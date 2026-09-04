@@ -8,7 +8,6 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Restore session from localStorage on first load
   useEffect(() => {
     const savedToken = localStorage.getItem('scriptmark_token')
     const savedUser = localStorage.getItem('scriptmark_user')

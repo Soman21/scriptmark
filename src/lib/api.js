@@ -1,5 +1,3 @@
-// Central place that talks to the backend. Change VITE_API_URL in .env
-// (or your Vercel project settings) to point at your deployed backend.
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 async function request(path, { method = 'GET', body, token } = {}) {
@@ -38,9 +36,14 @@ export const api = {
   getScript: (scriptId, token) => request(`/api/sessions/scripts/${scriptId}`, { token }),
   updateCaScore: (scriptId, caScore, token) =>
     request(`/api/sessions/scripts/${scriptId}/caScore`, { method: 'PUT', body: { caScore }, token }),
+  updateStudentInfo: (scriptId, payload, token) =>
+    request(`/api/sessions/scripts/${scriptId}/studentInfo`, { method: 'PUT', body: payload, token }),
 
   confirmScore: (answerId, payload, token) =>
     request(`/api/results/${answerId}/confirm`, { method: 'PUT', body: payload, token }),
   scoreScript: (scriptId, guideId, token) =>
     request(`/api/results/scripts/${scriptId}/score`, { method: 'POST', body: { guideId }, token }),
+
+  chatWithAssistant: (messages, token) =>
+    request('/api/assistant/chat', { method: 'POST', body: { messages }, token }),
 }

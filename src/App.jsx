@@ -8,6 +8,7 @@ import MarkingGuides from './pages/MarkingGuides.jsx'
 import Results from './pages/Results.jsx'
 import Analytics from './pages/Analytics.jsx'
 import Archive from './pages/Archive.jsx'
+import AiAssistant from './pages/AiAssistant.jsx'
 import SignUp from './pages/SignUp.jsx'
 import Login from './pages/Login.jsx'
 import Settings from './pages/Settings.jsx'
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/results" element={<Protected><Results /></Protected>} />
         <Route path="/analytics" element={<Protected><Analytics /></Protected>} />
         <Route path="/archive" element={<Protected><Archive /></Protected>} />
+        <Route path="/assistant" element={<Protected><AiAssistant /></Protected>} />
         <Route path="/settings" element={<Protected><Settings /></Protected>} />
       </Routes>
     </AuthProvider>

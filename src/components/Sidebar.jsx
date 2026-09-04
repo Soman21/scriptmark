@@ -11,6 +11,7 @@ import {
   LogOut,
   ScanLine,
   Archive as ArchiveIcon,
+  Sparkles,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/results', label: 'Results', icon: CheckSquare },
   { to: '/archive', label: 'Export Results', icon: ArchiveIcon },
   { to: '/analytics', label: 'Analytics', icon: BarChart2 },
+  { to: '/assistant', label: 'AI Assistant', icon: Sparkles },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -35,7 +37,6 @@ export default function Sidebar({ user, onSignOut }) {
     try {
       await api.createSession({ title: `Marking Session — ${new Date().toLocaleDateString()}` }, token)
     } catch (err) {
-      // Not fatal: still let the lecturer proceed to the scan screen
       console.error(err)
     } finally {
       setCreating(false)

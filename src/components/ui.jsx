@@ -18,7 +18,7 @@ export function StatCard({ icon, label, value, sub, subColor = 'text-slate-500',
 export function PrimaryButton({ children, className = '', ...props }) {
   return (
     <button
-      className={`inline-flex items-center gap-2 rounded-lg bg-ink-950 hover:bg-ink-900 text-white text-sm font-medium px-4 py-2 transition-colors ${className}`}
+      className={`inline-flex items-center gap-2 rounded-lg bg-ink-950 hover:bg-ink-900 text-white text-sm font-medium px-4 py-2 transition-colors disabled:opacity-60 ${className}`}
       {...props}
     >
       {children}
@@ -29,7 +29,7 @@ export function PrimaryButton({ children, className = '', ...props }) {
 export function SecondaryButton({ children, className = '', ...props }) {
   return (
     <button
-      className={`inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium px-4 py-2 transition-colors ${className}`}
+      className={`inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium px-4 py-2 transition-colors disabled:opacity-60 ${className}`}
       {...props}
     >
       {children}
