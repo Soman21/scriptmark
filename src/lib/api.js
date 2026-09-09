@@ -22,6 +22,8 @@ async function request(path, { method = 'GET', body, token } = {}) {
 export const api = {
   signup: (payload) => request('/api/auth/signup', { method: 'POST', body: payload }),
   login: (payload) => request('/api/auth/login', { method: 'POST', body: payload }),
+  forgotPassword: (email) => request('/api/auth/forgotPassword', { method: 'POST', body: { email } }),
+  resetPassword: (payload) => request('/api/auth/resetPassword', { method: 'POST', body: payload }),
 
   getGuides: (token) => request('/api/guides', { token }),
   getGuide: (id, token) => request(`/api/guides/${id}`, { token }),
@@ -38,6 +40,16 @@ export const api = {
     request(`/api/sessions/scripts/${scriptId}/caScore`, { method: 'PUT', body: { caScore }, token }),
   updateStudentInfo: (scriptId, payload, token) =>
     request(`/api/sessions/scripts/${scriptId}/studentInfo`, { method: 'PUT', body: payload, token }),
+  bulkConfirm: (sessionId, groups, token) =>
+    request(`/api/sessions/${sessionId}/scripts/bulkConfirm`, { method: 'POST', body: { groups }, token }),
+  deleteScript: (sessionId, scriptId, token) =>
+    request(`/api/sessions/${sessionId}/scripts/${scriptId}`, { method: 'DELETE', token }),
+  getAnalytics: (sessionId, token) => request(`/api/sessions/${sessionId}/analytics`, { token }),
+
+  startMarking: (sessionId, token) =>
+    request(`/api/sessions/${sessionId}/mark`, { method: 'POST', token }),
+  getMarkingStatus: (sessionId, token) =>
+    request(`/api/sessions/${sessionId}/markingStatus`, { token }),
 
   confirmScore: (answerId, payload, token) =>
     request(`/api/results/${answerId}/confirm`, { method: 'PUT', body: payload, token }),

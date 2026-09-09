@@ -57,7 +57,7 @@ export default function Dashboard() {
   function switchSession(session) {
     localStorage.setItem('scriptmark_active_session', session.id)
     localStorage.setItem('scriptmark_active_session_title', session.title)
-    localStorage.removeItem('scriptmark_active_script') // don't carry over another session's script in progress
+    localStorage.removeItem('scriptmark_active_script')
     setActiveSessionId(session.id)
     setActiveSessionTitle(session.title)
     loadEverything()
@@ -75,7 +75,6 @@ export default function Dashboard() {
       <Topbar title={`Welcome${user ? `, ${user.name.split(' ')[0]}` : ''}`} />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Active session overview */}
         <div className="rounded-xl border border-slate-200 bg-white p-5">
           {activeSessionId ? (
             <>
@@ -116,7 +115,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Quick actions */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {quickActions.map(({ label, icon: Icon, to, color }) => (
             <button
@@ -130,7 +128,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* All sessions */}
         <div className="rounded-xl border border-slate-200 bg-white">
           <div className="px-5 py-3 border-b border-slate-100">
             <p className="font-semibold text-sm text-slate-900">Your Sessions</p>

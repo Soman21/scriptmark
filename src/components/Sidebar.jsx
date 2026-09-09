@@ -12,6 +12,7 @@ import {
   ScanLine,
   Archive as ArchiveIcon,
   Sparkles,
+  ListChecks,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -19,6 +20,7 @@ import { api } from '../lib/api.js'
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
   { to: '/scan', label: 'Scan Scripts', icon: ScanLine },
+  { to: '/marking', label: 'Marking Progress', icon: ListChecks },
   { to: '/guides', label: 'Marking Guides', icon: BookOpen },
   { to: '/results', label: 'Results', icon: CheckSquare },
   { to: '/archive', label: 'Export Results', icon: ArchiveIcon },

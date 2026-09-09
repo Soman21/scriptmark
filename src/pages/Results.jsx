@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
-import { PrimaryButton } from '../components/ui.jsx'
+import { PrimaryButton, Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 
@@ -11,7 +11,7 @@ export default function Results() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [draftScores, setDraftScores] = useState({}) // { answerId: number }
+  const [draftScores, setDraftScores] = useState({})
   const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
@@ -29,12 +29,11 @@ export default function Results() {
     }
     try {
       const data = await api.getSessionScripts(sessionId, token)
-      // Only scripts that have been scored are worth reviewing here.
       const scored = data.filter((s) => s.answers && s.answers.length > 0)
+      // Low-confidence scripts need a closer look — put them first in the queue.
+      scored.sort((a, b) => (b.hasLowConfidenceScore ? 1 : 0) - (a.hasLowConfidenceScore ? 1 : 0))
       setScripts(scored)
 
-      // Populate draft scores with the LLM's suggestions, so the lecturer
-      // is editing/confirming rather than typing from scratch.
       const drafts = {}
       scored.forEach((s) => {
         s.answers.forEach((a) => {
@@ -99,7 +98,7 @@ export default function Results() {
         ) : scripts.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
             No scored scripts yet. Go to <strong>Scan Scripts</strong>, upload one, select a marking guide, and click
-            "Commit to Grading Queue" — it'll show up here for review.
+            "Commit to Grading Queue" — it will show up here for review.
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
@@ -108,15 +107,22 @@ export default function Results() {
                 <span className="rounded-full bg-ink-950 text-white text-xs font-medium px-3 py-1">
                   Script {currentIndex + 1} of {scripts.length}
                 </span>
-                <span
-                  className={`text-xs font-medium rounded-full px-2.5 py-0.5 ${
-                    currentScript.status === 'REVIEWED'
-                      ? 'bg-emerald-50 text-emerald-600'
-                      : 'bg-amber-50 text-amber-600'
-                  }`}
-                >
-                  {currentScript.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  {currentScript.hasLowConfidenceScore && (
+                    <span className="flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-0.5 bg-amber-50 text-amber-600">
+                      <AlertCircle size={12} /> Needs a closer look
+                    </span>
+                  )}
+                  <span
+                    className={`text-xs font-medium rounded-full px-2.5 py-0.5 ${
+                      currentScript.status === 'REVIEWED'
+                        ? 'bg-emerald-50 text-emerald-600'
+                        : 'bg-amber-50 text-amber-600'
+                    }`}
+                  >
+                    {currentScript.status}
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5">
@@ -140,12 +146,14 @@ export default function Results() {
                 {currentScript.answers.map((answer) => {
                   const q = answer.question
                   const label = q ? `Question ${q.number}${q.subLabel || ''}` : 'Question'
+                  const confidenceTone =
+                    answer.confidence === 'low' ? 'red' : answer.confidence === 'medium' ? 'amber' : 'green'
                   return (
                     <div key={answer.id} className="rounded-lg border border-slate-200 p-3">
                       <div className="flex items-center justify-between gap-3">
-                        <div>
+                        <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-sky-600">{label}</span>
-                          <p className="text-sm font-medium text-slate-800">{q?.text}</p>
+                          {answer.confidence && <Badge tone={confidenceTone}>{answer.confidence} confidence</Badge>}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <input
@@ -157,7 +165,20 @@ export default function Results() {
                           <span className="text-sm text-slate-400">/ {q?.maxMarks}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-slate-600 mt-1.5">
+                      <p className="text-sm font-medium text-slate-800 mt-1">{q?.text}</p>
+
+                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="rounded-lg bg-slate-50 border border-slate-100 p-2.5">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Expected Answer</p>
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{q?.modelAnswer}</p>
+                        </div>
+                        <div className="rounded-lg bg-sky-50/50 border border-sky-100 p-2.5">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Student's Answer</p>
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{answer.extractedText}</p>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-slate-600 mt-2">
                         <span className="text-slate-400">Suggested reasoning: </span>
                         {answer.reasoning}
                       </p>
@@ -181,7 +202,6 @@ export default function Results() {
               </div>
             </div>
 
-            {/* Right: navigation between scripts */}
             <div className="space-y-4">
               <div className="rounded-xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">All Scripts</p>
@@ -194,7 +214,8 @@ export default function Results() {
                           i === currentIndex ? 'bg-sky-50 text-sky-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        {s.studentIdentifier || 'Unnamed script'}
+                        {s.hasLowConfidenceScore && <AlertCircle size={12} className="inline mr-1 text-amber-500" />}
+                        {s.studentName || s.studentIdentifier || 'Unnamed script'}
                         <span
                           className={`ml-2 text-xs ${s.status === 'REVIEWED' ? 'text-emerald-500' : 'text-amber-500'}`}
                         >

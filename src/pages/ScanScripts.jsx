@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, UploadCloud, Camera, CheckCircle2, RotateCw, Loader2, AlertCircle, FilePlus2, UserPlus, X } from 'lucide-react'
+import { Search, UploadCloud, Camera, CheckCircle2, RotateCw, Loader2, AlertCircle, FilePlus2, UserPlus, X, Sparkles } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
+import BulkUploadPanel from '../components/BulkUploadPanel.jsx'
+import MultiDocUploadPanel from '../components/MultiDocUploadPanel.jsx'
 import { PrimaryButton, SecondaryButton, Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -28,7 +30,8 @@ export default function ScanScripts() {
   // Current student / script in progress across multiple pages
   const [studentNameInput, setStudentNameInput] = useState('')
   const [regNumberInput, setRegNumberInput] = useState('')
-  const [activeScript, setActiveScript] = useState(null) // the script currently receiving pages
+  const [detectedFields, setDetectedFields] = useState({ name: false, regNumber: false })
+  const [activeScript, setActiveScript] = useState(null)
 
   const [scripts, setScripts] = useState([])
   const [uploading, setUploading] = useState(false)
@@ -52,8 +55,6 @@ export default function ScanScripts() {
     loadGuides()
   }, [])
 
-  // Reload the session's scripts (so you see what you already uploaded before
-  // leaving the page) and resume whichever script was in progress, if any.
   async function restoreProgress(activeSessionId) {
     try {
       const scriptData = await api.getSessionScripts(activeSessionId, token)
@@ -84,8 +85,6 @@ export default function ScanScripts() {
     }
   }
 
-  // Keep localStorage in sync so navigating away and back (or a refresh) resumes
-  // exactly where you left off, instead of losing progress.
   useEffect(() => {
     if (activeScript) {
       localStorage.setItem('scriptmark_active_script', activeScript.id)
@@ -137,14 +136,11 @@ export default function ScanScripts() {
   }
 
   // Uploads a page (given as a File or Blob). If activeScript is set, it's appended
-  // as the NEXT page of that student's script. Otherwise it starts a brand new script.
+  // as the NEXT page of that student's script. Otherwise it starts a brand new script,
+  // and student name/reg number are optional — left blank, they get auto detected
+  // from the front page's text if possible.
   async function uploadPage(fileOrBlob, filename) {
     if (!fileOrBlob || !sessionId) return
-
-    if (!activeScript && !studentNameInput.trim() && !regNumberInput.trim()) {
-      setError('Enter a student name or reg number before uploading the first page.')
-      return
-    }
 
     setUploading(true)
     setError('')
@@ -154,8 +150,8 @@ export default function ScanScripts() {
       if (activeScript) {
         formData.append('scriptId', activeScript.id)
       } else {
-        formData.append('studentName', studentNameInput.trim())
-        formData.append('regNumber', regNumberInput.trim())
+        if (studentNameInput.trim()) formData.append('studentName', studentNameInput.trim())
+        if (regNumberInput.trim()) formData.append('regNumber', regNumberInput.trim())
       }
 
       const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/scripts`, {
@@ -167,7 +163,12 @@ export default function ScanScripts() {
       if (!res.ok && res.status !== 207) throw new Error(data.error || 'Upload failed')
 
       const updatedScript = data.script || data
+      const detected = data.detectedStudentInfo
+
       setActiveScript(updatedScript)
+      setStudentNameInput(updatedScript.studentName || '')
+      setRegNumberInput(updatedScript.regNumber || '')
+      setDetectedFields({ name: !!detected?.name, regNumber: !!detected?.regNumber })
       setScoreResult(null)
 
       setScripts((prev) => {
@@ -195,12 +196,9 @@ export default function ScanScripts() {
       return
     }
     try {
-      // Prefer the rear facing camera on phones, since that's what you would point at a page.
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       streamRef.current = stream
       setCameraOpen(true)
-      // The <video> element only exists once cameraOpen is true, so attach the stream
-      // on the next tick after render.
       setTimeout(() => {
         if (videoRef.current) videoRef.current.srcObject = stream
       }, 0)
@@ -236,7 +234,6 @@ export default function ScanScripts() {
     )
   }
 
-  // Release the camera if the lecturer navigates away without explicitly closing it.
   useEffect(() => {
     return () => {
       if (streamRef.current) {
@@ -245,10 +242,27 @@ export default function ScanScripts() {
     }
   }, [])
 
+  async function saveStudentInfo() {
+    if (!activeScript) return
+    try {
+      const updated = await api.updateStudentInfo(
+        activeScript.id,
+        { studentName: studentNameInput.trim(), regNumber: regNumberInput.trim() },
+        token
+      )
+      setActiveScript(updated)
+      setDetectedFields({ name: false, regNumber: false })
+      setScripts((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   function handleNewStudent() {
     setActiveScript(null)
     setStudentNameInput('')
     setRegNumberInput('')
+    setDetectedFields({ name: false, regNumber: false })
     setScoreResult(null)
   }
 
@@ -395,19 +409,41 @@ export default function ScanScripts() {
                   </button>
                 )}
               </div>
+
+              {!activeScript && (
+                <p className="text-xs text-slate-400 mb-2">
+                  Leave blank to try automatic detection from the front page, or type it in now.
+                </p>
+              )}
+
+              {(detectedFields.name || detectedFields.regNumber) && (
+                <div className="mb-2 space-y-1">
+                  {detectedFields.regNumber && (
+                    <p className="flex items-center gap-1.5 text-xs text-emerald-600">
+                      <CheckCircle2 size={12} /> Reg number detected automatically, usually reliable.
+                    </p>
+                  )}
+                  {detectedFields.name && (
+                    <p className="flex items-center gap-1.5 text-xs text-amber-600">
+                      <Sparkles size={12} /> Name guessed by position (no printed label to anchor on) — please double check it.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <input
                 value={studentNameInput}
                 onChange={(e) => setStudentNameInput(e.target.value)}
-                disabled={!!activeScript}
+                onBlur={saveStudentInfo}
                 placeholder="Student full name"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-60"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
               />
               <input
                 value={regNumberInput}
                 onChange={(e) => setRegNumberInput(e.target.value)}
-                disabled={!!activeScript}
+                onBlur={saveStudentInfo}
                 placeholder="Registration number"
-                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-60"
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
               />
               {activeScript && (
                 <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1">
@@ -494,6 +530,20 @@ export default function ScanScripts() {
               </div>
             )}
 
+            <BulkUploadPanel
+              sessionId={sessionId}
+              onScriptsCreated={(newScripts) => {
+                setScripts((prev) => [...newScripts, ...prev])
+              }}
+            />
+
+            <MultiDocUploadPanel
+              sessionId={sessionId}
+              onScriptsCreated={(newScripts) => {
+                setScripts((prev) => [...newScripts, ...prev])
+              }}
+            />
+
             <div className="rounded-xl border border-slate-200 bg-white">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
                 <p className="font-semibold text-sm text-slate-900">Scripts This Session ({scripts.length})</p>
@@ -555,15 +605,13 @@ export default function ScanScripts() {
 
             {!activeScript ? (
               <div className="flex-1 flex items-center justify-center p-10 text-sm text-slate-400 text-center">
-                Enter a student's name/reg number and upload page 1 — extracted text will appear here.
+                Upload page 1 — extracted text (and, if visible, the student's name/reg number) will appear here.
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5">
                   <div className="space-y-2">
-                    <p className="text-xs uppercase tracking-wide text-slate-400">
-                      Pages ({pageCount})
-                    </p>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">Pages ({pageCount})</p>
                     <div className="grid grid-cols-3 gap-2">
                       {(activeScript.pages || []).map((p) => (
                         <div key={p.id} className="rounded-lg bg-slate-50 border border-slate-200 aspect-[3/4] overflow-hidden">

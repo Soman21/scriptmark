@@ -7,8 +7,6 @@ import { api } from '../lib/api.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-// Mirrors the backend's grading scale (src/lib/grading.js) so the table can show
-// a live grade preview before the lecturer even exports anything.
 function computeGrade(total) {
   if (total == null) return ''
   if (total >= 70) return 'A'
@@ -25,8 +23,8 @@ export default function Archive() {
   const [scripts, setScripts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [exporting, setExporting] = useState(false) // false | 'xlsx' | 'pdf'
-  const [caScores, setCaScores] = useState({}) // { scriptId: value }
+  const [exporting, setExporting] = useState(false)
+  const [caScores, setCaScores] = useState({})
 
   useEffect(() => {
     loadData()

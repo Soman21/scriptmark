@@ -1,76 +1,32 @@
 # ScriptMark — Frontend
 
-React + Vite + Tailwind CSS frontend for ScriptMark, an AI-assisted exam script
-marking system for lecturers, reviewers, and admins.
+React + Vite + Tailwind CSS frontend for ScriptMark.
 
 ## Stack
 - React 18 + Vite
 - Tailwind CSS
-- react-router-dom (routing + auth-protected routes)
+- react-router-dom
 - lucide-react (icons)
 - recharts (analytics charts)
 
-## Structure
-```
-src/
-  components/
-    Sidebar.jsx        sidebar nav; "New Marking Session" and "Sign Out" are wired to real actions
-    Topbar.jsx          shared page header (title, tabs, search, actions)
-    ui.jsx              reusable primitives (StatCard, buttons, Badge)
-    RequireAuth.jsx      route guard — redirects to /login if not signed in
-  context/
-    AuthContext.jsx      login/signup/logout state, persisted in localStorage
-  lib/
-    api.js               fetch wrapper that talks to the backend
-  pages/
-    Login.jsx            sign-in screen
-    SignUp.jsx            account creation — calls the real signup API
-    Dashboard.jsx          marking session chat + queue status
-    ScanScripts.jsx         OCR batch upload + live review (UI only — not wired to OCR yet)
-    MarkingGuides.jsx       create + list marking guides — fully wired to the backend
-    Results.jsx              per-script review with marking scheme (UI only for now)
-    Analytics.jsx             performance overview + charts
-    Archive.jsx               student results table
-    Settings.jsx              placeholder
-  App.jsx                routes, auth provider, protected route wrapper
-  main.jsx               entry point
-```
-
-## Running this locally (with the backend)
-1. Get the backend running first — see `scriptmark-backend/README.md`.
-   It should be live at `http://localhost:4000`.
-2. In this folder:
-   ```bash
-   cp .env.example .env
-   npm install
-   npm run dev
-   ```
-3. Visit `http://localhost:5173` → you'll land on `/login`. Click "Create
-   one" to sign up (this calls the real backend and creates a row in your
-   Supabase database).
-
-## What's actually wired up right now
-- **Sign up / Log in / Log out** — real, backed by the database (JWT auth).
-- **Protected routes** — every page except `/login` and `/signup` redirects
-  you to `/login` if you're not authenticated.
-- **Marking Guides page** — creating a guide really saves it to the
-  database; the "Recent Guides" list is real data, not mock data.
-- **"New Marking Session"** button — creates a real session record, then
-  takes you to the scan screen.
-- **Scan Scripts / Results pages** — UI is complete but still shows
-  illustrative mock content, because they depend on OCR (Google Cloud
-  Vision) and LLM scoring integrations that come in a later phase.
-
-## Build
+## Running locally
 ```bash
-npm run build
-npm run preview
+cp .env.example .env   # if present, otherwise create .env with: VITE_API_URL=http://localhost:4000
+npm install
+npm run dev
 ```
+Get the backend running first (see the backend's README) — this app expects it at
+`http://localhost:4000` by default.
 
-## Deploying later (Vercel)
-1. Push this folder to GitHub.
-2. On https://vercel.com → New Project → import the repo.
-3. Framework preset: Vite (auto-detected).
-4. Add an environment variable: `VITE_API_URL` = your Railway backend URL.
-5. Deploy. Update the backend's `FRONTEND_URL` env var to this Vercel URL
-   afterward so CORS allows it.
+## What's real vs example data
+- Auth, Marking Guides (with numbered questions and optional lettered subparts),
+  Scan Scripts (multi page uploads, live camera capture, OCR, automatic student
+  name/reg number detection), Results review/confirm, and Export (Excel + PDF
+  with CA scores and computed grades) are all fully wired to the backend.
+- The Analytics page still shows illustrative example data — wiring it to real
+  confirmed scores is the next feature to build.
+
+## Not built yet
+- OTP based two factor login
+- AI assistant chat with voice input/output
+- Role based UI restrictions (Lecturer/Reviewer/Admin)

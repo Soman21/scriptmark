@@ -160,7 +160,7 @@ export default function SignUp() {
 
             <p className="text-center text-sm text-slate-500 mt-6">
               Already have an academic account?{' '}
-              <Link to="/" className="text-sky-600 font-medium">
+              <Link to="/login" className="text-sky-600 font-medium">
                 Sign In
               </Link>
             </p>

@@ -6,11 +6,13 @@ import Dashboard from './pages/Dashboard.jsx'
 import ScanScripts from './pages/ScanScripts.jsx'
 import MarkingGuides from './pages/MarkingGuides.jsx'
 import Results from './pages/Results.jsx'
+import MarkingProgress from './pages/MarkingProgress.jsx'
 import Analytics from './pages/Analytics.jsx'
 import Archive from './pages/Archive.jsx'
 import AiAssistant from './pages/AiAssistant.jsx'
 import SignUp from './pages/SignUp.jsx'
 import Login from './pages/Login.jsx'
+import ForgotPassword from './pages/ForgotPassword.jsx'
 import Settings from './pages/Settings.jsx'
 
 function AppLayout({ children }) {
@@ -48,11 +50,13 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgotPassword" element={<ForgotPassword />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/" element={<Protected><Dashboard /></Protected>} />
         <Route path="/scan" element={<Protected><ScanScripts /></Protected>} />
         <Route path="/guides" element={<Protected><MarkingGuides /></Protected>} />
         <Route path="/results" element={<Protected><Results /></Protected>} />
+        <Route path="/marking" element={<Protected><MarkingProgress /></Protected>} />
         <Route path="/analytics" element={<Protected><Analytics /></Protected>} />
         <Route path="/archive" element={<Protected><Archive /></Protected>} />
         <Route path="/assistant" element={<Protected><AiAssistant /></Protected>} />

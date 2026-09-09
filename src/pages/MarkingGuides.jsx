@@ -5,7 +5,6 @@ import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 
-// Converts an index to a letter label: 0->a, 1->b, ... 25->z, 26->aa, 27->ab, ...
 function letterLabel(index) {
   let n = index
   let label = ''
@@ -30,8 +29,6 @@ const blankGroup = (number) => ({
   parts: [blankPart()],
 })
 
-// Rebuilds the nested "groups" editor shape from the flat question list
-// the backend stores, so an existing guide can be reloaded for editing.
 function groupsFromQuestions(questions) {
   const byNumber = {}
   questions.forEach((q) => {
@@ -57,7 +54,6 @@ function groupsFromQuestions(questions) {
 export default function MarkingGuides() {
   const { token } = useAuth()
 
-  // Stage: "choose" a session first, then "edit" the guide tied to it.
   const [stage, setStage] = useState('choose')
   const [sessions, setSessions] = useState([])
   const [chosenSessionId, setChosenSessionId] = useState(localStorage.getItem('scriptmark_active_session') || '')
@@ -68,7 +64,6 @@ export default function MarkingGuides() {
   const [currentSession, setCurrentSession] = useState(null)
   const [loadingSession, setLoadingSession] = useState(false)
 
-  // Guide editor state
   const [currentGuideId, setCurrentGuideId] = useState(null)
   const [title, setTitle] = useState('')
   const [groups, setGroups] = useState([blankGroup(1), blankGroup(2)])
@@ -139,7 +134,7 @@ export default function MarkingGuides() {
         loadGuideForEditing(full.guide)
       } else {
         resetGuideForm()
-        setTitle(full.title) // sensible default, still editable
+        setTitle(full.title)
         setStage('edit')
       }
     } catch (err) {
@@ -265,7 +260,6 @@ export default function MarkingGuides() {
 
   const visibleGuides = showAllGuides ? recentGuides : recentGuides.slice(0, 5)
 
-  // ---- Stage 1: choose a session ----
   if (stage === 'choose') {
     return (
       <div className="flex h-full flex-col">
@@ -360,7 +354,6 @@ export default function MarkingGuides() {
     )
   }
 
-  // ---- Stage 2: edit the guide ----
   return (
     <div className="flex h-full flex-col">
       <Topbar
@@ -530,7 +523,6 @@ export default function MarkingGuides() {
           </button>
         </div>
 
-        {/* Right sidebar */}
         <div className="space-y-5">
           <div className="rounded-xl bg-ink-950 text-white p-5">
             <p className="font-semibold mb-4">Guide Summary</p>
