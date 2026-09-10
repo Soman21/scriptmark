@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileUp, ChevronDown, ChevronUp, Loader2, AlertCircle, Merge, Trash2, CheckCircle2, Expand } from 'lucide-react'
+import { FileUp, ChevronDown, ChevronUp, Loader2, AlertCircle, Merge, Trash2, CheckCircle2, Expand, RotateCw } from 'lucide-react'
 import { PrimaryButton, SecondaryButton } from './ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import PageViewerModal from './PageViewerModal.jsx'
+import { bakePageEdits } from '../lib/imageEdit.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -49,7 +50,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
         data.groups.map((g) => ({
           studentName: '',
           regNumber: '',
-          pages: g.pages,
+          pages: g.pages.map((p) => ({ ...p, rotation: 0, crop: null })),
         }))
       )
     } catch (err) {
@@ -90,6 +91,38 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
     setViewerIndex(offset + pageIndex)
   }
 
+  // Maps a flat index (as used by the viewer) back to which group/page it
+  // belongs to, so an edit made in the viewer lands on the right page.
+  function locateFlatIndex(flatIndex) {
+    let offset = 0
+    for (let gi = 0; gi < groups.length; gi++) {
+      if (flatIndex < offset + groups[gi].pages.length) {
+        return { groupIndex: gi, pageIndex: flatIndex - offset }
+      }
+      offset += groups[gi].pages.length
+    }
+    return null
+  }
+
+  function updatePageField(groupIndex, pageIndex, updates) {
+    setGroups((prev) => {
+      const next = prev.map((g) => ({ ...g, pages: [...g.pages] }))
+      const page = next[groupIndex].pages[pageIndex]
+      next[groupIndex].pages[pageIndex] = { ...page, ...updates }
+      return next
+    })
+  }
+
+  function updatePageAtFlatIndex(flatIndex, updates) {
+    const loc = locateFlatIndex(flatIndex)
+    if (loc) updatePageField(loc.groupIndex, loc.pageIndex, updates)
+  }
+
+  function quickRotate(groupIndex, pageIndex) {
+    const current = groups[groupIndex].pages[pageIndex].rotation || 0
+    updatePageField(groupIndex, pageIndex, { rotation: (current + 90) % 360 })
+  }
+
   function handleDragStart(groupIndex, pageIndex) {
     setDragSource({ groupIndex, pageIndex })
   }
@@ -119,11 +152,32 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
     setConfirming(true)
     setError('')
     try {
-      const payload = groups.map((g) => ({
-        studentName: g.studentName.trim(),
-        regNumber: g.regNumber.trim(),
-        pages: g.pages.map((p) => ({ imageUrl: p.imageUrl })),
-      }))
+      const payload = []
+      for (const g of groups) {
+        const pages = []
+        for (const p of g.pages) {
+          // Untouched pages upload exactly as they already were, no extra
+          // cost. Only pages the lecturer actually rotated or cropped get
+          // re-rendered and re-uploaded here.
+          if (!p.rotation && !p.crop) {
+            pages.push({ imageUrl: p.imageUrl })
+            continue
+          }
+          const blob = await bakePageEdits(p.imageUrl, p.rotation || 0, p.crop || null)
+          const formData = new FormData()
+          formData.append('image', blob, 'edited_page.png')
+          const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/scripts/uploadPage`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error || 'Could not save an edited page')
+          pages.push({ imageUrl: data.imageUrl })
+        }
+        payload.push({ studentName: g.studentName.trim(), regNumber: g.regNumber.trim(), pages })
+      }
+
       const result = await api.bulkConfirm(sessionId, payload, token)
       onScriptsCreated?.(result.scripts)
       setGroups(null)
@@ -157,8 +211,9 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
       {expanded && (
         <div className="border-t border-slate-100 p-4 space-y-4">
           <p className="text-xs text-slate-500">
-            Upload one PDF containing many students' scripts. Review and adjust the split before anything is saved —
-            OCR and student detection happen automatically afterward, during Marking, so this stays fast.
+            Use this when you have one big PDF holding many students' scripts, scanned all together and not yet
+            split apart. Review and adjust the split before anything is saved. OCR and student detection happen
+            automatically afterward, during Marking, so this stays fast.
           </p>
 
           {error && (
@@ -179,8 +234,8 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
                   className="mt-1 w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
                 />
                 <p className="mt-1 text-xs text-slate-400">
-                  How many pages a typical answer script runs to here. Splitting uses this to chunk the PDF —
-                  you can always drag pages between groups afterward if a student used extra sheets.
+                  How many pages a typical answer script runs to here. Splitting uses this to chunk the PDF.
+                  You can always drag pages between groups afterward if a student used extra sheets.
                 </p>
               </div>
 
@@ -218,7 +273,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
           ) : (
             <>
               <p className="text-sm font-medium text-slate-800">
-                {groups.length} proposed submissions — review, edit, and drag pages between groups before confirming
+                {groups.length} proposed submissions. Review, edit, and drag pages between groups before confirming.
               </p>
               <div className="space-y-3 max-h-[32rem] overflow-y-auto">
                 {groups.map((g, gi) => (
@@ -228,17 +283,19 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
                     onDrop={() => handleDropOnGroup(gi)}
                     className="rounded-lg border border-slate-200 p-3"
                   >
-                    <div className="flex items-center justify-between mb-2 gap-2">
+                    <div className="mb-2">
                       <input
                         value={g.regNumber}
                         onChange={(e) => updateGroupField(gi, 'regNumber', e.target.value)}
-                        placeholder={`Group ${gi + 1} — type reg number`}
-                        className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-sky-400"
+                        placeholder={`Group ${gi + 1}: type reg number`}
+                        className="w-full rounded-lg border border-slate-200 px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-sky-400"
                       />
+                    </div>
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                       <span className="whitespace-nowrap text-xs font-medium text-slate-500">
                         {g.pages.length} page{g.pages.length !== 1 ? 's' : ''}
                       </span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-3">
                         {gi < groups.length - 1 && (
                           <button
                             onClick={() => mergeWithNext(gi)}
@@ -250,10 +307,10 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
                         )}
                         <button
                           onClick={() => removeGroup(gi)}
-                          className="text-slate-400 hover:text-rose-500"
+                          className="flex items-center gap-1 text-xs text-rose-500 hover:text-rose-600"
                           title="Discard this submission"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={12} /> Discard
                         </button>
                       </div>
                     </div>
@@ -281,7 +338,27 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
                               End
                             </span>
                           )}
-                          <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
+                          <img
+                            src={p.imageUrl}
+                            alt=""
+                            className="h-full w-full object-cover transition-transform"
+                            style={{ transform: `rotate(${p.rotation || 0}deg)` }}
+                          />
+                          {p.crop && (
+                            <span className="absolute bottom-1 right-1 z-10 rounded bg-sky-600 px-1 text-[9px] font-semibold text-white">
+                              Cropped
+                            </span>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              quickRotate(gi, pi)
+                            }}
+                            className="absolute left-1 bottom-1 z-10 rounded-full bg-black/50 p-1 text-white opacity-0 transition group-hover:opacity-100 hover:bg-black/70"
+                            title="Rotate 90°"
+                          >
+                            <RotateCw size={12} />
+                          </button>
                           <button
                             onClick={() => openViewerAt(gi, pi)}
                             className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100"
@@ -322,7 +399,13 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
         </div>
       )}
 
-      <PageViewerModal pages={flat} startIndex={viewerIndex} onClose={() => setViewerIndex(null)} onIndexChange={setViewerIndex} />
+      <PageViewerModal
+        pages={flat}
+        startIndex={viewerIndex}
+        onClose={() => setViewerIndex(null)}
+        onIndexChange={setViewerIndex}
+        onUpdatePage={updatePageAtFlatIndex}
+      />
     </div>
   )
 }

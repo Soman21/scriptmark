@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Files, ChevronDown, ChevronUp, Loader2, AlertCircle, X, FileText, Image as ImageIcon, CheckCircle2 } from 'lucide-react'
+import { Files, ChevronDown, ChevronUp, Loader2, AlertCircle, X, FileText, Image as ImageIcon, CheckCircle2, UploadCloud } from 'lucide-react'
 import { PrimaryButton } from './ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -19,11 +19,22 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated }) {
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [dragOver, setDragOver] = useState(false)
+
+  function addFiles(fileList) {
+    const picked = Array.from(fileList || [])
+    setFiles((prev) => [...prev, ...picked])
+  }
 
   function handleFilesSelected(e) {
-    const picked = Array.from(e.target.files || [])
-    setFiles((prev) => [...prev, ...picked])
+    addFiles(e.target.files)
     e.target.value = ''
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setDragOver(false)
+    addFiles(e.dataTransfer.files)
   }
 
   function removeFile(index) {
@@ -79,19 +90,42 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated }) {
             files per student, not one big PDF that still needs splitting.
           </p>
 
+          <div
+            onDragOver={(e) => {
+              e.preventDefault()
+              setDragOver(true)
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            className={`rounded-xl border-2 border-dashed p-6 text-center transition ${
+              dragOver ? 'border-violet-400 bg-violet-50' : 'border-slate-300 bg-white'
+            }`}
+          >
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-violet-50 text-violet-500">
+              <UploadCloud size={20} />
+            </div>
+            <p className="text-sm font-medium text-slate-800">Drag files here, as many as you like at once</p>
+            <p className="mt-1 text-xs text-slate-400">
+              Select multiple files in your own file explorer first, then drag the whole group in. No special key
+              needed.
+            </p>
+            <label className="mt-3 inline-block cursor-pointer text-xs font-medium text-violet-600 hover:text-violet-700">
+              Or click to browse (hold Ctrl or Cmd to pick more than one, or click Browse again to add more)
+              <input
+                type="file"
+                multiple
+                accept="application/pdf,image/*"
+                onChange={handleFilesSelected}
+                className="hidden"
+              />
+            </label>
+          </div>
+
           {error && (
             <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
               <AlertCircle size={14} /> {error}
             </div>
           )}
-
-          <input
-            type="file"
-            multiple
-            accept="application/pdf,image/*"
-            onChange={handleFilesSelected}
-            className="block w-full text-sm text-slate-600"
-          />
 
           {files.length > 0 && (
             <div className="space-y-2">

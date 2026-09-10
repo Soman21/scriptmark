@@ -425,7 +425,7 @@ export default function ScanScripts() {
                   )}
                   {detectedFields.name && (
                     <p className="flex items-center gap-1.5 text-xs text-amber-600">
-                      <Sparkles size={12} /> Name guessed by position (no printed label to anchor on) — please double check it.
+                      <Sparkles size={12} /> Name guessed by position, no printed label to anchor on. Please double check it.
                     </p>
                   )}
                 </div>
@@ -452,6 +452,13 @@ export default function ScanScripts() {
               )}
             </div>
 
+            <div className="mb-1">
+              <p className="text-sm font-semibold text-slate-900">Scan One Script</p>
+              <p className="text-xs text-slate-500">
+                Use this when you have one physical script in front of you right now. Type the student's details once below, then add each page as you go, by camera or photo.
+              </p>
+            </div>
+
             <div className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-8 text-center">
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 text-sky-500">
                 <UploadCloud size={22} />
@@ -460,7 +467,7 @@ export default function ScanScripts() {
                 {activeScript ? `Add page ${pageCount + 1}` : 'Upload page 1'}
               </p>
               <p className="text-sm text-slate-500 mt-1">
-                A full script can be many pages — upload one at a time, in order.
+                A full script can be many pages. Upload them one at a time, in order.
               </p>
 
               <input
