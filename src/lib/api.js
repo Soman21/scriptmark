@@ -22,6 +22,7 @@ async function request(path, { method = 'GET', body, token } = {}) {
 export const api = {
   signup: (payload) => request('/api/auth/signup', { method: 'POST', body: payload }),
   login: (payload) => request('/api/auth/login', { method: 'POST', body: payload }),
+  verifyOtp: (payload) => request('/api/auth/verifyOtp', { method: 'POST', body: payload }),
   forgotPassword: (email) => request('/api/auth/forgotPassword', { method: 'POST', body: { email } }),
   resetPassword: (payload) => request('/api/auth/resetPassword', { method: 'POST', body: payload }),
 

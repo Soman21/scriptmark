@@ -33,6 +33,15 @@ export function AuthProvider({ children }) {
 
   async function login({ email, password }) {
     const data = await api.login({ email, password })
+    if (data.otpRequired) {
+      return { otpRequired: true, pendingToken: data.pendingToken, email: data.email }
+    }
+    persist(data.token, data.user)
+    return { otpRequired: false, user: data.user }
+  }
+
+  async function verifyOtp({ pendingToken, code }) {
+    const data = await api.verifyOtp({ pendingToken, code })
     persist(data.token, data.user)
     return data.user
   }
@@ -45,7 +54,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, signup, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, signup, login, verifyOtp, logout }}>
       {children}
     </AuthContext.Provider>
   )
