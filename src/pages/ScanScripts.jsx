@@ -10,7 +10,7 @@ import { api } from '../lib/api.js'
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 export default function ScanScripts() {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const fileInputRef = useRef(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
@@ -301,6 +301,17 @@ export default function ScanScripts() {
   }
 
   const pageCount = activeScript?.pages?.length || 0
+
+  if (user && user.role === 'REVIEWER') {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="max-w-sm rounded-xl border border-slate-200 bg-white p-6 text-center">
+          <p className="text-sm font-medium text-slate-700">Only Lecturers and Admins can upload or scan scripts.</p>
+          <p className="text-sm text-slate-500 mt-1">You can review and confirm scores for scripts that have already been uploaded, from Results.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-full flex-col">

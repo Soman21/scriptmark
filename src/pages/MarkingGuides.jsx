@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Sparkles, Plus, Trash2, ArrowLeft } from 'lucide-react'
+import { Sparkles, Plus, Trash2, ArrowLeft, FileUp, Loader2 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 function letterLabel(index) {
   let n = index
@@ -52,7 +54,7 @@ function groupsFromQuestions(questions) {
 }
 
 export default function MarkingGuides() {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
 
   const [stage, setStage] = useState('choose')
   const [sessions, setSessions] = useState([])
@@ -73,6 +75,7 @@ export default function MarkingGuides() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [parsingDoc, setParsingDoc] = useState(false)
 
   const totalMarks = groups.reduce(
     (sum, g) => sum + g.parts.reduce((pSum, p) => pSum + Number(p.marks || 0), 0),
@@ -205,6 +208,38 @@ export default function MarkingGuides() {
     )
   }
 
+  async function handleParseDocument(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setParsingDoc(true)
+    setError('')
+    setSuccessMsg('')
+    try {
+      const formData = new FormData()
+      formData.append('document', file)
+
+      const res = await fetch(`${API_BASE}/api/guides/parse`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Could not parse this document.')
+
+      if (!title.trim() && data.title) setTitle(data.title)
+      const orderedQuestions = data.questions.map((q, i) => ({ ...q, order: i }))
+      setGroups(groupsFromQuestions(orderedQuestions))
+      setSuccessMsg(`Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document. Check everything below before saving.`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setParsingDoc(false)
+      e.target.value = ''
+    }
+  }
+
+
   async function handleSave(isDraft) {
     setError('')
     setSuccessMsg('')
@@ -259,6 +294,18 @@ export default function MarkingGuides() {
   }
 
   const visibleGuides = showAllGuides ? recentGuides : recentGuides.slice(0, 5)
+
+  if (user && user.role === 'REVIEWER') {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="max-w-sm rounded-xl border border-slate-200 bg-white p-6 text-center">
+          <Sparkles size={20} className="mx-auto mb-2 text-slate-400" />
+          <p className="text-sm font-medium text-slate-700">Only Lecturers and Admins can create or edit marking guides.</p>
+          <p className="text-sm text-slate-500 mt-1">You can still review and confirm scores from Results.</p>
+        </div>
+      </div>
+    )
+  }
 
   if (stage === 'choose') {
     return (
@@ -388,6 +435,31 @@ export default function MarkingGuides() {
               {error || successMsg}
             </div>
           )}
+
+          <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">Upload an existing marking scheme</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Have a Word or PDF document with your questions and model answers already written out? Upload it and
+              the fields below will be filled in for you to review and adjust before saving.
+            </p>
+            <label
+              className={`mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-4 py-2.5 text-sm transition ${
+                parsingDoc
+                  ? 'border-slate-200 text-slate-400'
+                  : 'border-slate-300 text-slate-600 hover:border-sky-400 hover:text-sky-600'
+              }`}
+            >
+              {parsingDoc ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
+              {parsingDoc ? 'Reading document...' : 'Choose PDF or Word file'}
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handleParseDocument}
+                disabled={parsingDoc}
+                className="hidden"
+              />
+            </label>
+          </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Subject / Exam Title</label>

@@ -8,7 +8,7 @@ import { api } from '../lib/api.js'
 const POLL_INTERVAL_MS = 3000
 
 function timeAgo(dateString) {
-  if (!dateString) return '—'
+  if (!dateString) return 'N/A'
   const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000)
   if (seconds < 10) return 'just now'
   if (seconds < 60) return `${seconds}s ago`
@@ -44,7 +44,7 @@ function statusLabel(status) {
     case 'DIGITIZED':
       return 'Digitizing done, scoring next'
     case 'SCORED':
-      return 'Marked — awaiting review'
+      return 'Marked, awaiting review'
     case 'REVIEWED':
       return 'Reviewed'
     case 'FLAGGED':
@@ -55,7 +55,7 @@ function statusLabel(status) {
 }
 
 export default function MarkingProgress() {
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const navigate = useNavigate()
   const sessionId = localStorage.getItem('scriptmark_active_session')
   const sessionTitle = localStorage.getItem('scriptmark_active_session_title')
@@ -170,7 +170,7 @@ export default function MarkingProgress() {
           />
         </div>
         {total > 0 && markedCount === total && (
-          <p className="mt-2 text-xs text-emerald-600">All submissions marked — taking you to Results...</p>
+          <p className="mt-2 text-xs text-emerald-600">All submissions marked. Taking you to Results...</p>
         )}
       </div>
 
@@ -205,7 +205,7 @@ export default function MarkingProgress() {
                 <td className="px-4 py-3">
                   <Badge tone={statusTone(s.status)}>{statusLabel(s.status)}</Badge>
                 </td>
-                <td className="px-4 py-3 text-slate-700">{s.totalScore != null ? s.totalScore : '—'}</td>
+                <td className="px-4 py-3 text-slate-700">{s.totalScore != null ? s.totalScore : 'N/A'}</td>
                 <td className="px-4 py-3 text-slate-400">{timeAgo(s.updatedAt)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -223,13 +223,15 @@ export default function MarkingProgress() {
                     >
                       <Pencil size={12} /> Edit
                     </button>
-                    <button
-                      onClick={() => handleDelete(s.id)}
-                      className="flex items-center gap-1 text-xs text-rose-500 hover:text-rose-600"
-                      title="Delete this submission"
-                    >
-                      <Trash2 size={12} /> Delete
-                    </button>
+                    {user?.role !== 'REVIEWER' && (
+                      <button
+                        onClick={() => handleDelete(s.id)}
+                        className="flex items-center gap-1 text-xs text-rose-500 hover:text-rose-600"
+                        title="Delete this submission"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

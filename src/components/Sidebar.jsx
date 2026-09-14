@@ -19,9 +19,9 @@ import { api } from '../lib/api.js'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
-  { to: '/scan', label: 'Scan Scripts', icon: ScanLine },
+  { to: '/scan', label: 'Scan Scripts', icon: ScanLine, restrictedTo: ['LECTURER', 'ADMIN'] },
   { to: '/marking', label: 'Marking Progress', icon: ListChecks },
-  { to: '/guides', label: 'Marking Guides', icon: BookOpen },
+  { to: '/guides', label: 'Marking Guides', icon: BookOpen, restrictedTo: ['LECTURER', 'ADMIN'] },
   { to: '/results', label: 'Results', icon: CheckSquare },
   { to: '/archive', label: 'Export Results', icon: ArchiveIcon },
   { to: '/analytics', label: 'Analytics', icon: BarChart2 },
@@ -37,7 +37,7 @@ export default function Sidebar({ user, onSignOut }) {
   async function handleNewSession() {
     setCreating(true)
     try {
-      await api.createSession({ title: `Marking Session — ${new Date().toLocaleDateString()}` }, token)
+      await api.createSession({ title: `Marking Session, ${new Date().toLocaleDateString()}` }, token)
     } catch (err) {
       console.error(err)
     } finally {
@@ -46,6 +46,9 @@ export default function Sidebar({ user, onSignOut }) {
     }
   }
 
+  const canManage = user?.role === 'LECTURER' || user?.role === 'ADMIN'
+  const visibleNavItems = navItems.filter((item) => !item.restrictedTo || canManage)
+
   return (
     <aside className="hidden md:flex w-64 shrink-0 flex-col bg-ink-950 text-slate-100 px-4 py-5">
       <div className="mb-8 px-2">
@@ -53,17 +56,19 @@ export default function Sidebar({ user, onSignOut }) {
         <p className="text-xs text-slate-400 mt-0.5">AI Grading Assistant</p>
       </div>
 
-      <button
-        onClick={handleNewSession}
-        disabled={creating}
-        className="mb-6 flex items-center justify-center gap-2 rounded-lg bg-sky-500 hover:bg-sky-400 transition-colors text-white font-medium text-sm py-2.5 disabled:opacity-60"
-      >
-        <Plus size={16} />
-        {creating ? 'Creating...' : 'New Marking Session'}
-      </button>
+      {canManage && (
+        <button
+          onClick={handleNewSession}
+          disabled={creating}
+          className="mb-6 flex items-center justify-center gap-2 rounded-lg bg-sky-500 hover:bg-sky-400 transition-colors text-white font-medium text-sm py-2.5 disabled:opacity-60"
+        >
+          <Plus size={16} />
+          {creating ? 'Creating...' : 'New Marking Session'}
+        </button>
+      )}
 
       <nav className="flex-1 space-y-1">
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {visibleNavItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
