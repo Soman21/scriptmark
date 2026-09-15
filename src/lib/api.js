@@ -30,6 +30,8 @@ export const api = {
   getGuide: (id, token) => request(`/api/guides/${id}`, { token }),
   createGuide: (payload, token) => request('/api/guides', { method: 'POST', body: payload, token }),
   updateGuide: (id, payload, token) => request(`/api/guides/${id}`, { method: 'PUT', body: payload, token }),
+  generateGuideAnswers: (questions, token) =>
+    request('/api/guides/generateAnswers', { method: 'POST', body: { questions }, token }),
 
   getSessions: (token) => request('/api/sessions', { token }),
   getSession: (id, token) => request(`/api/sessions/${id}`, { token }),

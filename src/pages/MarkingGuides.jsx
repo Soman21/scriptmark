@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sparkles, Plus, Trash2, ArrowLeft, FileUp, Loader2 } from 'lucide-react'
+import { Sparkles, Plus, Trash2, ArrowLeft, FileUp, Loader2, Eye, X } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -76,6 +76,12 @@ export default function MarkingGuides() {
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [parsingDoc, setParsingDoc] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const [previewText, setPreviewText] = useState('')
+  const [showPreview, setShowPreview] = useState(false)
+  const [generatingAnswers, setGeneratingAnswers] = useState(false)
 
   const totalMarks = groups.reduce(
     (sum, g) => sum + g.parts.reduce((pSum, p) => pSum + Number(p.marks || 0), 0),
@@ -208,13 +214,17 @@ export default function MarkingGuides() {
     )
   }
 
-  async function handleParseDocument(e) {
-    const file = e.target.files?.[0]
+  async function handleParseDocument(file) {
     if (!file) return
 
     setParsingDoc(true)
     setError('')
     setSuccessMsg('')
+    setUploadedFile(file)
+    setPreviewText('')
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(file.type === 'application/pdf' ? URL.createObjectURL(file) : null)
+
     try {
       const formData = new FormData()
       formData.append('document', file)
@@ -230,12 +240,74 @@ export default function MarkingGuides() {
       if (!title.trim() && data.title) setTitle(data.title)
       const orderedQuestions = data.questions.map((q, i) => ({ ...q, order: i }))
       setGroups(groupsFromQuestions(orderedQuestions))
-      setSuccessMsg(`Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document. Check everything below before saving.`)
+      setPreviewText(data.previewText || '')
+
+      const blankCount = orderedQuestions.filter((q) => !q.modelAnswer || !q.modelAnswer.trim()).length
+      const summary = `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document.`
+      setSuccessMsg(
+        blankCount > 0
+          ? `${summary} ${blankCount} of them had no answer in the document, use Generate Answers with AI below to fill those in.`
+          : `${summary} Check everything below before saving.`
+      )
     } catch (err) {
       setError(err.message)
     } finally {
       setParsingDoc(false)
-      e.target.value = ''
+    }
+  }
+
+  function handleFileInputChange(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    handleParseDocument(file)
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    handleParseDocument(file)
+  }
+
+  function getBlankAnswerParts() {
+    const blanks = []
+    groups.forEach((g) => {
+      g.parts.forEach((p, pi) => {
+        if (!p.modelAnswer || !p.modelAnswer.trim()) {
+          blanks.push({
+            groupId: g.id,
+            partId: p.id,
+            number: g.number,
+            subLabel: g.parts.length > 1 ? letterLabel(pi) : null,
+            text: p.text,
+            maxMarks: p.marks,
+          })
+        }
+      })
+    })
+    return blanks
+  }
+
+  async function handleGenerateAnswers() {
+    const blanks = getBlankAnswerParts()
+    if (blanks.length === 0) return
+
+    setGeneratingAnswers(true)
+    setError('')
+    try {
+      const payload = blanks.map((b, i) => ({ index: i, number: b.number, subLabel: b.subLabel, text: b.text, maxMarks: b.maxMarks }))
+      const result = await api.generateGuideAnswers(payload, token)
+      result.answers.forEach((a) => {
+        const target = blanks[a.index]
+        if (!target) return
+        updatePart(target.groupId, target.partId, 'modelAnswer', a.modelAnswer)
+        updatePart(target.groupId, target.partId, 'keywords', a.keywords)
+      })
+      setSuccessMsg(`Generated ${result.answers.length} model answer${result.answers.length !== 1 ? 's' : ''} with AI. Please review each one below.`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setGeneratingAnswers(false)
     }
   }
 
@@ -439,27 +511,94 @@ export default function MarkingGuides() {
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <p className="text-sm font-semibold text-slate-900">Upload an existing marking scheme</p>
             <p className="text-xs text-slate-500 mt-1">
-              Have a Word or PDF document with your questions and model answers already written out? Upload it and
-              the fields below will be filled in for you to review and adjust before saving.
+              Have a Word or PDF document with your questions, printed or already answered? Upload it and the fields
+              below will be filled in for you to review and adjust before saving.
             </p>
-            <label
-              className={`mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-4 py-2.5 text-sm transition ${
-                parsingDoc
-                  ? 'border-slate-200 text-slate-400'
-                  : 'border-slate-300 text-slate-600 hover:border-sky-400 hover:text-sky-600'
+
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragOver(true)
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              className={`mt-3 rounded-xl border-2 border-dashed p-5 text-center transition ${
+                dragOver ? 'border-sky-400 bg-sky-50' : 'border-slate-300 bg-white'
               }`}
             >
-              {parsingDoc ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />}
-              {parsingDoc ? 'Reading document...' : 'Choose PDF or Word file'}
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                onChange={handleParseDocument}
-                disabled={parsingDoc}
-                className="hidden"
-              />
-            </label>
+              {parsingDoc ? (
+                <Loader2 size={20} className="mx-auto mb-2 animate-spin text-sky-500" />
+              ) : (
+                <FileUp size={20} className="mx-auto mb-2 text-slate-400" />
+              )}
+              <p className="text-sm font-medium text-slate-700">
+                {parsingDoc ? 'Reading document...' : 'Drag a PDF or Word file here'}
+              </p>
+              {!parsingDoc && (
+                <label className="mt-1 inline-block cursor-pointer text-xs font-medium text-sky-600 hover:text-sky-700">
+                  or click to browse
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+
+            {uploadedFile && !parsingDoc && (
+              <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+                <span className="truncate text-sm text-slate-600">{uploadedFile.name}</span>
+                <button
+                  onClick={() => setShowPreview(true)}
+                  className="flex shrink-0 items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                >
+                  <Eye size={14} /> Preview
+                </button>
+              </div>
+            )}
+
+            {getBlankAnswerParts().length > 0 && (
+              <div className="mt-3 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+                <span className="text-xs text-amber-700">
+                  {getBlankAnswerParts().length} question{getBlankAnswerParts().length !== 1 ? 's have' : ' has'} no answer yet.
+                </span>
+                <button
+                  onClick={handleGenerateAnswers}
+                  disabled={generatingAnswers}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-400 disabled:opacity-60"
+                >
+                  {generatingAnswers ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  {generatingAnswers ? 'Generating...' : 'Generate Answers with AI'}
+                </button>
+              </div>
+            )}
           </div>
+
+          {showPreview && uploadedFile && (
+            <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/80 p-4 md:p-10">
+              <div className="flex items-center justify-between pb-3">
+                <span className="truncate text-sm font-medium text-white">{uploadedFile.name}</span>
+                <button onClick={() => setShowPreview(false)} className="rounded-full p-1.5 text-white hover:bg-white/10">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto rounded-xl bg-white">
+                {previewUrl ? (
+                  <iframe src={previewUrl} title="Document preview" className="h-full w-full" />
+                ) : (
+                  <div className="p-6">
+                    <p className="mb-3 text-xs text-slate-500">
+                      Word documents cannot be rendered in the browser directly, this is the text ScriptMark actually
+                      read from it.
+                    </p>
+                    <pre className="whitespace-pre-wrap text-sm text-slate-700">{previewText || 'No preview text available.'}</pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Subject / Exam Title</label>
