@@ -13,6 +13,9 @@ import {
   Archive as ArchiveIcon,
   Sparkles,
   ListChecks,
+  ListTodo,
+  ClipboardCheck,
+  Users,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -21,6 +24,9 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
   { to: '/scan', label: 'Scan Scripts', icon: ScanLine, restrictedTo: ['LECTURER', 'ADMIN'] },
   { to: '/marking', label: 'Marking Progress', icon: ListChecks },
+  { to: '/my-queue', label: 'My Queue', icon: ListTodo },
+  { to: '/claim-questions', label: 'Claim Questions', icon: ClipboardCheck },
+  { to: '/coordinator', label: 'Coordinator Overview', icon: Users },
   { to: '/guides', label: 'Marking Guides', icon: BookOpen, restrictedTo: ['LECTURER', 'ADMIN'] },
   { to: '/results', label: 'Results', icon: CheckSquare },
   { to: '/archive', label: 'Export Results', icon: ArchiveIcon },

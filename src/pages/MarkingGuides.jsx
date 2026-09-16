@@ -19,10 +19,12 @@ function letterLabel(index) {
 
 const blankPart = () => ({
   id: Date.now() + Math.random(),
+  questionId: null,
   text: '',
   modelAnswer: '',
   keywords: '',
   marks: 0,
+  assignedMarkerId: '',
 })
 
 const blankGroup = (number) => ({
@@ -45,10 +47,12 @@ function groupsFromQuestions(questions) {
       .sort((a, b) => a.order - b.order)
       .map((q) => ({
         id: Date.now() + Math.random(),
+        questionId: q.id || null,
         text: q.text,
         modelAnswer: q.modelAnswer,
         keywords: q.keywords,
         marks: q.maxMarks,
+        assignedMarkerId: q.assignedMarkerId || '',
       })),
   }))
 }
@@ -63,6 +67,12 @@ export default function MarkingGuides() {
   const [newSessionTitle, setNewSessionTitle] = useState('')
   const [newSessionDept, setNewSessionDept] = useState('')
   const [newSessionFaculty, setNewSessionFaculty] = useState('')
+  const [newCourseCode, setNewCourseCode] = useState('')
+  const [newAcademicSession, setNewAcademicSession] = useState('')
+  const [newSemester, setNewSemester] = useState('')
+  const [newAutoAccept, setNewAutoAccept] = useState(true)
+  const [joinCodeInput, setJoinCodeInput] = useState('')
+  const [joiningSession, setJoiningSession] = useState(false)
   const [currentSession, setCurrentSession] = useState(null)
   const [loadingSession, setLoadingSession] = useState(false)
 
@@ -82,6 +92,7 @@ export default function MarkingGuides() {
   const [previewText, setPreviewText] = useState('')
   const [showPreview, setShowPreview] = useState(false)
   const [generatingAnswers, setGeneratingAnswers] = useState(false)
+  const [mergeMode, setMergeMode] = useState(false)
 
   const totalMarks = groups.reduce(
     (sum, g) => sum + g.parts.reduce((pSum, p) => pSum + Number(p.marks || 0), 0),
@@ -162,6 +173,23 @@ export default function MarkingGuides() {
     enterSession(session)
   }
 
+  async function handleJoinSession() {
+    if (!joinCodeInput.trim()) {
+      setError('Enter the join code a Coordinator shared with you.')
+      return
+    }
+    setJoiningSession(true)
+    setError('')
+    try {
+      const session = await api.joinSession(joinCodeInput.trim(), token)
+      await loadSessions()
+      enterSession(session)
+    } catch (err) {
+      setError(err.message)
+      setJoiningSession(false)
+    }
+  }
+
   async function handleStartNewSession() {
     if (!newSessionTitle.trim()) {
       setError('Give the new session a course/exam title.')
@@ -171,7 +199,15 @@ export default function MarkingGuides() {
     setError('')
     try {
       const session = await api.createSession(
-        { title: newSessionTitle.trim(), department: newSessionDept.trim(), faculty: newSessionFaculty.trim() },
+        {
+          title: newSessionTitle.trim(),
+          department: newSessionDept.trim(),
+          faculty: newSessionFaculty.trim(),
+          courseCode: newCourseCode.trim(),
+          academicSession: newAcademicSession.trim(),
+          semester: newSemester.trim(),
+          autoAcceptHighConfidence: newAutoAccept,
+        },
         token
       )
       await loadSessions()
@@ -214,6 +250,75 @@ export default function MarkingGuides() {
     )
   }
 
+  // Matches incoming parsed questions onto the groups already in the editor,
+  // by question number (and position within it for subparts), and only
+  // fills in whatever's missing rather than replacing everything. Used when
+  // the question paper and answer scheme are two separate uploaded files.
+  function mergeQuestionsIntoGroups(newQuestions) {
+    const incomingByNumber = {}
+    newQuestions.forEach((q) => {
+      if (!incomingByNumber[q.number]) incomingByNumber[q.number] = []
+      incomingByNumber[q.number].push(q)
+    })
+
+    setGroups((prevGroups) => {
+      const nextGroups = prevGroups.map((g) => ({ ...g, parts: [...g.parts] }))
+      const matchedNumbers = new Set()
+
+      nextGroups.forEach((g) => {
+        const incoming = incomingByNumber[g.number]
+        if (!incoming) return
+        matchedNumbers.add(g.number)
+
+        g.parts = g.parts.map((p, i) => {
+          const match = incoming[i]
+          if (!match) return p
+          return {
+            ...p,
+            text: p.text.trim() ? p.text : match.text || p.text,
+            modelAnswer: match.modelAnswer?.trim() ? match.modelAnswer : p.modelAnswer,
+            keywords: match.keywords?.trim() ? match.keywords : p.keywords,
+            marks: p.marks || match.maxMarks || 0,
+          }
+        })
+
+        // The answer scheme had more subparts than the question paper did
+        // for this number, append the extras rather than dropping them.
+        for (let i = g.parts.length; i < incoming.length; i++) {
+          g.parts.push({
+            id: Date.now() + Math.random(),
+            questionId: null,
+            text: incoming[i].text || '',
+            modelAnswer: incoming[i].modelAnswer || '',
+            keywords: incoming[i].keywords || '',
+            marks: incoming[i].maxMarks || 0,
+            assignedMarkerId: '',
+          })
+        }
+      })
+
+      // Any incoming question number with no matching existing group at all
+      // becomes a new group, rather than being silently lost.
+      const extraGroups = Object.keys(incomingByNumber)
+        .filter((num) => !matchedNumbers.has(num))
+        .map((num) => ({
+          id: Date.now() + Math.random(),
+          number: num,
+          parts: incomingByNumber[num].map((q) => ({
+            id: Date.now() + Math.random(),
+            questionId: null,
+            text: q.text || '',
+            modelAnswer: q.modelAnswer || '',
+            keywords: q.keywords || '',
+            marks: q.maxMarks || 0,
+            assignedMarkerId: '',
+          })),
+        }))
+
+      return [...nextGroups, ...extraGroups]
+    })
+  }
+
   async function handleParseDocument(file) {
     if (!file) return
 
@@ -239,13 +344,20 @@ export default function MarkingGuides() {
 
       if (!title.trim() && data.title) setTitle(data.title)
       const orderedQuestions = data.questions.map((q, i) => ({ ...q, order: i }))
-      setGroups(groupsFromQuestions(orderedQuestions))
+
+      if (mergeMode) {
+        mergeQuestionsIntoGroups(orderedQuestions)
+      } else {
+        setGroups(groupsFromQuestions(orderedQuestions))
+      }
       setPreviewText(data.previewText || '')
 
       const blankCount = orderedQuestions.filter((q) => !q.modelAnswer || !q.modelAnswer.trim()).length
-      const summary = `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document.`
+      const summary = mergeMode
+        ? `Merged ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from this document into what you already had.`
+        : `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document.`
       setSuccessMsg(
-        blankCount > 0
+        blankCount > 0 && !mergeMode
           ? `${summary} ${blankCount} of them had no answer in the document, use Generate Answers with AI below to fill those in.`
           : `${summary} Check everything below before saving.`
       )
@@ -254,6 +366,14 @@ export default function MarkingGuides() {
     } finally {
       setParsingDoc(false)
     }
+  }
+
+  function handleRemoveUploadedFile() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setUploadedFile(null)
+    setPreviewUrl(null)
+    setPreviewText('')
+    setShowPreview(false)
   }
 
   function handleFileInputChange(e) {
@@ -428,6 +548,21 @@ export default function MarkingGuides() {
                 <SecondaryButton onClick={() => setShowNewSessionForm(true)} className="w-full justify-center">
                   <Plus size={16} /> Start New Session
                 </SecondaryButton>
+
+                <div className="mt-5">
+                  <label className="block text-xs font-medium text-slate-500">Join a session with a code</label>
+                  <div className="mt-1.5 flex gap-2">
+                    <input
+                      value={joinCodeInput}
+                      onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                      placeholder="e.g. K3M7QZ"
+                      className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm uppercase tracking-widest outline-none focus:ring-2 focus:ring-sky-400"
+                    />
+                    <SecondaryButton onClick={handleJoinSession} disabled={joiningSession}>
+                      {joiningSession ? 'Joining...' : 'Join'}
+                    </SecondaryButton>
+                  </div>
+                </div>
               </>
             ) : (
               <>
@@ -452,6 +587,46 @@ export default function MarkingGuides() {
                   placeholder="Physical Sciences"
                   className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
                 />
+
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500">Course Code</label>
+                    <input
+                      value={newCourseCode}
+                      onChange={(e) => setNewCourseCode(e.target.value)}
+                      placeholder="CSC401"
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500">Academic Session</label>
+                    <input
+                      value={newAcademicSession}
+                      onChange={(e) => setNewAcademicSession(e.target.value)}
+                      placeholder="2025/2026"
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500">Semester</label>
+                    <input
+                      value={newSemester}
+                      onChange={(e) => setNewSemester(e.target.value)}
+                      placeholder="First"
+                      className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                    />
+                  </div>
+                </div>
+
+                <p className="mt-4 text-xs text-slate-400">
+                  Other markers join this session themselves using a code, shown to you right after you create it.
+                </p>
+
+                <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked={newAutoAccept} onChange={(e) => setNewAutoAccept(e.target.checked)} />
+                  Auto-accept high-confidence AI scores, so lecturers only review flagged or uncertain cases
+                </label>
+
                 <PrimaryButton
                   onClick={handleStartNewSession}
                   disabled={loadingSession}
@@ -508,12 +683,41 @@ export default function MarkingGuides() {
             </div>
           )}
 
+          {currentSession?.joinCode && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50 p-4">
+              <div>
+                <p className="text-xs font-medium text-sky-700">Session join code</p>
+                <p className="text-lg font-bold tracking-widest text-sky-900">{currentSession.joinCode}</p>
+              </div>
+              <p className="max-w-xs text-xs text-sky-700">
+                Share this with other markers. Once they join, they assign themselves questions from the Claim
+                Questions page.
+              </p>
+            </div>
+          )}
+
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <p className="text-sm font-semibold text-slate-900">Upload an existing marking scheme</p>
             <p className="text-xs text-slate-500 mt-1">
               Have a Word or PDF document with your questions, printed or already answered? Upload it and the fields
               below will be filled in for you to review and adjust before saving.
             </p>
+
+            {groups.some((g) => g.parts.some((p) => p.text.trim())) && (
+              <label className="mt-2 flex items-start gap-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={mergeMode}
+                  onChange={(e) => setMergeMode(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  Merge with what's already below, instead of replacing it. Use this when the question paper and
+                  answer scheme are two separate files, upload the question paper first, then the answer scheme
+                  with this ticked.
+                </span>
+              </label>
+            )}
 
             <div
               onDragOver={(e) => {
@@ -550,12 +754,20 @@ export default function MarkingGuides() {
             {uploadedFile && !parsingDoc && (
               <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
                 <span className="truncate text-sm text-slate-600">{uploadedFile.name}</span>
-                <button
-                  onClick={() => setShowPreview(true)}
-                  className="flex shrink-0 items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
-                >
-                  <Eye size={14} /> Preview
-                </button>
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    onClick={() => setShowPreview(true)}
+                    className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                  >
+                    <Eye size={14} /> Preview
+                  </button>
+                  <button
+                    onClick={handleRemoveUploadedFile}
+                    className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
+                  >
+                    <Trash2 size={14} /> Remove
+                  </button>
+                </div>
               </div>
             )}
 
@@ -668,8 +880,14 @@ export default function MarkingGuides() {
                         rows={2}
                         value={part.text}
                         onChange={(e) => updatePart(group.id, part.id, 'text', e.target.value)}
+                        ref={(el) => {
+                          if (el) {
+                            el.style.height = 'auto'
+                            el.style.height = `${el.scrollHeight}px`
+                          }
+                        }}
                         placeholder="Enter the question prompt here..."
-                        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                        className="mt-1.5 w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
                       />
 
                       <div className="mt-3 flex items-center justify-between">
@@ -683,11 +901,17 @@ export default function MarkingGuides() {
                         </button>
                       </div>
                       <textarea
-                        rows={2}
+                        rows={4}
                         value={part.modelAnswer}
                         onChange={(e) => updatePart(group.id, part.id, 'modelAnswer', e.target.value)}
+                        ref={(el) => {
+                          if (el) {
+                            el.style.height = 'auto'
+                            el.style.height = `${el.scrollHeight}px`
+                          }
+                        }}
                         placeholder="Paste the ideal response here... (formulas are fine as plain text, e.g. F = ma)"
-                        className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                        className="mt-1.5 w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
                       />
 
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-3">
@@ -710,6 +934,13 @@ export default function MarkingGuides() {
                           />
                         </div>
                       </div>
+
+                      {currentGuideId && (
+                        <p className="mt-3 text-xs text-slate-400">
+                          Markers assign themselves to questions from the Claim Questions page, once they've joined
+                          this session.
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

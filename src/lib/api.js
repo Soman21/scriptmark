@@ -36,6 +36,20 @@ export const api = {
   getSessions: (token) => request('/api/sessions', { token }),
   getSession: (id, token) => request(`/api/sessions/${id}`, { token }),
   createSession: (payload, token) => request('/api/sessions', { method: 'POST', body: payload, token }),
+  getLecturers: (token) => request('/api/sessions/lecturers', { token }),
+  getSessionMarkers: (sessionId, token) => request(`/api/sessions/${sessionId}/markers`, { token }),
+  updateSessionMarkers: (sessionId, markerUserIds, token) =>
+    request(`/api/sessions/${sessionId}/markers`, { method: 'PUT', body: { markerUserIds }, token }),
+  joinSession: (code, token) => request('/api/sessions/join', { method: 'POST', body: { code }, token }),
+  getClaimStatus: (guideId, token) => request(`/api/guides/${guideId}/claimStatus`, { token }),
+  claimQuestion: (guideId, questionId, token, targetUserId) =>
+    request(`/api/guides/${guideId}/questions/${questionId}/claim`, {
+      method: 'PUT',
+      body: targetUserId === undefined ? {} : { targetUserId },
+      token,
+    }),
+  getMyQueue: (sessionId, token) => request(`/api/results/myQueue?sessionId=${sessionId}`, { token }),
+  getCoordinatorOverview: (sessionId, token) => request(`/api/sessions/${sessionId}/coordinatorOverview`, { token }),
   updateSession: (id, payload, token) => request(`/api/sessions/${id}`, { method: 'PUT', body: payload, token }),
   getSessionScripts: (sessionId, token) => request(`/api/sessions/${sessionId}/scripts`, { token }),
   getScript: (scriptId, token) => request(`/api/sessions/scripts/${scriptId}`, { token }),

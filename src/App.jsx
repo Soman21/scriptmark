@@ -7,6 +7,9 @@ import ScanScripts from './pages/ScanScripts.jsx'
 import MarkingGuides from './pages/MarkingGuides.jsx'
 import Results from './pages/Results.jsx'
 import MarkingProgress from './pages/MarkingProgress.jsx'
+import MyQueue from './pages/MyQueue.jsx'
+import ClaimQuestions from './pages/ClaimQuestions.jsx'
+import CoordinatorDashboard from './pages/CoordinatorDashboard.jsx'
 import Analytics from './pages/Analytics.jsx'
 import Archive from './pages/Archive.jsx'
 import AiAssistant from './pages/AiAssistant.jsx'
@@ -57,6 +60,9 @@ export default function App() {
         <Route path="/guides" element={<Protected><MarkingGuides /></Protected>} />
         <Route path="/results" element={<Protected><Results /></Protected>} />
         <Route path="/marking" element={<Protected><MarkingProgress /></Protected>} />
+        <Route path="/my-queue" element={<Protected><MyQueue /></Protected>} />
+        <Route path="/claim-questions" element={<Protected><ClaimQuestions /></Protected>} />
+        <Route path="/coordinator" element={<Protected><CoordinatorDashboard /></Protected>} />
         <Route path="/analytics" element={<Protected><Analytics /></Protected>} />
         <Route path="/archive" element={<Protected><Archive /></Protected>} />
         <Route path="/assistant" element={<Protected><AiAssistant /></Protected>} />
