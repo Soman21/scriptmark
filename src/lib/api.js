@@ -41,6 +41,19 @@ export const api = {
   updateSessionMarkers: (sessionId, markerUserIds, token) =>
     request(`/api/sessions/${sessionId}/markers`, { method: 'PUT', body: { markerUserIds }, token }),
   joinSession: (code, token) => request('/api/sessions/join', { method: 'POST', body: { code }, token }),
+  getBrowsableSessions: (token) => request('/api/sessions/browsable', { token }),
+  requestAccess: (sessionId, token) => request(`/api/sessions/${sessionId}/requestAccess`, { method: 'POST', token }),
+  getPendingRequests: (sessionId, token) => request(`/api/sessions/${sessionId}/pendingRequests`, { token }),
+  approveMarker: (sessionId, userId, token) =>
+    request(`/api/sessions/${sessionId}/markers/${userId}/approve`, { method: 'PUT', token }),
+  denyMarker: (sessionId, userId, token) =>
+    request(`/api/sessions/${sessionId}/markers/${userId}/deny`, { method: 'PUT', token }),
+  updateAccessLevel: (sessionId, userId, accessLevel, token) =>
+    request(`/api/sessions/${sessionId}/markers/${userId}/accessLevel`, { method: 'PUT', body: { accessLevel }, token }),
+  revokeMarker: (sessionId, userId, token) =>
+    request(`/api/sessions/${sessionId}/markers/${userId}`, { method: 'DELETE', token }),
+  inviteByEmail: (sessionId, email, token) =>
+    request(`/api/sessions/${sessionId}/inviteByEmail`, { method: 'POST', body: { email }, token }),
   getClaimStatus: (guideId, token) => request(`/api/guides/${guideId}/claimStatus`, { token }),
   claimQuestion: (guideId, questionId, token, targetUserId) =>
     request(`/api/guides/${guideId}/questions/${questionId}/claim`, {

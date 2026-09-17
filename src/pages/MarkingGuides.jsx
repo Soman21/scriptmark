@@ -73,6 +73,14 @@ export default function MarkingGuides() {
   const [newAutoAccept, setNewAutoAccept] = useState(true)
   const [joinCodeInput, setJoinCodeInput] = useState('')
   const [joiningSession, setJoiningSession] = useState(false)
+  const [showBrowse, setShowBrowse] = useState(false)
+  const [browsableSessions, setBrowsableSessions] = useState([])
+  const [loadingBrowsable, setLoadingBrowsable] = useState(false)
+  const [requestingId, setRequestingId] = useState(null)
+  const [requestSentIds, setRequestSentIds] = useState([])
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [invitingEmail, setInvitingEmail] = useState(false)
+  const [inviteSent, setInviteSent] = useState(false)
   const [currentSession, setCurrentSession] = useState(null)
   const [loadingSession, setLoadingSession] = useState(false)
 
@@ -187,6 +195,51 @@ export default function MarkingGuides() {
     } catch (err) {
       setError(err.message)
       setJoiningSession(false)
+    }
+  }
+
+  async function toggleBrowse() {
+    const next = !showBrowse
+    setShowBrowse(next)
+    if (next && browsableSessions.length === 0) {
+      setLoadingBrowsable(true)
+      try {
+        const sessions = await api.getBrowsableSessions(token)
+        setBrowsableSessions(sessions)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoadingBrowsable(false)
+      }
+    }
+  }
+
+  async function handleRequestAccess(sessionId) {
+    setRequestingId(sessionId)
+    setError('')
+    try {
+      await api.requestAccess(sessionId, token)
+      setRequestSentIds((prev) => [...prev, sessionId])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRequestingId(null)
+    }
+  }
+
+  async function handleInviteByEmail() {
+    if (!inviteEmail.trim() || !currentSession) return
+    setInvitingEmail(true)
+    setError('')
+    try {
+      await api.inviteByEmail(currentSession.id, inviteEmail.trim(), token)
+      setInviteEmail('')
+      setInviteSent(true)
+      setTimeout(() => setInviteSent(false), 4000)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setInvitingEmail(false)
     }
   }
 
@@ -563,6 +616,44 @@ export default function MarkingGuides() {
                     </SecondaryButton>
                   </div>
                 </div>
+
+                <button onClick={toggleBrowse} className="mt-3 text-xs font-medium text-sky-600 hover:text-sky-700">
+                  {showBrowse ? 'Hide sessions' : "Don't have a code? Browse sessions to request access"}
+                </button>
+
+                {showBrowse && (
+                  <div className="mt-2 max-h-56 space-y-1.5 overflow-y-auto rounded-lg border border-slate-200 p-2">
+                    {loadingBrowsable ? (
+                      <p className="px-2 py-1.5 text-xs text-slate-400">Loading sessions...</p>
+                    ) : browsableSessions.length === 0 ? (
+                      <p className="px-2 py-1.5 text-xs text-slate-400">
+                        No other sessions available to request right now.
+                      </p>
+                    ) : (
+                      browsableSessions.map((s) => (
+                        <div key={s.id} className="flex items-center justify-between rounded-lg px-2 py-2 hover:bg-slate-50">
+                          <div>
+                            <p className="text-sm text-slate-800">{s.title}</p>
+                            <p className="text-xs text-slate-400">
+                              {s.courseCode ? `${s.courseCode}, ` : ''}by {s.createdBy?.name || 'Unknown'}
+                            </p>
+                          </div>
+                          {requestSentIds.includes(s.id) ? (
+                            <span className="text-xs font-medium text-emerald-600">Requested</span>
+                          ) : (
+                            <button
+                              onClick={() => handleRequestAccess(s.id)}
+                              disabled={requestingId === s.id}
+                              className="shrink-0 rounded-lg border border-sky-200 px-2.5 py-1 text-xs font-medium text-sky-600 hover:bg-sky-50 disabled:opacity-60"
+                            >
+                              {requestingId === s.id ? 'Sending...' : 'Request Access'}
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -684,15 +775,31 @@ export default function MarkingGuides() {
           )}
 
           {currentSession?.joinCode && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50 p-4">
-              <div>
-                <p className="text-xs font-medium text-sky-700">Session join code</p>
-                <p className="text-lg font-bold tracking-widest text-sky-900">{currentSession.joinCode}</p>
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-medium text-sky-700">Session join code</p>
+                  <p className="text-lg font-bold tracking-widest text-sky-900">{currentSession.joinCode}</p>
+                </div>
+                <p className="max-w-xs text-xs text-sky-700">
+                  Share this with other markers, or invite someone directly by email below. Once they join, they
+                  assign themselves questions from the Claim Questions page.
+                </p>
               </div>
-              <p className="max-w-xs text-xs text-sky-700">
-                Share this with other markers. Once they join, they assign themselves questions from the Claim
-                Questions page.
-              </p>
+
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="colleague@university.edu"
+                  className="flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                />
+                <SecondaryButton onClick={handleInviteByEmail} disabled={invitingEmail || !inviteEmail.trim()}>
+                  {invitingEmail ? 'Sending...' : 'Invite by Email'}
+                </SecondaryButton>
+              </div>
+              {inviteSent && <p className="mt-1.5 text-xs font-medium text-emerald-700">Invite sent.</p>}
             </div>
           )}
 
