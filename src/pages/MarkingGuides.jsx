@@ -93,14 +93,21 @@ export default function MarkingGuides() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
-  const [parsingDoc, setParsingDoc] = useState(false)
-  const [dragOver, setDragOver] = useState(false)
-  const [uploadedFile, setUploadedFile] = useState(null)
-  const [previewUrl, setPreviewUrl] = useState(null)
-  const [previewText, setPreviewText] = useState('')
-  const [showPreview, setShowPreview] = useState(false)
+  const [autoGenerateOnParse, setAutoGenerateOnParse] = useState(false)
   const [generatingAnswers, setGeneratingAnswers] = useState(false)
-  const [mergeMode, setMergeMode] = useState(false)
+  const [pendingAutoGenerate, setPendingAutoGenerate] = useState(false)
+  const [questionPaperFile, setQuestionPaperFile] = useState(null)
+  const [questionPaperPreviewUrl, setQuestionPaperPreviewUrl] = useState(null)
+  const [questionPaperPreviewText, setQuestionPaperPreviewText] = useState('')
+  const [showQuestionPaperPreview, setShowQuestionPaperPreview] = useState(false)
+  const [dragOverPaper, setDragOverPaper] = useState(false)
+  const [parsingPaper, setParsingPaper] = useState(false)
+  const [guideFile, setGuideFile] = useState(null)
+  const [guidePreviewUrl, setGuidePreviewUrl] = useState(null)
+  const [guidePreviewText, setGuidePreviewText] = useState('')
+  const [showGuidePreview, setShowGuidePreview] = useState(false)
+  const [dragOverGuide, setDragOverGuide] = useState(false)
+  const [parsingGuideDoc, setParsingGuideDoc] = useState(false)
 
   const totalMarks = groups.reduce(
     (sum, g) => sum + g.parts.reduce((pSum, p) => pSum + Number(p.marks || 0), 0),
@@ -372,16 +379,16 @@ export default function MarkingGuides() {
     })
   }
 
-  async function handleParseDocument(file) {
+  async function handleParseQuestionPaper(file) {
     if (!file) return
 
-    setParsingDoc(true)
+    setParsingPaper(true)
     setError('')
     setSuccessMsg('')
-    setUploadedFile(file)
-    setPreviewText('')
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(file.type === 'application/pdf' ? URL.createObjectURL(file) : null)
+    setQuestionPaperFile(file)
+    setQuestionPaperPreviewText('')
+    if (questionPaperPreviewUrl) URL.revokeObjectURL(questionPaperPreviewUrl)
+    setQuestionPaperPreviewUrl(file.type === 'application/pdf' ? URL.createObjectURL(file) : null)
 
     try {
       const formData = new FormData()
@@ -398,48 +405,120 @@ export default function MarkingGuides() {
       if (!title.trim() && data.title) setTitle(data.title)
       const orderedQuestions = data.questions.map((q, i) => ({ ...q, order: i }))
 
-      if (mergeMode) {
-        mergeQuestionsIntoGroups(orderedQuestions)
-      } else {
-        setGroups(groupsFromQuestions(orderedQuestions))
-      }
-      setPreviewText(data.previewText || '')
+      // Question Paper always sets the structure fresh, this is the source
+      // of truth for question text and marks, never merged with anything.
+      setGroups(groupsFromQuestions(orderedQuestions))
+      setQuestionPaperPreviewText(data.previewText || '')
 
       const blankCount = orderedQuestions.filter((q) => !q.modelAnswer || !q.modelAnswer.trim()).length
-      const summary = mergeMode
-        ? `Merged ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from this document into what you already had.`
-        : `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document.`
+      if (autoGenerateOnParse && blankCount > 0) {
+        setPendingAutoGenerate(true) // picked up by the effect below, once groups has actually updated
+        setSuccessMsg(`Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''}. Generating answers with AI...`)
+      } else {
+        setSuccessMsg(
+          blankCount > 0
+            ? `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''}. ${blankCount} have no answer yet, upload a marking guide below or use Generate Answers with AI.`
+            : `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document. Check everything below before saving.`
+        )
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setParsingPaper(false)
+    }
+  }
+
+  // Runs once, right after a Question Paper parse that had "auto-generate"
+  // checked, so it reads the FRESH groups state rather than a stale closure
+  // from before setGroups above took effect.
+  useEffect(() => {
+    if (pendingAutoGenerate) {
+      setPendingAutoGenerate(false)
+      handleGenerateAnswers()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, pendingAutoGenerate])
+
+  async function handleParseMarkingGuideDoc(file) {
+    if (!file) return
+
+    setParsingGuideDoc(true)
+    setError('')
+    setSuccessMsg('')
+    setGuideFile(file)
+    setGuidePreviewText('')
+    if (guidePreviewUrl) URL.revokeObjectURL(guidePreviewUrl)
+    setGuidePreviewUrl(file.type === 'application/pdf' ? URL.createObjectURL(file) : null)
+
+    try {
+      const formData = new FormData()
+      formData.append('document', file)
+
+      const res = await fetch(`${API_BASE}/api/guides/parse`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Could not parse this document.')
+
+      const orderedQuestions = data.questions.map((q, i) => ({ ...q, order: i }))
+
+      // Marking Guide/Answers ALWAYS merges into whatever's already there,
+      // never replaces, so it can never wipe out question text from the
+      // Question Paper upload.
+      mergeQuestionsIntoGroups(orderedQuestions)
+      setGuidePreviewText(data.previewText || '')
       setSuccessMsg(
-        blankCount > 0 && !mergeMode
-          ? `${summary} ${blankCount} of them had no answer in the document, use Generate Answers with AI below to fill those in.`
-          : `${summary} Check everything below before saving.`
+        `Merged ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} of answers into what you already had. Check everything below before saving.`
       )
     } catch (err) {
       setError(err.message)
     } finally {
-      setParsingDoc(false)
+      setParsingGuideDoc(false)
     }
   }
 
-  function handleRemoveUploadedFile() {
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setUploadedFile(null)
-    setPreviewUrl(null)
-    setPreviewText('')
-    setShowPreview(false)
+  function handleRemoveQuestionPaper() {
+    if (questionPaperPreviewUrl) URL.revokeObjectURL(questionPaperPreviewUrl)
+    setQuestionPaperFile(null)
+    setQuestionPaperPreviewUrl(null)
+    setQuestionPaperPreviewText('')
+    setShowQuestionPaperPreview(false)
   }
 
-  function handleFileInputChange(e) {
+  function handleRemoveGuideDoc() {
+    if (guidePreviewUrl) URL.revokeObjectURL(guidePreviewUrl)
+    setGuideFile(null)
+    setGuidePreviewUrl(null)
+    setGuidePreviewText('')
+    setShowGuidePreview(false)
+  }
+
+  function handlePaperFileInputChange(e) {
     const file = e.target.files?.[0]
     e.target.value = ''
-    handleParseDocument(file)
+    handleParseQuestionPaper(file)
   }
 
-  function handleDrop(e) {
+  function handlePaperDrop(e) {
     e.preventDefault()
-    setDragOver(false)
+    setDragOverPaper(false)
     const file = e.dataTransfer.files?.[0]
-    handleParseDocument(file)
+    handleParseQuestionPaper(file)
+  }
+
+  function handleGuideFileInputChange(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    handleParseMarkingGuideDoc(file)
+  }
+
+  function handleGuideDrop(e) {
+    e.preventDefault()
+    setDragOverGuide(false)
+    const file = e.dataTransfer.files?.[0]
+    handleParseMarkingGuideDoc(file)
   }
 
   function getBlankAnswerParts() {
@@ -804,72 +883,66 @@ export default function MarkingGuides() {
           )}
 
           <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">Upload an existing marking scheme</p>
+            <p className="text-sm font-semibold text-slate-900">1. Upload Question Paper</p>
             <p className="text-xs text-slate-500 mt-1">
-              Have a Word or PDF document with your questions, printed or already answered? Upload it and the fields
-              below will be filled in for you to review and adjust before saving.
+              The questions and marks, printed or otherwise. This always sets the question list fresh, uploading
+              here again replaces it.
             </p>
 
-            {groups.some((g) => g.parts.some((p) => p.text.trim())) && (
-              <label className="mt-2 flex items-start gap-2 text-xs text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={mergeMode}
-                  onChange={(e) => setMergeMode(e.target.checked)}
-                  className="mt-0.5"
-                />
-                <span>
-                  Merge with what's already below, instead of replacing it. Use this when the question paper and
-                  answer scheme are two separate files, upload the question paper first, then the answer scheme
-                  with this ticked.
-                </span>
-              </label>
-            )}
+            <label className="mt-2 flex items-start gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={autoGenerateOnParse}
+                onChange={(e) => setAutoGenerateOnParse(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>This paper has no answers. Generate them with AI automatically once it's parsed.</span>
+            </label>
 
             <div
               onDragOver={(e) => {
                 e.preventDefault()
-                setDragOver(true)
+                setDragOverPaper(true)
               }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
+              onDragLeave={() => setDragOverPaper(false)}
+              onDrop={handlePaperDrop}
               className={`mt-3 rounded-xl border-2 border-dashed p-5 text-center transition ${
-                dragOver ? 'border-sky-400 bg-sky-50' : 'border-slate-300 bg-white'
+                dragOverPaper ? 'border-sky-400 bg-sky-50' : 'border-slate-300 bg-white'
               }`}
             >
-              {parsingDoc ? (
+              {parsingPaper ? (
                 <Loader2 size={20} className="mx-auto mb-2 animate-spin text-sky-500" />
               ) : (
                 <FileUp size={20} className="mx-auto mb-2 text-slate-400" />
               )}
               <p className="text-sm font-medium text-slate-700">
-                {parsingDoc ? 'Reading document...' : 'Drag a PDF or Word file here'}
+                {parsingPaper ? 'Reading document...' : 'Drag the question paper here'}
               </p>
-              {!parsingDoc && (
+              {!parsingPaper && (
                 <label className="mt-1 inline-block cursor-pointer text-xs font-medium text-sky-600 hover:text-sky-700">
                   or click to browse
                   <input
                     type="file"
                     accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    onChange={handleFileInputChange}
+                    onChange={handlePaperFileInputChange}
                     className="hidden"
                   />
                 </label>
               )}
             </div>
 
-            {uploadedFile && !parsingDoc && (
+            {questionPaperFile && !parsingPaper && (
               <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
-                <span className="truncate text-sm text-slate-600">{uploadedFile.name}</span>
+                <span className="truncate text-sm text-slate-600">{questionPaperFile.name}</span>
                 <div className="flex shrink-0 items-center gap-3">
                   <button
-                    onClick={() => setShowPreview(true)}
+                    onClick={() => setShowQuestionPaperPreview(true)}
                     className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
                   >
                     <Eye size={14} /> Preview
                   </button>
                   <button
-                    onClick={handleRemoveUploadedFile}
+                    onClick={handleRemoveQuestionPaper}
                     className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
                   >
                     <Trash2 size={14} /> Remove
@@ -895,24 +968,108 @@ export default function MarkingGuides() {
             )}
           </div>
 
-          {showPreview && uploadedFile && (
+          {showQuestionPaperPreview && questionPaperFile && (
             <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/80 p-4 md:p-10">
               <div className="flex items-center justify-between pb-3">
-                <span className="truncate text-sm font-medium text-white">{uploadedFile.name}</span>
-                <button onClick={() => setShowPreview(false)} className="rounded-full p-1.5 text-white hover:bg-white/10">
+                <span className="truncate text-sm font-medium text-white">{questionPaperFile.name}</span>
+                <button onClick={() => setShowQuestionPaperPreview(false)} className="rounded-full p-1.5 text-white hover:bg-white/10">
                   <X size={20} />
                 </button>
               </div>
               <div className="flex-1 overflow-auto rounded-xl bg-white">
-                {previewUrl ? (
-                  <iframe src={previewUrl} title="Document preview" className="h-full w-full" />
+                {questionPaperPreviewUrl ? (
+                  <iframe src={questionPaperPreviewUrl} title="Question paper preview" className="h-full w-full" />
                 ) : (
                   <div className="p-6">
                     <p className="mb-3 text-xs text-slate-500">
                       Word documents cannot be rendered in the browser directly, this is the text ScriptMark actually
                       read from it.
                     </p>
-                    <pre className="whitespace-pre-wrap text-sm text-slate-700">{previewText || 'No preview text available.'}</pre>
+                    <pre className="whitespace-pre-wrap text-sm text-slate-700">{questionPaperPreviewText || 'No preview text available.'}</pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-slate-200 bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">2. Upload Marking Guide (optional)</p>
+            <p className="text-xs text-slate-500 mt-1">
+              A separate answer scheme, if you have one. This always fills in just the missing answers into what's
+              already above, it never replaces the question list.
+            </p>
+
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragOverGuide(true)
+              }}
+              onDragLeave={() => setDragOverGuide(false)}
+              onDrop={handleGuideDrop}
+              className={`mt-3 rounded-xl border-2 border-dashed p-5 text-center transition ${
+                dragOverGuide ? 'border-sky-400 bg-sky-50' : 'border-slate-300 bg-white'
+              }`}
+            >
+              {parsingGuideDoc ? (
+                <Loader2 size={20} className="mx-auto mb-2 animate-spin text-sky-500" />
+              ) : (
+                <FileUp size={20} className="mx-auto mb-2 text-slate-400" />
+              )}
+              <p className="text-sm font-medium text-slate-700">
+                {parsingGuideDoc ? 'Reading document...' : 'Drag the marking guide / answers here'}
+              </p>
+              {!parsingGuideDoc && (
+                <label className="mt-1 inline-block cursor-pointer text-xs font-medium text-sky-600 hover:text-sky-700">
+                  or click to browse
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={handleGuideFileInputChange}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+
+            {guideFile && !parsingGuideDoc && (
+              <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+                <span className="truncate text-sm text-slate-600">{guideFile.name}</span>
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    onClick={() => setShowGuidePreview(true)}
+                    className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                  >
+                    <Eye size={14} /> Preview
+                  </button>
+                  <button
+                    onClick={handleRemoveGuideDoc}
+                    className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
+                  >
+                    <Trash2 size={14} /> Remove
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {showGuidePreview && guideFile && (
+            <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/80 p-4 md:p-10">
+              <div className="flex items-center justify-between pb-3">
+                <span className="truncate text-sm font-medium text-white">{guideFile.name}</span>
+                <button onClick={() => setShowGuidePreview(false)} className="rounded-full p-1.5 text-white hover:bg-white/10">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto rounded-xl bg-white">
+                {guidePreviewUrl ? (
+                  <iframe src={guidePreviewUrl} title="Marking guide preview" className="h-full w-full" />
+                ) : (
+                  <div className="p-6">
+                    <p className="mb-3 text-xs text-slate-500">
+                      Word documents cannot be rendered in the browser directly, this is the text ScriptMark actually
+                      read from it.
+                    </p>
+                    <pre className="whitespace-pre-wrap text-sm text-slate-700">{guidePreviewText || 'No preview text available.'}</pre>
                   </div>
                 )}
               </div>

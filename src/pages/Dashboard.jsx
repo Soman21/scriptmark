@@ -83,9 +83,12 @@ export default function Dashboard() {
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Active Session</p>
                   <p className="text-xl font-bold text-slate-900 mt-1">{activeSessionTitle}</p>
                 </div>
-                <SecondaryButton onClick={() => navigate('/scan')}>
-                  Continue Scanning <ArrowRight size={14} />
-                </SecondaryButton>
+                <div className="flex items-center gap-2">
+                  <SecondaryButton onClick={() => navigate('/guides')}>Start New Session</SecondaryButton>
+                  <SecondaryButton onClick={() => navigate('/scan')}>
+                    Continue Scanning <ArrowRight size={14} />
+                  </SecondaryButton>
+                </div>
               </div>
 
               {loading ? (
