@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, CheckCircle2, Loader2, ShieldCheck, UserCheck, UserMinus, Users, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Layers, Loader2, ShieldCheck, UserCheck, UserMinus, Users, X } from 'lucide-react'
 import { Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -18,6 +18,8 @@ export default function ClaimQuestions() {
   const [error, setError] = useState('')
   const [busyQuestionId, setBusyQuestionId] = useState(null)
   const [reassigningId, setReassigningId] = useState(null)
+  const [busyGroupNumber, setBusyGroupNumber] = useState(null)
+  const [busyClaimAll, setBusyClaimAll] = useState(false)
 
   const [pendingRequests, setPendingRequests] = useState([])
   const [busyUserId, setBusyUserId] = useState(null)
@@ -82,6 +84,19 @@ export default function ClaimQuestions() {
       setError(err.message)
     } finally {
       setBusyQuestionId(null)
+    }
+  }
+
+  async function handleBulkClaim(questionIds, busySetter) {
+    busySetter(true)
+    setError('')
+    try {
+      await Promise.all(questionIds.map((id) => api.claimQuestion(guideId, id, token)))
+      await loadEverything()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      busySetter(false)
     }
   }
 
@@ -254,86 +269,126 @@ export default function ClaimQuestions() {
           <Loader2 size={16} className="animate-spin" /> Loading questions...
         </div>
       ) : (
-        <div className="space-y-3">
-          {questions.map((q) => {
-            const isMine = q.assignedMarkerId === user?.id
-            const isTaken = q.assignedMarkerId && !isMine
-            const busy = busyQuestionId === q.id
+        <div className="space-y-4">
+          {(() => {
+            const unclaimedTotal = questions.filter((q) => !q.assignedMarkerId)
+            if (unclaimedTotal.length === 0) return null
+            return (
+              <button
+                onClick={() => handleBulkClaim(unclaimedTotal.map((q) => q.id), setBusyClaimAll)}
+                disabled={busyClaimAll}
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
+              >
+                {busyClaimAll ? <Loader2 size={13} className="animate-spin" /> : <Layers size={13} />}
+                Claim All Unclaimed ({unclaimedTotal.length})
+              </button>
+            )
+          })()}
+
+          {Object.entries(
+            questions.reduce((acc, q) => {
+              if (!acc[q.number]) acc[q.number] = []
+              acc[q.number].push(q)
+              return acc
+            }, {})
+          ).map(([number, group]) => {
+            const unclaimedInGroup = group.filter((q) => !q.assignedMarkerId)
 
             return (
-              <div key={q.id} className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      Question {q.number}
-                      {q.subLabel || ''} ({q.maxMarks} marks)
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">{q.text}</p>
-                  </div>
+              <div key={number} className="space-y-2">
+                {group.length > 1 && unclaimedInGroup.length > 0 && (
+                  <button
+                    onClick={() => handleBulkClaim(unclaimedInGroup.map((q) => q.id), (v) => setBusyGroupNumber(v ? number : null))}
+                    disabled={busyGroupNumber === number}
+                    className="flex items-center gap-1.5 text-xs font-medium text-sky-600 hover:text-sky-700 disabled:opacity-60"
+                  >
+                    {busyGroupNumber === number ? <Loader2 size={12} className="animate-spin" /> : <Layers size={12} />}
+                    Claim all of Question {number} ({unclaimedInGroup.length})
+                  </button>
+                )}
 
-                  <div className="flex shrink-0 flex-col items-end gap-2">
-                    {!q.assignedMarkerId && (
-                      <button
-                        onClick={() => handleClaim(q)}
-                        disabled={busy}
-                        className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
-                      >
-                        {busy ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-                        Claim
-                      </button>
-                    )}
+                {group.map((q) => {
+                  const isMine = q.assignedMarkerId === user?.id
+                  const isTaken = q.assignedMarkerId && !isMine
+                  const busy = busyQuestionId === q.id
 
-                    {isMine && (
-                      <div className="flex items-center gap-2">
-                        <Badge tone="green">
-                          <UserCheck size={10} /> Claimed by you
-                        </Badge>
-                        <button
-                          onClick={() => handleUnclaim(q)}
-                          disabled={busy}
-                          className="text-xs text-slate-400 hover:text-rose-500"
-                        >
-                          Unclaim
-                        </button>
-                      </div>
-                    )}
+                  return (
+                    <div key={q.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            Question {q.number}
+                            {q.subLabel || ''} ({q.maxMarks} marks)
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600">{q.text}</p>
+                        </div>
 
-                    {isTaken && (
-                      <div className="flex flex-col items-end gap-1.5">
-                        <Badge tone="slate">Claimed by {q.assignedMarker?.name || 'another marker'}</Badge>
-                        {canManage && reassigningId !== q.id && (
-                          <button
-                            onClick={() => setReassigningId(q.id)}
-                            className="text-xs font-medium text-sky-600 hover:text-sky-700"
-                          >
-                            Reassign
-                          </button>
-                        )}
-                        {canManage && reassigningId === q.id && (
-                          <div className="flex items-center gap-1.5">
-                            <select
-                              onChange={(e) => handleReassign(q, e.target.value)}
-                              defaultValue=""
-                              className="rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-sky-400"
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          {!q.assignedMarkerId && (
+                            <button
+                              onClick={() => handleClaim(q)}
+                              disabled={busy}
+                              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
                             >
-                              <option value="" disabled>
-                                Choose a marker
-                              </option>
-                              {markers.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                  {m.name}
-                                </option>
-                              ))}
-                            </select>
-                            <button onClick={() => setReassigningId(null)} className="text-slate-400 hover:text-slate-600">
-                              <X size={14} />
+                              {busy ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                              Claim
                             </button>
-                          </div>
-                        )}
+                          )}
+
+                          {isMine && (
+                            <div className="flex items-center gap-2">
+                              <Badge tone="green">
+                                <UserCheck size={10} /> Claimed by you
+                              </Badge>
+                              <button
+                                onClick={() => handleUnclaim(q)}
+                                disabled={busy}
+                                className="text-xs text-slate-400 hover:text-rose-500"
+                              >
+                                Unclaim
+                              </button>
+                            </div>
+                          )}
+
+                          {isTaken && (
+                            <div className="flex flex-col items-end gap-1.5">
+                              <Badge tone="slate">Claimed by {q.assignedMarker?.name || 'another marker'}</Badge>
+                              {canManage && reassigningId !== q.id && (
+                                <button
+                                  onClick={() => setReassigningId(q.id)}
+                                  className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                                >
+                                  Reassign
+                                </button>
+                              )}
+                              {canManage && reassigningId === q.id && (
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    onChange={(e) => handleReassign(q, e.target.value)}
+                                    defaultValue=""
+                                    className="rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-sky-400"
+                                  >
+                                    <option value="" disabled>
+                                      Choose a marker
+                                    </option>
+                                    {markers.map((m) => (
+                                      <option key={m.id} value={m.id}>
+                                        {m.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button onClick={() => setReassigningId(null)} className="text-slate-400 hover:text-slate-600">
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
+                    </div>
+                  )
+                })}
               </div>
             )
           })}
