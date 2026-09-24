@@ -99,6 +99,8 @@ export default function MarkingGuides() {
   const [questionPaperFile, setQuestionPaperFile] = useState(null)
   const [questionPaperPreviewUrl, setQuestionPaperPreviewUrl] = useState(null)
   const [questionPaperPreviewText, setQuestionPaperPreviewText] = useState('')
+  const [questionPaperDocUrl, setQuestionPaperDocUrl] = useState(null)
+  const [questionPaperDocMimeType, setQuestionPaperDocMimeType] = useState(null)
   const [showQuestionPaperPreview, setShowQuestionPaperPreview] = useState(false)
   const [dragOverPaper, setDragOverPaper] = useState(false)
   const [parsingPaper, setParsingPaper] = useState(false)
@@ -151,6 +153,8 @@ export default function MarkingGuides() {
     setCurrentGuideId(guide.id)
     setTitle(guide.title)
     setGroups(groupsFromQuestions(guide.questions))
+    setQuestionPaperDocUrl(guide.questionPaperUrl || null)
+    setQuestionPaperDocMimeType(guide.questionPaperMimeType || null)
     setStage('edit')
     setError('')
     setSuccessMsg('')
@@ -409,6 +413,8 @@ export default function MarkingGuides() {
       // of truth for question text and marks, never merged with anything.
       setGroups(groupsFromQuestions(orderedQuestions))
       setQuestionPaperPreviewText(data.previewText || '')
+      setQuestionPaperDocUrl(data.documentUrl || null)
+      setQuestionPaperDocMimeType(data.documentMimeType || null)
 
       const blankCount = orderedQuestions.filter((q) => !q.modelAnswer || !q.modelAnswer.trim()).length
       if (autoGenerateOnParse && blankCount > 0) {
@@ -484,6 +490,8 @@ export default function MarkingGuides() {
     setQuestionPaperFile(null)
     setQuestionPaperPreviewUrl(null)
     setQuestionPaperPreviewText('')
+    setQuestionPaperDocUrl(null)
+    setQuestionPaperDocMimeType(null)
     setShowQuestionPaperPreview(false)
   }
 
@@ -599,10 +607,17 @@ export default function MarkingGuides() {
     setSaving(true)
     try {
       let guide
+      const payload = {
+        title,
+        questions: flatQuestions,
+        isDraft,
+        questionPaperUrl: questionPaperDocUrl,
+        questionPaperMimeType: questionPaperDocMimeType,
+      }
       if (currentGuideId) {
-        guide = await api.updateGuide(currentGuideId, { title, questions: flatQuestions, isDraft }, token)
+        guide = await api.updateGuide(currentGuideId, payload, token)
       } else {
-        guide = await api.createGuide({ title, questions: flatQuestions, isDraft }, token)
+        guide = await api.createGuide(payload, token)
         setCurrentGuideId(guide.id)
         if (currentSession) {
           await api.updateSession(currentSession.id, { guideId: guide.id }, token)

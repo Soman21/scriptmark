@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, CheckCircle2, Layers, Loader2, ShieldCheck, UserCheck, UserMinus, Users, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, FileText, Layers, Loader2, ShieldCheck, UserCheck, UserMinus, Users, X } from 'lucide-react'
 import { Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -14,6 +14,9 @@ export default function ClaimQuestions() {
   const [isCoordinator, setIsCoordinator] = useState(false)
   const [canManage, setCanManage] = useState(false)
   const [guideId, setGuideId] = useState(null)
+  const [questionPaperUrl, setQuestionPaperUrl] = useState(null)
+  const [questionPaperMimeType, setQuestionPaperMimeType] = useState(null)
+  const [showPaperPreview, setShowPaperPreview] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyQuestionId, setBusyQuestionId] = useState(null)
@@ -47,6 +50,8 @@ export default function ClaimQuestions() {
       setMarkers(status.markers)
       setIsCoordinator(status.isCoordinator)
       setCanManage(status.canManage)
+      setQuestionPaperUrl(status.questionPaperUrl || null)
+      setQuestionPaperMimeType(status.questionPaperMimeType || null)
 
       if (status.canManage) {
         api
@@ -181,6 +186,53 @@ export default function ClaimQuestions() {
         <h1 className="text-xl font-semibold text-slate-900">Claim Questions</h1>
         <p className="text-sm text-slate-500">{sessionTitle || 'Active session'}</p>
       </div>
+
+      {questionPaperUrl && (
+        <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50 p-4">
+          <div>
+            <p className="text-sm font-medium text-sky-900">Question paper, as it was printed</p>
+            <p className="text-xs text-sky-700">
+              Worth a look before claiming, the layout here is often easier to recognize than the extracted text below.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowPaperPreview(true)}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-500"
+          >
+            <FileText size={14} /> Preview
+          </button>
+        </div>
+      )}
+
+      {showPaperPreview && questionPaperUrl && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/80 p-4 md:p-10">
+          <div className="flex items-center justify-between pb-3">
+            <span className="text-sm font-medium text-white">Question Paper</span>
+            <button onClick={() => setShowPaperPreview(false)} className="rounded-full p-1.5 text-white hover:bg-white/10">
+              <X size={20} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto rounded-xl bg-white">
+            {questionPaperMimeType === 'application/pdf' ? (
+              <iframe src={questionPaperUrl} title="Question paper" className="h-full w-full" />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                <p className="text-sm text-slate-500">
+                  Word documents can't be displayed directly in the browser. Open it in its original layout instead.
+                </p>
+                <a
+                  href={questionPaperUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+                >
+                  Open the Question Paper
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">

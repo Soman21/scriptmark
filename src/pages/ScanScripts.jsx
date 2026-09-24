@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, UploadCloud, Camera, CheckCircle2, RotateCw, Loader2, AlertCircle, FilePlus2, UserPlus, X, Sparkles } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { UploadCloud, Camera, CheckCircle2, Loader2, AlertCircle, FilePlus2, UserPlus, X, Sparkles } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import BulkUploadPanel from '../components/BulkUploadPanel.jsx'
 import MultiDocUploadPanel from '../components/MultiDocUploadPanel.jsx'
-import { PrimaryButton, SecondaryButton, Badge } from '../components/ui.jsx'
+import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 
@@ -11,6 +12,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 export default function ScanScripts() {
   const { token, user } = useAuth()
+  const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
@@ -36,23 +38,17 @@ export default function ScanScripts() {
   const [scripts, setScripts] = useState([])
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
-  const [guides, setGuides] = useState([])
-  const [selectedGuideId, setSelectedGuideId] = useState('')
-  const [scoring, setScoring] = useState(false)
-  const [scoreResult, setScoreResult] = useState(null)
+  const [finishing, setFinishing] = useState(false)
 
   useEffect(() => {
     const id = localStorage.getItem('scriptmark_active_session')
     const title = localStorage.getItem('scriptmark_active_session_title')
-    const savedGuideId = localStorage.getItem('scriptmark_selected_guide')
-    if (savedGuideId) setSelectedGuideId(savedGuideId)
 
     if (id && title) {
       setSessionId(id)
       setSessionTitle(title)
       restoreProgress(id)
     }
-    loadGuides()
   }, [])
 
   async function restoreProgress(activeSessionId) {
@@ -76,15 +72,6 @@ export default function ScanScripts() {
     }
   }
 
-  async function loadGuides() {
-    try {
-      const data = await api.getGuides(token)
-      setGuides(data)
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
   useEffect(() => {
     if (activeScript) {
       localStorage.setItem('scriptmark_active_script', activeScript.id)
@@ -92,12 +79,6 @@ export default function ScanScripts() {
       localStorage.removeItem('scriptmark_active_script')
     }
   }, [activeScript])
-
-  useEffect(() => {
-    if (selectedGuideId) {
-      localStorage.setItem('scriptmark_selected_guide', selectedGuideId)
-    }
-  }, [selectedGuideId])
 
   async function handleStartSession() {
     if (!sessionNameInput.trim()) {
@@ -126,13 +107,10 @@ export default function ScanScripts() {
     localStorage.removeItem('scriptmark_active_session')
     localStorage.removeItem('scriptmark_active_session_title')
     localStorage.removeItem('scriptmark_active_script')
-    localStorage.removeItem('scriptmark_selected_guide')
     setSessionId(null)
     setSessionTitle('')
     setScripts([])
-    setScoreResult(null)
     setActiveScript(null)
-    setSelectedGuideId('')
   }
 
   // Uploads a page (given as a File or Blob). If activeScript is set, it's appended
@@ -281,22 +259,19 @@ export default function ScanScripts() {
     }
   }
 
-  async function handleCommit() {
-    if (!activeScript) return
-    if (!selectedGuideId) {
-      setError('Select a marking guide before committing this script for scoring.')
-      return
-    }
-
-    setScoring(true)
+  // Scoring is deferred to the Marking pipeline now, same as every other
+  // upload path — this just tells that pipeline to start, for the whole
+  // session, once the lecturer is done scanning.
+  async function handleFinishAndMark() {
+    if (!sessionId) return
+    setFinishing(true)
     setError('')
     try {
-      const result = await api.scoreScript(activeScript.id, selectedGuideId, token)
-      setScoreResult(result)
+      await api.startMarking(sessionId, token)
+      navigate('/marking')
     } catch (err) {
       setError(err.message)
-    } finally {
-      setScoring(false)
+      setFinishing(false)
     }
   }
 
@@ -380,34 +355,8 @@ export default function ScanScripts() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6">
-          {/* Left column: student info + upload + queue */}
-          <div className="space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Marking Guide (required to score scripts)
-              </label>
-              <select
-                value={selectedGuideId}
-                onChange={(e) => setSelectedGuideId(e.target.value)}
-                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-              >
-                <option value="">Select a marking guide...</option>
-                {guides
-                  .filter((g) => !g.isDraft)
-                  .map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.title} ({g.questions.length} questions)
-                    </option>
-                  ))}
-              </select>
-              {guides.length === 0 && (
-                <p className="mt-1.5 text-xs text-amber-600">
-                  No marking guides yet — create one on the Marking Guides page first.
-                </p>
-              )}
-            </div>
-
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="mx-auto max-w-2xl space-y-6">
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Current Student</label>
@@ -457,9 +406,20 @@ export default function ScanScripts() {
                 className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
               />
               {activeScript && (
-                <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1">
-                  <CheckCircle2 size={12} /> {pageCount} page{pageCount !== 1 ? 's' : ''} captured for this script
-                </p>
+                <>
+                  <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1">
+                    <CheckCircle2 size={12} /> {pageCount} page{pageCount !== 1 ? 's' : ''} captured for this script
+                  </p>
+                  {pageCount > 0 && (
+                    <div className="mt-3 grid grid-cols-4 gap-2">
+                      {activeScript.pages.map((p) => (
+                        <div key={p.id} className="rounded-lg bg-slate-50 border border-slate-200 aspect-[3/4] overflow-hidden">
+                          <img src={p.imageUrl} alt={`Page ${p.pageNumber}`} className="h-full w-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -548,6 +508,15 @@ export default function ScanScripts() {
               </div>
             )}
 
+            {activeScript && (
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
+                <p className="text-xs text-slate-500">Status: {activeScript.status}</p>
+                <SecondaryButton onClick={handleDiscard} className="px-3 py-1.5 text-xs">
+                  Discard Scan
+                </SecondaryButton>
+              </div>
+            )}
+
             <BulkUploadPanel
               sessionId={sessionId}
               onScriptsCreated={(newScripts) => {
@@ -601,108 +570,21 @@ export default function ScanScripts() {
                 </ul>
               )}
             </div>
-          </div>
 
-          {/* Right column: live review */}
-          <div className="rounded-xl border border-slate-200 bg-white flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-              <p className="text-sm font-medium text-slate-800">
-                {activeScript
-                  ? `Live Review: ${activeScript.studentName || activeScript.studentIdentifier || 'Unnamed script'}`
-                  : 'Live Review'}
-              </p>
-              <div className="flex items-center gap-3">
-                <button className="text-slate-400 hover:text-slate-600">
-                  <Search size={16} />
-                </button>
-                <button className="text-slate-400 hover:text-slate-600">
-                  <RotateCw size={16} />
-                </button>
-              </div>
-            </div>
-
-            {!activeScript ? (
-              <div className="flex-1 flex items-center justify-center p-10 text-sm text-slate-400 text-center">
-                Upload page 1 — extracted text (and, if visible, the student's name/reg number) will appear here.
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5">
-                  <div className="space-y-2">
-                    <p className="text-xs uppercase tracking-wide text-slate-400">Pages ({pageCount})</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(activeScript.pages || []).map((p) => (
-                        <div key={p.id} className="rounded-lg bg-slate-50 border border-slate-200 aspect-[3/4] overflow-hidden">
-                          <img src={p.imageUrl} alt={`Page ${p.pageNumber}`} className="h-full w-full object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="text-sm text-slate-700 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs uppercase tracking-wide text-slate-400">Combined Extracted Text</span>
-                      {activeScript.ocrConfidence != null && (
-                        <Badge tone={activeScript.ocrConfidence > 0.7 ? 'green' : 'amber'}>
-                          <CheckCircle2 size={12} /> Confidence: {Math.round(activeScript.ocrConfidence * 100)}%
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="whitespace-pre-wrap max-h-56 overflow-y-auto">
-                      {activeScript.ocrText || (
-                        <span className="text-slate-400 italic">No text extracted yet — OCR may still be processing.</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                {scoreResult && (
-                  <div className="border-t border-slate-100 p-5 space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      Suggested Scores (from Llama 3.3 via Groq — a lecturer must confirm these)
-                    </p>
-                    {scoreResult.answers.map((ans) => {
-                      const question = scoreResult.questions.find((q) => q.id === ans.questionId)
-                      const label = question ? `Question ${question.number}${question.subLabel || ''}` : 'Question'
-                      return (
-                        <div key={ans.id} className="rounded-lg border border-slate-200 p-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="text-xs font-semibold text-sky-600">{label}</span>
-                              <p className="text-sm font-medium text-slate-800">{question?.text}</p>
-                            </div>
-                            <span className="text-sm font-semibold text-sky-600 whitespace-nowrap ml-3">
-                              {ans.suggestedScore} / {question?.maxMarks}
-                            </span>
-                          </div>
-                          <p className="text-sm text-slate-600 mt-1">{ans.reasoning}</p>
-                        </div>
-                      )
-                    })}
-                    <p className="text-sm font-semibold text-slate-800 text-right">
-                      Total suggested: {scoreResult.script.totalScore} marks
-                    </p>
-                  </div>
+            {scripts.length > 0 && (
+              <PrimaryButton
+                onClick={handleFinishAndMark}
+                disabled={finishing}
+                className="w-full justify-center bg-emerald-600 hover:bg-emerald-500"
+              >
+                {finishing ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Starting...
+                  </>
+                ) : (
+                  'Done Scanning, Start Marking'
                 )}
-
-                <div className="mt-auto flex items-center justify-between border-t border-slate-100 px-5 py-3">
-                  <p className="text-xs text-slate-500">Status: {activeScript.status}</p>
-                  <div className="flex items-center gap-2">
-                    <SecondaryButton onClick={handleDiscard} className="px-3 py-1.5 text-xs">
-                      Discard Scan
-                    </SecondaryButton>
-                    <PrimaryButton onClick={handleCommit} disabled={scoring} className="px-3 py-1.5 text-xs">
-                      {scoring ? (
-                        <>
-                          <Loader2 size={14} className="animate-spin" /> Scoring...
-                        </>
-                      ) : (
-                        'Commit to Grading Queue'
-                      )}
-                    </PrimaryButton>
-                  </div>
-                </div>
-              </>
+              </PrimaryButton>
             )}
           </div>
         </div>
