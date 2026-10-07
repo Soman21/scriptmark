@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, RefreshCw, Pencil, Trash2, AlertCircle } from 'lucide-react'
 import { Badge, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 
 const POLL_INTERVAL_MS = 3000
@@ -57,8 +58,7 @@ function statusLabel(status) {
 export default function MarkingProgress() {
   const { token, user } = useAuth()
   const navigate = useNavigate()
-  const sessionId = localStorage.getItem('scriptmark_active_session')
-  const sessionTitle = localStorage.getItem('scriptmark_active_session_title')
+  const { sessionId } = useSession()
 
   const [scripts, setScripts] = useState([])
   const [total, setTotal] = useState(0)
@@ -135,20 +135,10 @@ export default function MarkingProgress() {
 
   const percent = total > 0 ? Math.round((markedCount / total) * 100) : 0
 
-  if (!sessionId) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-slate-500">
-        No active session. Start or select a session from the Dashboard first.
-      </div>
-    )
-  }
 
   return (
     <div className="h-full overflow-y-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Marking Progress</h1>
-        <p className="text-sm text-slate-500">{sessionTitle || 'Active session'}</p>
-      </div>
+      <h1 className="text-xl font-semibold text-slate-900">Marking Progress</h1>
 
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">

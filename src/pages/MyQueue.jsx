@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AlertCircle, CheckCircle2, Loader2, Sparkles } from 'lucide-react'
 import { Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 
 function confidenceTone(confidence) {
@@ -13,8 +14,7 @@ function confidenceTone(confidence) {
 
 export default function MyQueue() {
   const { token, user } = useAuth()
-  const sessionId = localStorage.getItem('scriptmark_active_session')
-  const sessionTitle = localStorage.getItem('scriptmark_active_session_title')
+  const { sessionId } = useSession()
 
   const [answers, setAnswers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -84,19 +84,12 @@ export default function MyQueue() {
     return acc
   }, {})
 
-  if (!sessionId) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-slate-500">
-        No active session. Start or select a session from the Dashboard first.
-      </div>
-    )
-  }
 
   return (
     <div className="h-full overflow-y-auto p-6 space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-slate-900">My Marking Queue</h1>
-        <p className="text-sm text-slate-500">{sessionTitle || 'Active session'}, questions assigned to you</p>
+        <p className="text-sm text-slate-500">Questions assigned to you in this session</p>
       </div>
 
       {error && (

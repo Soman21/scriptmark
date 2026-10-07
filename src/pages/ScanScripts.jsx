@@ -6,13 +6,16 @@ import BulkUploadPanel from '../components/BulkUploadPanel.jsx'
 import MultiDocUploadPanel from '../components/MultiDocUploadPanel.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 export default function ScanScripts() {
   const { token, user } = useAuth()
+  const { session, sessionId } = useSession()
   const navigate = useNavigate()
+  const sessionTitle = session.title
   const fileInputRef = useRef(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
@@ -20,14 +23,6 @@ export default function ScanScripts() {
 
   const [cameraOpen, setCameraOpen] = useState(false)
   const [cameraError, setCameraError] = useState('')
-
-  // Session (course/exam) state
-  const [sessionId, setSessionId] = useState(null)
-  const [sessionTitle, setSessionTitle] = useState('')
-  const [sessionNameInput, setSessionNameInput] = useState('')
-  const [departmentInput, setDepartmentInput] = useState('')
-  const [facultyInput, setFacultyInput] = useState('')
-  const [startingSession, setStartingSession] = useState(false)
 
   // Current student / script in progress across multiple pages
   const [studentNameInput, setStudentNameInput] = useState('')
@@ -41,15 +36,8 @@ export default function ScanScripts() {
   const [finishing, setFinishing] = useState(false)
 
   useEffect(() => {
-    const id = localStorage.getItem('scriptmark_active_session')
-    const title = localStorage.getItem('scriptmark_active_session_title')
-
-    if (id && title) {
-      setSessionId(id)
-      setSessionTitle(title)
-      restoreProgress(id)
-    }
-  }, [])
+    restoreProgress(sessionId)
+  }, [sessionId])
 
   async function restoreProgress(activeSessionId) {
     try {
@@ -79,39 +67,6 @@ export default function ScanScripts() {
       localStorage.removeItem('scriptmark_active_script')
     }
   }, [activeScript])
-
-  async function handleStartSession() {
-    if (!sessionNameInput.trim()) {
-      setError('Give this session a name (e.g. the course code and exam name).')
-      return
-    }
-    setStartingSession(true)
-    setError('')
-    try {
-      const session = await api.createSession(
-        { title: sessionNameInput.trim(), department: departmentInput.trim(), faculty: facultyInput.trim() },
-        token
-      )
-      localStorage.setItem('scriptmark_active_session', session.id)
-      localStorage.setItem('scriptmark_active_session_title', session.title)
-      setSessionId(session.id)
-      setSessionTitle(session.title)
-    } catch (err) {
-      setError('Could not start a scanning session: ' + err.message)
-    } finally {
-      setStartingSession(false)
-    }
-  }
-
-  function handleEndSession() {
-    localStorage.removeItem('scriptmark_active_session')
-    localStorage.removeItem('scriptmark_active_session_title')
-    localStorage.removeItem('scriptmark_active_script')
-    setSessionId(null)
-    setSessionTitle('')
-    setScripts([])
-    setActiveScript(null)
-  }
 
   // Uploads a page (given as a File or Blob). If activeScript is set, it's appended
   // as the NEXT page of that student's script. Otherwise it starts a brand new script,
@@ -268,7 +223,7 @@ export default function ScanScripts() {
     setError('')
     try {
       await api.startMarking(sessionId, token)
-      navigate('/marking')
+      navigate(`/sessions/${sessionId}/marking`)
     } catch (err) {
       setError(err.message)
       setFinishing(false)
@@ -294,14 +249,9 @@ export default function ScanScripts() {
         title="Scan Student Scripts"
         right={
           sessionTitle && (
-            <div className="flex items-center gap-2">
-              <span className="hidden md:flex items-center gap-2 rounded-full bg-sky-50 text-sky-700 text-xs font-medium px-3 py-1">
-                SESSION: {sessionTitle.toUpperCase()}
-              </span>
-              <button onClick={handleEndSession} className="text-xs text-slate-400 hover:text-rose-500 underline">
-                End Session
-              </button>
-            </div>
+            <span className="hidden md:flex items-center gap-2 rounded-full bg-sky-50 text-sky-700 text-xs font-medium px-3 py-1">
+              SESSION: {sessionTitle.toUpperCase()}
+            </span>
           )
         }
         search="Search sessions..."
@@ -313,50 +263,8 @@ export default function ScanScripts() {
         </div>
       )}
 
-      {!sessionId ? (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6">
-            <p className="font-semibold text-slate-900 text-center">Set up this scanning session</p>
-            <p className="text-sm text-slate-500 mt-1 text-center">
-              This information appears at the top of your exported results sheet.
-            </p>
-
-            <label className="block text-xs font-medium text-slate-500 mt-4">Course / Exam Title</label>
-            <input
-              value={sessionNameInput}
-              onChange={(e) => setSessionNameInput(e.target.value)}
-              placeholder="CS101 Midterm"
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-            />
-
-            <label className="block text-xs font-medium text-slate-500 mt-3">Department</label>
-            <input
-              value={departmentInput}
-              onChange={(e) => setDepartmentInput(e.target.value)}
-              placeholder="Computer Science"
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-            />
-
-            <label className="block text-xs font-medium text-slate-500 mt-3">Faculty</label>
-            <input
-              value={facultyInput}
-              onChange={(e) => setFacultyInput(e.target.value)}
-              placeholder="Physical Sciences"
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-            />
-
-            <PrimaryButton
-              onClick={handleStartSession}
-              disabled={startingSession}
-              className="mt-4 w-full justify-center bg-sky-500 hover:bg-sky-400"
-            >
-              {startingSession ? 'Starting...' : 'Start Scanning Session'}
-            </PrimaryButton>
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="mx-auto max-w-2xl space-y-6">
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="mx-auto max-w-2xl space-y-6">
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Current Student</label>
@@ -588,7 +496,6 @@ export default function ScanScripts() {
             )}
           </div>
         </div>
-      )}
     </div>
   )
 }

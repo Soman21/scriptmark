@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
-import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 
 function ImageViewerModal({ pages, startIndex, onClose, onIndexChange }) {
@@ -57,6 +59,8 @@ function ImageViewerModal({ pages, startIndex, onClose, onIndexChange }) {
 
 export default function Results() {
   const { token } = useAuth()
+  const { session, sessionId } = useSession()
+  const navigate = useNavigate()
   const [scripts, setScripts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -73,12 +77,6 @@ export default function Results() {
   async function loadScripts() {
     setLoading(true)
     setError('')
-    const sessionId = localStorage.getItem('scriptmark_active_session')
-    if (!sessionId) {
-      setError('No scanning session found yet — go scan a script first.')
-      setLoading(false)
-      return
-    }
     try {
       const data = await api.getSessionScripts(sessionId, token)
       const scored = data.filter((s) => s.answers && s.answers.length > 0)
@@ -102,7 +100,7 @@ export default function Results() {
   }
 
   const currentScript = scripts[currentIndex]
-  const sessionTitle = localStorage.getItem('scriptmark_active_session_title')
+  const sessionTitle = session.title
 
   function updateDraft(answerId, value) {
     setDraftScores((prev) => ({ ...prev, [answerId]: value }))
@@ -160,7 +158,17 @@ export default function Results() {
 
   return (
     <div className="flex h-full flex-col">
-      <Topbar title={sessionTitle ? `Review: ${sessionTitle}` : 'Review Suggested Scores'} />
+      <Topbar
+        title={sessionTitle ? `Review: ${sessionTitle}` : 'Review Suggested Scores'}
+        right={
+          <button
+            onClick={() => navigate(`/sessions/${sessionId}/export`)}
+            className="flex items-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-3.5 py-2 transition-colors"
+          >
+            <Download size={14} /> Export Results
+          </button>
+        }
+      />
 
       {error && (
         <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-600">
@@ -268,7 +276,38 @@ export default function Results() {
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Student's Answer</p>
                           <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{answer.extractedText}</p>
                         </div>
+                        {answer.visionTranscript && (
+                          <div className="rounded-lg bg-violet-50/50 border border-violet-100 p-3.5">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-violet-400 mb-1.5">
+                              Recalculated From Page Image
+                            </p>
+                            <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{answer.visionTranscript}</p>
+                            <p className="mt-1.5 text-xs text-slate-400">
+                              This question was flagged calculation heavy, so this is what the AI read directly from
+                              the page image rather than the standard extracted text above.
+                            </p>
+                          </div>
+                        )}
                       </div>
+
+                      {Array.isArray(answer.stepBreakdown) && answer.stepBreakdown.length > 0 && (
+                        <div className="mt-3 rounded-lg border border-slate-200 p-3.5">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Step Breakdown</p>
+                          <div className="space-y-2">
+                            {answer.stepBreakdown.map((step, si) => (
+                              <div key={si} className="flex items-start justify-between gap-3 text-sm">
+                                <div>
+                                  <p className="text-slate-700">{step.description}</p>
+                                  {step.reasoning && <p className="text-xs text-slate-400 mt-0.5">{step.reasoning}</p>}
+                                </div>
+                                <span className="shrink-0 font-medium text-slate-700">
+                                  {step.awarded} / {step.marks}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <p className="text-sm text-slate-600 mt-2">
                         <span className="text-slate-400">Suggested reasoning: </span>

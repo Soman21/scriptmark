@@ -1,7 +1,8 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import RequireAuth from './components/RequireAuth.jsx'
 import Sidebar from './components/Sidebar.jsx'
+import SessionWorkspace from './components/SessionWorkspace.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import ScanScripts from './pages/ScanScripts.jsx'
 import MarkingGuides from './pages/MarkingGuides.jsx'
@@ -23,7 +24,7 @@ function AppLayout({ children }) {
   const currentUser = user
     ? {
         name: user.name,
-        role: user.role.charAt(0) + user.role.slice(1).toLowerCase(),
+        role: user.role,
         initials: user.name
           .split(' ')
           .map((n) => n[0])
@@ -55,18 +56,26 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/forgotPassword" element={<ForgotPassword />} />
         <Route path="/signup" element={<SignUp />} />
+
+        {/* Tools: global, not tied to any one session */}
         <Route path="/" element={<Protected><Dashboard /></Protected>} />
-        <Route path="/scan" element={<Protected><ScanScripts /></Protected>} />
         <Route path="/guides" element={<Protected><MarkingGuides /></Protected>} />
-        <Route path="/results" element={<Protected><Results /></Protected>} />
-        <Route path="/marking" element={<Protected><MarkingProgress /></Protected>} />
-        <Route path="/my-queue" element={<Protected><MyQueue /></Protected>} />
-        <Route path="/claim-questions" element={<Protected><ClaimQuestions /></Protected>} />
-        <Route path="/coordinator" element={<Protected><CoordinatorDashboard /></Protected>} />
-        <Route path="/analytics" element={<Protected><Analytics /></Protected>} />
-        <Route path="/archive" element={<Protected><Archive /></Protected>} />
         <Route path="/assistant" element={<Protected><AiAssistant /></Protected>} />
         <Route path="/settings" element={<Protected><Settings /></Protected>} />
+
+        {/* A session's own workspace: tab bar + nested pages, all scoped to :id */}
+        <Route path="/sessions/:id" element={<Protected><SessionWorkspace /></Protected>}>
+          <Route index element={<Navigate to="marking" replace />} />
+          <Route path="scan" element={<ScanScripts />} />
+          <Route path="marking" element={<MarkingProgress />} />
+          <Route path="claim-questions" element={<ClaimQuestions />} />
+          <Route path="my-queue" element={<MyQueue />} />
+          <Route path="coordinator" element={<CoordinatorDashboard />} />
+          <Route path="results" element={<Results />} />
+          <Route path="analytics" element={<Analytics />} />
+          {/* Reached only via the "Export Results" button on Results, not a tab */}
+          <Route path="export" element={<Archive />} />
+        </Route>
       </Routes>
     </AuthProvider>
   )

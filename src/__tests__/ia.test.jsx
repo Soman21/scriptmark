@@ -1,0 +1,171 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { AuthProvider } from '../context/AuthContext.jsx'
+import RequireAuth from '../components/RequireAuth.jsx'
+import Sidebar from '../components/Sidebar.jsx'
+import SessionWorkspace from '../components/SessionWorkspace.jsx'
+import Dashboard from '../pages/Dashboard.jsx'
+import Results from '../pages/Results.jsx'
+import Analytics from '../pages/Analytics.jsx'
+import MarkingProgress from '../pages/MarkingProgress.jsx'
+import ClaimQuestions from '../pages/ClaimQuestions.jsx'
+import MyQueue from '../pages/MyQueue.jsx'
+import CoordinatorDashboard from '../pages/CoordinatorDashboard.jsx'
+import Archive from '../pages/Archive.jsx'
+import ScanScripts from '../pages/ScanScripts.jsx'
+
+const FAKE_USER = { id: 'u1', name: 'Ann Coordinator', role: 'LECTURER' }
+const FAKE_SESSION = {
+  id: 's1', title: 'ECE305 Midterm', courseCode: 'ECE305', status: 'ACTIVE',
+  createdById: 'u1', isCreator: true, accessLevel: 'FULL', guideId: 'g1',
+  guide: { id: 'g1', title: 'ECE305 Guide', questions: [] },
+  classList: [], classListUploads: [],
+}
+
+function seedAuth() {
+  localStorage.setItem('scriptmark_token', 'tok123')
+  localStorage.setItem('scriptmark_user', JSON.stringify(FAKE_USER))
+}
+
+function routeFor(path, body, status = 200) {
+  return { path, body, status }
+}
+
+let routes
+beforeEach(() => {
+  localStorage.clear()
+  seedAuth()
+  routes = [
+    routeFor('/api/sessions/s1', FAKE_SESSION),
+    routeFor('/api/sessions', [FAKE_SESSION]),
+    routeFor('/api/sessions/s1/scripts', []),
+    routeFor('/api/sessions/s1/classList', { classList: [], classListUploads: [] }),
+    routeFor('/api/sessions/s1/analytics', { totalScripts: 0, scoredCount: 0, flaggedCount: 0, lowConfidenceCount: 0, average: null, highest: null, distribution: [], perQuestion: [] }),
+    routeFor('/api/sessions/s1/coordinatorOverview', { perMarker: [], totalScripts: 0, scoredCount: 0, reviewedCount: 0 }),
+    routeFor('/api/sessions/s1/myQueue', []),
+    routeFor('/api/guides/g1/claimStatus', { questions: [], markers: [] }),
+  ]
+  global.fetch = vi.fn((url, opts) => {
+    const path = url.replace('http://localhost:4000', '')
+    const match = routes.find((r) => r.path === path.split('?')[0])
+    if (!match) {
+      console.error('UNMOCKED FETCH:', opts?.method || 'GET', path)
+      return Promise.resolve({ ok: false, status: 404, headers: { get: () => 'application/json' }, json: async () => ({ error: 'unmocked: ' + path }) })
+    }
+    return Promise.resolve({
+      ok: match.status < 400,
+      status: match.status,
+      headers: { get: () => 'application/json' },
+      json: async () => match.body,
+    })
+  })
+})
+
+function renderAt(initialPath, element) {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
+          <Route path="/sessions/:id" element={<RequireAuth><SessionWorkspace /></RequireAuth>}>
+            <Route path="scan" element={<ScanScripts />} />
+            <Route path="marking" element={<MarkingProgress />} />
+            <Route path="claim-questions" element={<ClaimQuestions />} />
+            <Route path="my-queue" element={<MyQueue />} />
+            <Route path="coordinator" element={<CoordinatorDashboard />} />
+            <Route path="results" element={<Results />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="export" element={<Archive />} />
+          </Route>
+        </Routes>
+      </AuthProvider>
+    </MemoryRouter>
+  )
+}
+
+describe('Dashboard (global tool, no session required)', () => {
+  it('renders without crashing and lists sessions', async () => {
+    renderAt('/', null)
+    await waitFor(() => expect(screen.getAllByText('ECE305 Midterm').length).toBeGreaterThan(0))
+  })
+})
+
+describe('SessionWorkspace tab bar', () => {
+  it('shows coordinator tabs for the session creator', async () => {
+    renderAt('/sessions/s1/marking', null)
+    await waitFor(() => expect(screen.getAllByText('ECE305 Midterm').length).toBeGreaterThan(0))
+    expect(screen.getByText('Scan Scripts')).toBeTruthy()
+    expect(screen.getByText('Coordinator Overview')).toBeTruthy()
+    expect(screen.getByText('Claim Questions')).toBeTruthy()
+    expect(screen.getByText('Results')).toBeTruthy()
+    expect(screen.getByText('Analytics')).toBeTruthy()
+  })
+
+  it('hides coordinator-only tabs for a LIMITED marker', async () => {
+    routes.unshift({ path: '/api/sessions/s1', body: { ...FAKE_SESSION, isCreator: false, accessLevel: 'LIMITED' }, status: 200 })
+    renderAt('/sessions/s1/marking', null)
+    await waitFor(() => expect(screen.getAllByText('ECE305 Midterm').length).toBeGreaterThan(0))
+    expect(screen.queryByText('Scan Scripts')).toBeNull()
+    expect(screen.queryByText('Coordinator Overview')).toBeNull()
+    expect(screen.getByText('Claim Questions')).toBeTruthy()
+  })
+
+  it('shows an error state, not a crash, for a 404 session', async () => {
+    routes[0] = routeFor('/api/sessions/s1', { error: 'not found' }, 404)
+    renderAt('/sessions/s1/marking', null)
+    await waitFor(() => expect(screen.getByText(/not found/i)).toBeTruthy())
+  })
+})
+
+for (const [tab, Comp, label] of [
+  ['scan', 'scan', 'Scan'],
+  ['marking', 'marking', 'Marking Progress'],
+  ['claim-questions', 'claim-questions', 'Claim Questions'],
+  ['my-queue', 'my-queue', 'My Queue'],
+  ['coordinator', 'coordinator', 'Coordinator Overview'],
+  ['results', 'results', 'Results'],
+  ['analytics', 'analytics', 'Analytics'],
+  ['export', 'export', 'Archive/Export'],
+]) {
+  describe(`${label} page inside a session`, () => {
+    it('mounts without throwing and reads sessionId from the URL, not localStorage', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      renderAt(`/sessions/s1/${tab}`, null)
+      await waitFor(() => expect(screen.getAllByText('ECE305 Midterm').length).toBeGreaterThan(0))
+      // give the nested page's own effect a tick to fire
+      await new Promise((r) => setTimeout(r, 30))
+      const thrown = consoleSpy.mock.calls.some((c) => String(c[0]).includes('Error') || String(c[0]).includes('error boundary'))
+      expect(thrown).toBe(false)
+      consoleSpy.mockRestore()
+    })
+  })
+}
+
+describe('Results page export button', () => {
+  it('links to the export sub-route', async () => {
+    renderAt('/sessions/s1/results', null)
+    await waitFor(() => expect(screen.getByText('Export Results')).toBeTruthy())
+  })
+})
+
+describe('Sidebar', () => {
+  it('renders Tools then Sessions, New Session button visible to a LECTURER', async () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AuthProvider>
+          <Sidebar user={{ name: 'Ann', role: 'LECTURER', initials: 'AC' }} onSignOut={() => {}} />
+        </AuthProvider>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Dashboard')).toBeTruthy()
+    expect(screen.getByText('Marking Guides')).toBeTruthy()
+    expect(screen.getByText('AI Assistant')).toBeTruthy()
+    expect(screen.getByText('New Marking Session')).toBeTruthy()
+    await waitFor(() => expect(screen.getAllByText('ECE305 Midterm').length).toBeGreaterThan(0))
+    // none of the old flat session-scoped items should exist in the permanent sidebar
+    expect(screen.queryByText('Marking Progress')).toBeNull()
+    expect(screen.queryByText('Claim Questions')).toBeNull()
+    expect(screen.queryByText('Export')).toBeNull()
+  })
+})

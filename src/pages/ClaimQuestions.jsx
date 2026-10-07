@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { AlertCircle, CheckCircle2, FileText, Layers, Loader2, ShieldCheck, UserCheck, UserMinus, Users, X } from 'lucide-react'
 import { Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 
 export default function ClaimQuestions() {
   const { token, user } = useAuth()
-  const sessionId = localStorage.getItem('scriptmark_active_session')
-  const sessionTitle = localStorage.getItem('scriptmark_active_session_title')
+  const { sessionId } = useSession()
 
   const [questions, setQuestions] = useState([])
   const [markers, setMarkers] = useState([])
@@ -172,20 +172,9 @@ export default function ClaimQuestions() {
     }
   }
 
-  if (!sessionId) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-slate-500">
-        No active session. Start or select a session from the Dashboard first.
-      </div>
-    )
-  }
-
   return (
     <div className="h-full overflow-y-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Claim Questions</h1>
-        <p className="text-sm text-slate-500">{sessionTitle || 'Active session'}</p>
-      </div>
+      <h1 className="text-xl font-semibold text-slate-900">Claim Questions</h1>
 
       {questionPaperUrl && (
         <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50 p-4">

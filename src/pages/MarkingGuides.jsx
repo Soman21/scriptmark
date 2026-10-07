@@ -25,7 +25,11 @@ const blankPart = () => ({
   keywords: '',
   marks: 0,
   assignedMarkerId: '',
+  isCalculationHeavy: false,
+  steps: [],
 })
+
+const blankStep = () => ({ id: Date.now() + Math.random(), description: '', marks: 0 })
 
 const blankGroup = (number) => ({
   id: Date.now() + Math.random(),
@@ -53,6 +57,10 @@ function groupsFromQuestions(questions) {
         keywords: q.keywords,
         marks: q.maxMarks,
         assignedMarkerId: q.assignedMarkerId || '',
+        isCalculationHeavy: q.isCalculationHeavy || false,
+        steps: Array.isArray(q.steps)
+          ? q.steps.map((s) => ({ id: Date.now() + Math.random(), description: s.description || '', marks: s.marks || 0 }))
+          : [],
       })),
   }))
 }
@@ -314,6 +322,51 @@ export default function MarkingGuides() {
     )
   }
 
+  function addStep(groupId, partId) {
+    setGroups((gs) =>
+      gs.map((g) =>
+        g.id === groupId
+          ? {
+              ...g,
+              parts: g.parts.map((p) => (p.id === partId ? { ...p, steps: [...p.steps, blankStep()] } : p)),
+            }
+          : g
+      )
+    )
+  }
+
+  function removeStep(groupId, partId, stepId) {
+    setGroups((gs) =>
+      gs.map((g) =>
+        g.id === groupId
+          ? {
+              ...g,
+              parts: g.parts.map((p) =>
+                p.id === partId ? { ...p, steps: p.steps.filter((s) => s.id !== stepId) } : p
+              ),
+            }
+          : g
+      )
+    )
+  }
+
+  function updateStep(groupId, partId, stepId, field, value) {
+    setGroups((gs) =>
+      gs.map((g) =>
+        g.id === groupId
+          ? {
+              ...g,
+              parts: g.parts.map((p) =>
+                p.id === partId
+                  ? { ...p, steps: p.steps.map((s) => (s.id === stepId ? { ...s, [field]: value } : s)) }
+                  : p
+              ),
+            }
+          : g
+      )
+    )
+  }
+
   // Matches incoming parsed questions onto the groups already in the editor,
   // by question number (and position within it for subparts), and only
   // fills in whatever's missing rather than replacing everything. Used when
@@ -343,6 +396,7 @@ export default function MarkingGuides() {
             modelAnswer: match.modelAnswer?.trim() ? match.modelAnswer : p.modelAnswer,
             keywords: match.keywords?.trim() ? match.keywords : p.keywords,
             marks: p.marks || match.maxMarks || 0,
+            isCalculationHeavy: p.isCalculationHeavy || match.isCalculationHeavy || false,
           }
         })
 
@@ -357,6 +411,8 @@ export default function MarkingGuides() {
             keywords: incoming[i].keywords || '',
             marks: incoming[i].maxMarks || 0,
             assignedMarkerId: '',
+            isCalculationHeavy: incoming[i].isCalculationHeavy || false,
+            steps: [],
           })
         }
       })
@@ -376,6 +432,8 @@ export default function MarkingGuides() {
             keywords: q.keywords || '',
             marks: q.maxMarks || 0,
             assignedMarkerId: '',
+            isCalculationHeavy: q.isCalculationHeavy || false,
+            steps: [],
           })),
         }))
 
@@ -601,6 +659,10 @@ export default function MarkingGuides() {
           modelAnswer: p.modelAnswer,
           keywords: p.keywords,
           maxMarks: p.marks,
+          isCalculationHeavy: p.isCalculationHeavy,
+          steps: p.steps
+            .filter((s) => s.description.trim())
+            .map((s) => ({ description: s.description, marks: Number(s.marks) || 0 })),
         }))
     )
 
@@ -1212,6 +1274,79 @@ export default function MarkingGuides() {
                             className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
                           />
                         </div>
+                      </div>
+
+                      <div className="mt-3 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`calc-${part.id}`}
+                          checked={part.isCalculationHeavy}
+                          onChange={(e) => updatePart(group.id, part.id, 'isCalculationHeavy', e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400"
+                        />
+                        <label htmlFor={`calc-${part.id}`} className="text-sm text-slate-700">
+                          Calculation heavy question
+                        </label>
+                        <span className="text-xs text-slate-400">
+                          The page image is re read for this question, since handwritten working often reads
+                          incorrectly from standard text scanning
+                        </span>
+                      </div>
+
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium text-slate-700">Step Rubric (optional)</label>
+                          <button
+                            type="button"
+                            onClick={() => addStep(group.id, part.id)}
+                            className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                          >
+                            <Plus size={12} /> Add step
+                          </button>
+                        </div>
+                        {part.steps.length === 0 ? (
+                          <p className="mt-1 text-xs text-slate-400">
+                            Leave empty for a flat score. Add steps to award partial credit for correct working even
+                            when the final answer is wrong.
+                          </p>
+                        ) : (
+                          <div className="mt-2 space-y-2">
+                            {part.steps.map((step, si) => (
+                              <div key={step.id} className="flex items-start gap-2">
+                                <span className="mt-2.5 text-xs text-slate-400">{si + 1}.</span>
+                                <input
+                                  value={step.description}
+                                  onChange={(e) => updateStep(group.id, part.id, step.id, 'description', e.target.value)}
+                                  placeholder="Describe this step, e.g. correctly sets up the equation"
+                                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                                />
+                                <input
+                                  type="number"
+                                  value={step.marks}
+                                  onChange={(e) => updateStep(group.id, part.id, step.id, 'marks', e.target.value)}
+                                  className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-right outline-none focus:ring-2 focus:ring-sky-400"
+                                />
+                                <button
+                                  onClick={() => removeStep(group.id, part.id, step.id)}
+                                  className="mt-2 text-slate-400 hover:text-rose-500"
+                                  title="Remove this step"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <p
+                              className={`text-xs ${
+                                part.steps.reduce((sum, s) => sum + Number(s.marks || 0), 0) === Number(part.marks)
+                                  ? 'text-slate-400'
+                                  : 'text-amber-600'
+                              }`}
+                            >
+                              Steps total {part.steps.reduce((sum, s) => sum + Number(s.marks || 0), 0)} of{' '}
+                              {part.marks} marks
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {currentGuideId && (

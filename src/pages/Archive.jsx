@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Download, AlertCircle, Users, CheckCircle2, Clock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Download, AlertCircle, Users, CheckCircle2, Clock, Upload, X, AlertTriangle, ArrowLeft } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, StatCard, Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
+import { downloadSessionExport } from '../lib/download.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -19,12 +22,21 @@ function computeGrade(total) {
 
 export default function Archive() {
   const { token } = useAuth()
-  const [session, setSession] = useState(null)
+  const { session, sessionId } = useSession()
+  const navigate = useNavigate()
   const [scripts, setScripts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
   const [caScores, setCaScores] = useState({})
+  const [classList, setClassList] = useState([])
+  const [classListUploads, setClassListUploads] = useState([])
+  const [uploadingRoster, setUploadingRoster] = useState(false)
+  const [rosterMsg, setRosterMsg] = useState('')
+  const [reviewEntry, setReviewEntry] = useState(null)
+  const [resolveName, setResolveName] = useState('')
+  const [resolveRegNumber, setResolveRegNumber] = useState('')
+  const [showSourcePreview, setShowSourcePreview] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -33,19 +45,14 @@ export default function Archive() {
   async function loadData() {
     setLoading(true)
     setError('')
-    const sessionId = localStorage.getItem('scriptmark_active_session')
-    if (!sessionId) {
-      setError('No active session found — go start one on the Scan Scripts page first.')
-      setLoading(false)
-      return
-    }
     try {
-      const [sessions, scriptData] = await Promise.all([
-        api.getSessions(token),
+      const [scriptData, rosterData] = await Promise.all([
         api.getSessionScripts(sessionId, token),
+        api.getClassList(sessionId, token),
       ])
-      setSession(sessions.find((s) => s.id === sessionId) || { title: localStorage.getItem('scriptmark_active_session_title') })
       setScripts(scriptData)
+      setClassList(rosterData.classList || [])
+      setClassListUploads(rosterData.classListUploads || [])
 
       const initialCa = {}
       scriptData.forEach((s) => {
@@ -56,6 +63,63 @@ export default function Archive() {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleUploadRoster(file) {
+    if (!file) return
+    setUploadingRoster(true)
+    setRosterMsg('')
+    setError('')
+    try {
+      const formData = new FormData()
+      formData.append('document', file)
+      const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/classList`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Could not process that document.')
+
+      setClassList(data.classList || [])
+      setClassListUploads(data.classListUploads || [])
+
+      const parts = []
+      if (data.addedCount) parts.push(`${data.addedCount} student${data.addedCount !== 1 ? 's' : ''} added`)
+      if (data.rematchedCount) parts.push(`${data.rematchedCount} already-scanned script${data.rematchedCount !== 1 ? 's' : ''} matched`)
+      if (data.flaggedCount) parts.push(`${data.flaggedCount} name conflict${data.flaggedCount !== 1 ? 's' : ''} need review`)
+      setRosterMsg(parts.length ? parts.join(', ') + '.' : 'No new students found in that document.')
+
+      loadData() // refresh scripts, since names on already-matched ones may have changed
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploadingRoster(false)
+    }
+  }
+
+  function openReview(entry) {
+    setReviewEntry(entry)
+    setResolveName(entry.name)
+    setResolveRegNumber(entry.regNumber)
+    setShowSourcePreview(false)
+  }
+
+  async function handleResolveEntry() {
+    if (!resolveName.trim() || !resolveRegNumber.trim()) return
+    try {
+      const data = await api.resolveClassListEntry(
+        sessionId,
+        reviewEntry.id,
+        { name: resolveName, regNumber: resolveRegNumber },
+        token
+      )
+      setClassList(data.classList || [])
+      setReviewEntry(null)
+      loadData() // pick up the corrected name on any already-matched script
+    } catch (err) {
+      setError(err.message)
     }
   }
 
@@ -72,25 +136,10 @@ export default function Archive() {
   }
 
   async function handleExport(format) {
-    const sessionId = localStorage.getItem('scriptmark_active_session')
     setExporting(format)
     setError('')
     try {
-      const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/export?format=${format}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) throw new Error('Could not generate the export.')
-
-      const blob = await res.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      const ext = format === 'pdf' ? 'pdf' : 'xlsx'
-      a.download = `${(session?.title || 'results').replace(/[^a-z0-9]/gi, '_')}_results.${ext}`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      window.URL.revokeObjectURL(url)
+      await downloadSessionExport(sessionId, format, session?.title, token)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -103,7 +152,17 @@ export default function Archive() {
 
   return (
     <div className="flex h-full flex-col">
-      <Topbar title={session ? `Results: ${session.title}` : 'Student Results'} />
+      <Topbar
+        title={session ? `Results: ${session.title}` : 'Student Results'}
+        right={
+          <button
+            onClick={() => navigate(`/sessions/${sessionId}/results`)}
+            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800"
+          >
+            <ArrowLeft size={14} /> Back to Results
+          </button>
+        }
+      />
 
       {error && (
         <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-600">
@@ -144,6 +203,62 @@ export default function Archive() {
               <PrimaryButton onClick={() => handleExport('pdf')} disabled={!!exporting} className="bg-slate-700 hover:bg-slate-600">
                 <Download size={16} /> {exporting === 'pdf' ? 'Generating...' : 'Export to PDF'}
               </PrimaryButton>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Class List / Attendance</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Upload the attendance sheet, the official class list, or both, in either order. Student names and
+                    reg numbers extracted from it replace guessed ones on matching scripts.
+                  </p>
+                </div>
+                <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                  {uploadingRoster ? 'Processing...' : (
+                    <>
+                      <Upload size={14} /> Upload document
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,image/*"
+                    className="hidden"
+                    disabled={uploadingRoster}
+                    onChange={(e) => handleUploadRoster(e.target.files?.[0])}
+                  />
+                </label>
+              </div>
+              {rosterMsg && <p className="mt-3 text-xs text-slate-500">{rosterMsg}</p>}
+
+              {classList.some((e) => e.flagged) && (
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3.5">
+                  <div className="flex items-center gap-2 text-sm font-medium text-amber-800">
+                    <AlertTriangle size={15} />
+                    {classList.filter((e) => e.flagged).length} name conflict
+                    {classList.filter((e) => e.flagged).length !== 1 ? 's' : ''} need review before export
+                  </div>
+                  <div className="mt-2 space-y-1.5">
+                    {classList
+                      .filter((e) => e.flagged)
+                      .map((entry) => (
+                        <button
+                          key={entry.id}
+                          onClick={() => openReview(entry)}
+                          className="flex w-full items-center justify-between rounded-md bg-white px-3 py-2 text-left text-sm hover:bg-amber-100/50"
+                        >
+                          <span>
+                            <span className="font-medium text-slate-800">{entry.name}</span>
+                            <span className="text-slate-400"> vs </span>
+                            <span className="font-medium text-slate-800">{entry.conflict?.name}</span>
+                            <span className="text-slate-400 ml-1.5">({entry.regNumber})</span>
+                          </span>
+                          <span className="text-xs font-medium text-amber-700">Review</span>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -196,6 +311,110 @@ export default function Archive() {
           </>
         )}
       </div>
+
+      {reviewEntry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+          <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <p className="text-sm font-semibold text-slate-900">Resolve name conflict</p>
+              <button onClick={() => setReviewEntry(null)} className="rounded-full p-1 text-slate-400 hover:bg-slate-100">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <p className="text-sm text-slate-500">
+                Reg number <span className="font-medium text-slate-700">{reviewEntry.regNumber}</span> appears with two
+                different names across the documents uploaded for this session. Pick one, or type the correct name below.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => {
+                    setResolveName(reviewEntry.name)
+                    setResolveRegNumber(reviewEntry.regNumber)
+                  }}
+                  className={`rounded-lg border p-3 text-left text-sm ${resolveName === reviewEntry.name ? 'border-sky-400 bg-sky-50' : 'border-slate-200 hover:bg-slate-50'}`}
+                >
+                  <p className="text-xs text-slate-400 mb-1">Currently saved</p>
+                  <p className="font-medium text-slate-800">{reviewEntry.name}</p>
+                </button>
+                <button
+                  onClick={() => {
+                    setResolveName(reviewEntry.conflict?.name || '')
+                    setResolveRegNumber(reviewEntry.conflict?.regNumber || reviewEntry.regNumber)
+                  }}
+                  className={`rounded-lg border p-3 text-left text-sm ${resolveName === reviewEntry.conflict?.name ? 'border-sky-400 bg-sky-50' : 'border-slate-200 hover:bg-slate-50'}`}
+                >
+                  <p className="text-xs text-slate-400 mb-1">From the newer upload</p>
+                  <p className="font-medium text-slate-800">{reviewEntry.conflict?.name}</p>
+                </button>
+              </div>
+
+              {(() => {
+                const upload = classListUploads.find((u) => u.id === reviewEntry.conflict?.uploadId)
+                if (!upload) return null
+                return (
+                  <div>
+                    {!showSourcePreview ? (
+                      <button
+                        onClick={() => setShowSourcePreview(true)}
+                        className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                      >
+                        View the source document this came from
+                      </button>
+                    ) : (
+                      <div className="rounded-lg border border-slate-200 overflow-hidden">
+                        {upload.mimeType.startsWith('image/') ? (
+                          <img src={upload.documentUrl} alt="Source document" className="w-full" />
+                        ) : upload.mimeType === 'application/pdf' ? (
+                          <iframe src={upload.documentUrl} title="Source document" className="h-96 w-full" />
+                        ) : (
+                          <div className="max-h-96 overflow-y-auto p-4">
+                            <p className="mb-2 text-xs text-slate-500">
+                              Word documents cannot be rendered in the browser, this is the text ScriptMark read from it.
+                            </p>
+                            <pre className="whitespace-pre-wrap text-xs text-slate-700">{upload.previewText || 'No preview text available.'}</pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Name</label>
+                  <input
+                    value={resolveName}
+                    onChange={(e) => setResolveName(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500">Reg Number</label>
+                  <input
+                    value={resolveRegNumber}
+                    onChange={(e) => setResolveRegNumber(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4">
+              <button
+                onClick={() => setReviewEntry(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <PrimaryButton onClick={handleResolveEntry}>Save and resolve</PrimaryButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

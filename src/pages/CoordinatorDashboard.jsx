@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { AlertCircle, Loader2, Users } from 'lucide-react'
 import { StatCard } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 
 export default function CoordinatorDashboard() {
   const { token } = useAuth()
-  const sessionId = localStorage.getItem('scriptmark_active_session')
-  const sessionTitle = localStorage.getItem('scriptmark_active_session_title')
+  const { sessionId } = useSession()
 
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -22,13 +22,6 @@ export default function CoordinatorDashboard() {
       .finally(() => setLoading(false))
   }, [sessionId, token])
 
-  if (!sessionId) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-slate-500">
-        No active session. Start or select a session from the Dashboard first.
-      </div>
-    )
-  }
 
   if (loading) {
     return (
@@ -48,10 +41,7 @@ export default function CoordinatorDashboard() {
 
   return (
     <div className="h-full overflow-y-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Coordinator Overview</h1>
-        <p className="text-sm text-slate-500">{sessionTitle || 'Active session'}</p>
-      </div>
+      <h1 className="text-xl font-semibold text-slate-900">Coordinator Overview</h1>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Scripts" value={overview.scriptCount} />

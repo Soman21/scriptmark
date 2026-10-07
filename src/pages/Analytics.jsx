@@ -4,14 +4,16 @@ import { LayoutGrid, Trophy, Flag, FileText, AlertCircle, AlertTriangle } from '
 import Topbar from '../components/Topbar.jsx'
 import { StatCard } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 
 export default function Analytics() {
   const { token } = useAuth()
+  const { session, sessionId } = useSession()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const sessionTitle = localStorage.getItem('scriptmark_active_session_title')
+  const sessionTitle = session.title
 
   useEffect(() => {
     loadAnalytics()
@@ -20,12 +22,6 @@ export default function Analytics() {
   async function loadAnalytics() {
     setLoading(true)
     setError('')
-    const sessionId = localStorage.getItem('scriptmark_active_session')
-    if (!sessionId) {
-      setError('No active session found — go start one on the Scan Scripts page first.')
-      setLoading(false)
-      return
-    }
     try {
       const result = await api.getAnalytics(sessionId, token)
       setData(result)

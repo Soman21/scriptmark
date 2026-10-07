@@ -70,6 +70,9 @@ export const api = {
     request(`/api/sessions/scripts/${scriptId}/caScore`, { method: 'PUT', body: { caScore }, token }),
   updateStudentInfo: (scriptId, payload, token) =>
     request(`/api/sessions/scripts/${scriptId}/studentInfo`, { method: 'PUT', body: payload, token }),
+  getClassList: (sessionId, token) => request(`/api/sessions/${sessionId}/classList`, { token }),
+  resolveClassListEntry: (sessionId, entryId, payload, token) =>
+    request(`/api/sessions/${sessionId}/classList/${entryId}`, { method: 'PUT', body: payload, token }),
   bulkConfirm: (sessionId, groups, token) =>
     request(`/api/sessions/${sessionId}/scripts/bulkConfirm`, { method: 'POST', body: { groups }, token }),
   deleteScript: (sessionId, scriptId, token) =>
@@ -86,6 +89,6 @@ export const api = {
   scoreScript: (scriptId, guideId, token) =>
     request(`/api/results/scripts/${scriptId}/score`, { method: 'POST', body: { guideId }, token }),
 
-  chatWithAssistant: (messages, token) =>
-    request('/api/assistant/chat', { method: 'POST', body: { messages }, token }),
+  chatWithAssistant: (messages, activeSessionId, token) =>
+    request('/api/assistant/chat', { method: 'POST', body: { messages, activeSessionId }, token }),
 }

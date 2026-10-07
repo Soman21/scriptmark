@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Mic, MicOff, Volume2, VolumeX, Sparkles, User } from 'lucide-react'
+import { Send, Mic, MicOff, Volume2, VolumeX, Sparkles, User, Download } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import { downloadSessionExport } from '../lib/download.js'
 
 const WELCOME_MESSAGE = {
   role: 'assistant',
   content:
-    "Hi! I'm the ScriptMark Assistant. Ask me anything about creating marking guides, scanning scripts, reviewing scores, or exporting results.",
+    "Hi! I'm the ScriptMark Assistant. Ask me about any of your sessions — progress, a student's scores, analytics, marking guides — or just how to use the app.",
 }
 
 export default function AiAssistant() {
@@ -19,6 +20,7 @@ export default function AiAssistant() {
   const [listening, setListening] = useState(false)
   const [voiceReplies, setVoiceReplies] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(true)
+  const [downloading, setDownloading] = useState(null)
 
   const recognitionRef = useRef(null)
   const scrollRef = useRef(null)
@@ -79,14 +81,27 @@ export default function AiAssistant() {
 
     try {
       const historyForApi = nextMessages.map((m) => ({ role: m.role, content: m.content }))
-      const data = await api.chatWithAssistant(historyForApi, token)
-      const updated = [...nextMessages, { role: 'assistant', content: data.reply }]
+      const activeSessionId = localStorage.getItem('scriptmark_active_session')
+      const data = await api.chatWithAssistant(historyForApi, activeSessionId, token)
+      const updated = [...nextMessages, { role: 'assistant', content: data.reply, action: data.action }]
       setMessages(updated)
       if (voiceReplies) speak(data.reply)
     } catch (err) {
       setError(err.message)
     } finally {
       setSending(false)
+    }
+  }
+
+  async function handleDownload(action, format) {
+    setDownloading(`${action.sessionId}-${format}`)
+    setError('')
+    try {
+      await downloadSessionExport(action.sessionId, format, action.sessionTitle, token)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setDownloading(null)
     }
   }
 
@@ -141,6 +156,28 @@ export default function AiAssistant() {
               </div>
               <div className="max-w-xl rounded-2xl border border-sky-100 bg-sky-50 px-5 py-3">
                 <p className="text-sm text-slate-800 whitespace-pre-wrap">{m.content}</p>
+                {m.action?.type === 'export' && (
+                  <div className="mt-3 flex gap-2 border-t border-sky-100 pt-3">
+                    {(m.action.format === 'xlsx' || m.action.format === 'both') && (
+                      <button
+                        onClick={() => handleDownload(m.action, 'xlsx')}
+                        disabled={!!downloading}
+                        className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        <Download size={12} /> {downloading === `${m.action.sessionId}-xlsx` ? 'Preparing...' : 'Download Excel'}
+                      </button>
+                    )}
+                    {(m.action.format === 'pdf' || m.action.format === 'both') && (
+                      <button
+                        onClick={() => handleDownload(m.action, 'pdf')}
+                        disabled={!!downloading}
+                        className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        <Download size={12} /> {downloading === `${m.action.sessionId}-pdf` ? 'Preparing...' : 'Download PDF'}
+                      </button>
+                    )}
+                  </div>
+                )}
                 <button
                   onClick={() => speak(m.content)}
                   className="mt-2 flex items-center gap-1 text-xs text-sky-600 hover:text-sky-700"
@@ -169,7 +206,7 @@ export default function AiAssistant() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about ScriptMark..."
+            placeholder="Ask about a session, a student, or anything else..."
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
           />
           {speechSupported && (
