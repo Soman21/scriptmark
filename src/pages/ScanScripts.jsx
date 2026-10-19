@@ -16,7 +16,6 @@ export default function ScanScripts() {
   const { token, user } = useAuth()
   const { session, sessionId } = useSession()
   const navigate = useNavigate()
-  const sessionTitle = session.title
   const fileInputRef = useRef(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
@@ -246,17 +245,7 @@ export default function ScanScripts() {
 
   return (
     <div className="flex h-full flex-col">
-      <Topbar
-        title="Scan Student Scripts"
-        right={
-          sessionTitle && (
-            <span className="hidden md:flex items-center gap-2 rounded-full bg-sky-50 text-sky-700 text-xs font-medium px-3 py-1">
-              SESSION: {sessionTitle.toUpperCase()}
-            </span>
-          )
-        }
-        search="Search sessions..."
-      />
+      <Topbar title="Scan Student Scripts" />
 
       {error && (
         <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-600">

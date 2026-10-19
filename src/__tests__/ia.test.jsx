@@ -204,3 +204,32 @@ describe('Attendance sheet upload on Scan Scripts', () => {
     })
   })
 })
+
+describe('Sidebar collapsed rail', () => {
+  it('hides labels but keeps every item reachable by its tooltip', async () => {
+    const onToggle = vi.fn()
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AuthProvider>
+          <Sidebar user={{ name: 'Ann', role: 'LECTURER', initials: 'AC' }} onSignOut={() => {}} collapsed onToggleCollapse={onToggle} />
+        </AuthProvider>
+      </MemoryRouter>
+    )
+    expect(screen.queryByText('Dashboard')).toBeNull()
+    expect(screen.queryByText('Sessions')).toBeNull()
+    expect(screen.getByTitle('Dashboard')).toBeTruthy()
+    expect(screen.getByTitle('New Marking Session')).toBeTruthy()
+    fireEvent.click(screen.getByLabelText('Expand sidebar'))
+    expect(onToggle).toHaveBeenCalled()
+  })
+})
+
+describe('Session header', () => {
+  it('shows one breadcrumb and tab row, with no repeated page title on Scan Scripts', async () => {
+    renderAt('/sessions/s1/scan', null)
+    await waitFor(() => expect(screen.getByRole('navigation', { name: 'Session sections' })).toBeTruthy())
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' }).textContent).toContain('Sessions')
+    expect(screen.queryByText('Scan Student Scripts')).toBeNull()
+    expect(screen.getByRole('link', { name: /Scan Scripts/ }).getAttribute('aria-current')).toBe('page')
+  })
+})

@@ -1,4 +1,6 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Menu } from 'lucide-react'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import RequireAuth from './components/RequireAuth.jsx'
 import Sidebar from './components/Sidebar.jsx'
@@ -33,10 +35,51 @@ function AppLayout({ children }) {
       }
     : null
 
+  const location = useLocation()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('scriptmark_sidebar_collapsed') === '1'
+    } catch {
+      return false
+    }
+  })
+
+  // The mobile drawer closes itself once the user picks somewhere to go.
+  useEffect(() => setMobileOpen(false), [location.pathname])
+
+  function toggleCollapsed() {
+    setCollapsed((c) => {
+      try {
+        localStorage.setItem('scriptmark_sidebar_collapsed', c ? '0' : '1')
+      } catch {}
+      return !c
+    })
+  }
+
   return (
     <div className="flex h-screen bg-slate-50">
-      <Sidebar user={currentUser} onSignOut={logout} />
-      <main className="flex-1 overflow-hidden">{children}</main>
+      <Sidebar
+        user={currentUser}
+        onSignOut={logout}
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapsed}
+        mobileOpen={mobileOpen}
+        onCloseMobile={() => setMobileOpen(false)}
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex h-12 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-3 md:hidden">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+            aria-label="Open menu"
+          >
+            <Menu size={20} />
+          </button>
+          <span className="text-[15px] font-semibold tracking-tight text-slate-900">ScriptMark</span>
+        </div>
+        <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+      </div>
     </div>
   )
 }

@@ -153,7 +153,7 @@ export default function Archive() {
   return (
     <div className="flex h-full flex-col">
       <Topbar
-        title={session ? `Results: ${session.title}` : 'Student Results'}
+        title="Export Results"
         right={
           <button
             onClick={() => navigate(`/sessions/${sessionId}/results`)}

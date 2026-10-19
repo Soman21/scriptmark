@@ -13,7 +13,6 @@ export default function Analytics() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const sessionTitle = session.title
 
   useEffect(() => {
     loadAnalytics()
@@ -34,7 +33,7 @@ export default function Analytics() {
 
   return (
     <div className="flex h-full flex-col">
-      <Topbar title={sessionTitle ? `Analytics: ${sessionTitle}` : 'Analytics Report'} />
+      <Topbar title="Analytics Report" />
 
       {error && (
         <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-600">

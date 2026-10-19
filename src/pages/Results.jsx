@@ -100,7 +100,6 @@ export default function Results() {
   }
 
   const currentScript = scripts[currentIndex]
-  const sessionTitle = session.title
 
   function updateDraft(answerId, value) {
     setDraftScores((prev) => ({ ...prev, [answerId]: value }))
@@ -159,7 +158,7 @@ export default function Results() {
   return (
     <div className="flex h-full flex-col">
       <Topbar
-        title={sessionTitle ? `Review: ${sessionTitle}` : 'Review Suggested Scores'}
+        title="Review Suggested Scores"
         right={
           <button
             onClick={() => navigate(`/sessions/${sessionId}/export`)}
