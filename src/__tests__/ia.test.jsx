@@ -265,3 +265,31 @@ describe('AI Agreement panel on Analytics', () => {
     await waitFor(() => expect(screen.getByText(/No lecturer confirmed scores yet/)).toBeTruthy())
   })
 })
+
+describe('Results review screen', () => {
+  const q = { id: 'q1', number: '1', subLabel: null, text: 'Define OCR', modelAnswer: 'Optical character recognition', maxMarks: 5 }
+  const script = (id, name, reg, status) => ({
+    id, studentName: name, regNumber: reg, status, hasLowConfidenceScore: false, ocrText: 'OCR is ...',
+    pages: [{ pageNumber: 1, imageUrl: 'p1.jpg' }, { pageNumber: 2, imageUrl: 'p2.jpg' }],
+    answers: [{ id: `a_${id}`, question: q, suggestedScore: 4, confirmedScore: null, confidence: 'high', extractedText: 'Reads text', reasoning: 'Fine' }],
+  })
+
+  it('names the student, counts reviewed scripts, and switches script from the jump list', async () => {
+    routes.unshift(routeFor('/api/sessions/s1/scripts', [script('x1', 'ADA OKAFOR', '2017364085', 'SCORED'), script('x2', 'CHIDI EZE', '2025366001FN', 'REVIEWED')]))
+    renderAt('/sessions/s1/results', null)
+    await waitFor(() => expect(screen.getByText('2017364085')).toBeTruthy())
+    expect(screen.getByText('Script 1 of 2, 1 reviewed')).toBeTruthy()
+    expect(screen.getByText('Needs review')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Jump to script'), { target: { value: '1' } })
+    await waitFor(() => expect(screen.getByText('2025366001FN')).toBeTruthy())
+    expect(screen.getByText('Reviewed')).toBeTruthy()
+  })
+
+  it('lets the reviewer page through a multi page script beside the scores', async () => {
+    routes.unshift(routeFor('/api/sessions/s1/scripts', [script('x1', 'ADA OKAFOR', '2017364085', 'SCORED')]))
+    renderAt('/sessions/s1/results', null)
+    await waitFor(() => expect(screen.getByAltText('Page 1')).toBeTruthy())
+    fireEvent.click(screen.getByLabelText('Next page'))
+    expect(screen.getByAltText('Page 2').getAttribute('src')).toBe('p2.jpg')
+  })
+})
