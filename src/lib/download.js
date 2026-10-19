@@ -24,3 +24,21 @@ export async function downloadSessionExport(sessionId, format, sessionTitle, tok
   a.remove()
   window.URL.revokeObjectURL(url)
 }
+
+// Downloads the raw AI vs lecturer score pairs behind the AI Agreement
+// panel, one row per answer, for the thesis analysis in Excel or SPSS.
+export async function downloadEvaluationCsv(sessionId, sessionTitle, token) {
+  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/evaluation?format=csv`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Could not download the evaluation data.')
+  const blob = await res.blob()
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${(sessionTitle || 'session').replace(/[^a-z0-9]/gi, '_')}_evaluation.csv`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.URL.revokeObjectURL(url)
+}

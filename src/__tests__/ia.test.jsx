@@ -233,3 +233,35 @@ describe('Session header', () => {
     expect(screen.getByRole('link', { name: /Scan Scripts/ }).getAttribute('aria-current')).toBe('page')
   })
 })
+
+describe('AI Agreement panel on Analytics', () => {
+  // recharts' ResponsiveContainer needs ResizeObserver, which jsdom lacks
+  beforeEach(() => {
+    global.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} }
+  })
+
+  const analytics = { totalScripts: 2, scoredCount: 2, flaggedCount: 0, lowConfidenceCount: 0, average: 60, highest: 70, distribution: [], perQuestion: [] }
+  const evaluation = {
+    answersScored: 10, humanConfirmed: 8, autoAcceptedExcluded: 2, overriddenAfterConfirm: 1,
+    overall: { n: 8, exactAgreement: 0.625, withinOneMark: 0.875, mae: 0.5, rmse: 0.71, pearson: 0.93, kappa: 0.51, quadraticKappa: 0.9 },
+    passFail: { accuracy: 0.875, precision: 0.8, recall: 1, f1: 0.889 },
+    byConfidence: { high: { n: 5, exactAgreement: 0.8, mae: 0.2 }, medium: { n: 3, exactAgreement: 0.333, mae: 1 }, low: { n: 0 } },
+    perQuestion: [], scripts: { n: 2, maePercent: 4.5, pearson: 1, sameGrade: 0.5, withinOneGrade: 1 },
+  }
+
+  it('shows the agreement metrics and explains what was left out', async () => {
+    routes.unshift(routeFor('/api/sessions/s1/analytics', analytics), routeFor('/api/sessions/s1/evaluation', evaluation))
+    renderAt('/sessions/s1/analytics', null)
+    await waitFor(() => expect(screen.getByText('AI Agreement')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('62.5%')).toBeTruthy())
+    expect(screen.getByText('0.90')).toBeTruthy()
+    expect(screen.getByText(/2 auto accepted answers are left out/)).toBeTruthy()
+    expect(screen.getByText(/50% get the same letter grade/)).toBeTruthy()
+  })
+
+  it('says what to do when nothing is confirmed yet', async () => {
+    routes.unshift(routeFor('/api/sessions/s1/analytics', analytics), routeFor('/api/sessions/s1/evaluation', { ...evaluation, answersScored: 0, humanConfirmed: 0, overall: { n: 0 } }))
+    renderAt('/sessions/s1/analytics', null)
+    await waitFor(() => expect(screen.getByText(/No lecturer confirmed scores yet/)).toBeTruthy())
+  })
+})

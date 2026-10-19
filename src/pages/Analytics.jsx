@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import { LayoutGrid, Trophy, Flag, FileText, AlertCircle, AlertTriangle } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
+import AiAgreementPanel from '../components/AiAgreementPanel.jsx'
 import { StatCard } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
@@ -135,6 +136,8 @@ export default function Analytics() {
                 </tbody>
               </table>
             </div>
+
+            <AiAgreementPanel sessionId={sessionId} sessionTitle={session.title} />
           </>
         )}
       </div>
