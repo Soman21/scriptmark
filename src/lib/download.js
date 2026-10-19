@@ -3,8 +3,8 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 // Downloads a session's result sheet. Throws with the backend's actual error
 // message on failure (e.g. the 409 roster-conflict block), so callers can
 // surface it directly rather than a generic "could not export" string.
-export async function downloadSessionExport(sessionId, format, sessionTitle, token) {
-  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/export?format=${format}`, {
+export async function downloadSessionExport(sessionId, format, sessionTitle, token, scores = 'total') {
+  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/export?format=${format}&scores=${scores}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) {

@@ -67,6 +67,7 @@ export default function MarkingProgress() {
   const [error, setError] = useState('')
   const [guideId, setGuideId] = useState(null)
   const redirectedRef = useRef(false)
+  const sawUnmarkedRef = useRef(false)
 
   useEffect(() => {
     if (!sessionId) return
@@ -86,7 +87,10 @@ export default function MarkingProgress() {
         setMarkedCount(data.markedCount)
         setError('')
 
-        if (data.total > 0 && data.markedCount === data.total && !redirectedRef.current) {
+        // Move on to Results only when marking finishes while the lecturer
+        // watches; a session that was already marked stays here to browse.
+        if (data.markedCount < data.total) sawUnmarkedRef.current = true
+        if (sawUnmarkedRef.current && data.total > 0 && data.markedCount === data.total && !redirectedRef.current) {
           redirectedRef.current = true
           setTimeout(() => navigate(`/sessions/${sessionId}/results`), 1200)
         }
@@ -160,7 +164,9 @@ export default function MarkingProgress() {
           />
         </div>
         {total > 0 && markedCount === total && (
-          <p className="mt-2 text-xs text-emerald-600">All submissions marked. Taking you to Results...</p>
+          <p className="mt-2 text-xs text-emerald-600">
+            All submissions marked.{sawUnmarkedRef.current ? ' Taking you to Results...' : ''}
+          </p>
         )}
       </div>
 

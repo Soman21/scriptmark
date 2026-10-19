@@ -4,6 +4,7 @@ import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, Pan
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import NewSessionDialog from './NewSessionDialog.jsx'
+import HelpDialog from './HelpDialog.jsx'
 
 const toolItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
@@ -31,6 +32,7 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
   const navigate = useNavigate()
   const { id: activeSessionId } = useParams()
   const [showNew, setShowNew] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const [sessions, setSessions] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(true)
 
@@ -71,6 +73,7 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
 
   return (
     <>
+      <HelpDialog open={showHelp} onClose={() => setShowHelp(false)} />
       <NewSessionDialog
         open={showNew}
         onClose={() => setShowNew(false)}
@@ -176,7 +179,7 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
               <Settings size={18} className="shrink-0" />
               {!rail && 'Settings'}
             </NavLink>
-            <button title={rail ? 'Help' : undefined} className={`${itemBase} ${itemIdle} ${rail ? '' : 'w-full'}`}>
+            <button onClick={() => setShowHelp(true)} title={rail ? 'Help' : undefined} className={`${itemBase} ${itemIdle} ${rail ? '' : 'w-full'}`}>
               <HelpCircle size={18} className="shrink-0" />
               {!rail && 'Help'}
             </button>
