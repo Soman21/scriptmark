@@ -21,6 +21,7 @@ export default function MyQueue() {
   const [error, setError] = useState('')
   const [drafts, setDrafts] = useState({}) // answerId -> { score, reason }
   const [savingId, setSavingId] = useState(null)
+  const [showDone, setShowDone] = useState({}) // questionId -> true when its confirmed answers are open
 
   useEffect(() => {
     if (!sessionId) return
@@ -83,6 +84,9 @@ export default function MyQueue() {
     acc[key].items.push(a)
     return acc
   }, {})
+  // A fixed order by reg number, so a card never jumps after it is confirmed.
+  const byReg = (x, y) => (x.script.regNumber || '').localeCompare(y.script.regNumber || '')
+  const toConfirm = answers.filter((a) => !a.confirmedAt).length
 
 
   return (
@@ -91,6 +95,19 @@ export default function MyQueue() {
         <h1 className="text-xl font-semibold text-slate-900">My Marking Queue</h1>
         <p className="text-sm text-slate-500">Questions assigned to you in this session</p>
       </div>
+
+      {!loading && answers.length > 0 && (
+        <div
+          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
+            toConfirm ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+          }`}
+        >
+          <CheckCircle2 size={16} className="shrink-0" />
+          {toConfirm
+            ? `${toConfirm} of ${answers.length} answers left to confirm.`
+            : `All ${answers.length} answers in your queue are confirmed.`}
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
@@ -107,18 +124,27 @@ export default function MyQueue() {
           No questions are currently assigned to you in this session.
         </div>
       ) : (
-        Object.values(grouped).map(({ question, items }) => (
+        Object.values(grouped).map(({ question, items }) => {
+          const todo = items.filter((a) => !a.confirmedAt).sort(byReg)
+          const done = items.filter((a) => a.confirmedAt).sort(byReg)
+          const open = showDone[question.id] || todo.length === 0
+          return (
           <div key={question.id} className="space-y-3">
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-sm font-semibold text-slate-900">
-                Question {question.number}
-                {question.subLabel || ''} ({question.maxMarks} marks)
-              </p>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-900">
+                  Question {question.number}
+                  {question.subLabel || ''} ({question.maxMarks} marks)
+                </p>
+                <span className={`text-xs font-medium ${todo.length ? 'text-sky-700' : 'text-emerald-700'}`}>
+                  {todo.length ? `${todo.length} to confirm, ${done.length} done` : `All ${done.length} done`}
+                </span>
+              </div>
               <p className="mt-1 text-sm text-slate-600">{question.text}</p>
             </div>
 
             <div className="space-y-3 pl-2">
-              {items.map((a) => {
+              {[...todo, ...(open ? done : [])].map((a) => {
                 const draft = drafts[a.id] || {}
                 const isOverride = !!a.confirmedAt
                 const displayScore = draft.score !== undefined ? draft.score : a.confirmedScore ?? a.suggestedScore
@@ -127,12 +153,15 @@ export default function MyQueue() {
                   <div key={a.id} className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                       <span className="text-sm font-medium text-slate-800">
-                        {a.script.regNumber || a.script.studentIdentifier || 'Student'}
+                        {a.script.studentName || a.script.studentIdentifier || 'Student'}
+                        {a.script.regNumber && a.script.studentName && (
+                          <span className="ml-2 font-normal text-slate-400">{a.script.regNumber}</span>
+                        )}
                       </span>
                       <div className="flex items-center gap-2">
                         {a.autoAccepted && (
                           <Badge tone="green">
-                            <Sparkles size={10} /> Auto-accepted
+                            <Sparkles size={10} /> Auto accepted
                           </Badge>
                         )}
                         <Badge tone={confidenceTone(a.confidence)}>{a.confidence || 'unscored'} confidence</Badge>
@@ -175,7 +204,7 @@ export default function MyQueue() {
                       {isOverride && (
                         <div className="flex-1 min-w-[200px]">
                           <label className="text-xs font-medium text-slate-500">
-                            Reason for changing an already-reviewed score
+                            Reason for changing a reviewed score
                           </label>
                           <input
                             value={draft.reason || ''}
@@ -198,9 +227,19 @@ export default function MyQueue() {
                   </div>
                 )
               })}
+              {done.length > 0 && todo.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowDone((prev) => ({ ...prev, [question.id]: !prev[question.id] }))}
+                  className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                >
+                  {open ? 'Hide confirmed answers' : `Show ${done.length} confirmed answer${done.length === 1 ? '' : 's'}`}
+                </button>
+              )}
             </div>
           </div>
-        ))
+          )
+        })
       )}
     </div>
   )

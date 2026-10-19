@@ -46,7 +46,7 @@ export default function CoordinatorDashboard() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Scripts" value={overview.scriptCount} />
         <StatCard label="AI Marked" value={overview.aiMarked} />
-        <StatCard label="Auto-accepted" value={overview.autoAccepted} subColor="text-emerald-600" />
+        <StatCard label="Auto accepted" value={overview.autoAccepted} subColor="text-emerald-600" />
         <StatCard label="Review Completed" value={overview.humanReviewCompleted} subColor="text-emerald-600" />
         <StatCard label="Pending Review" value={overview.pendingReview} subColor="text-amber-600" />
       </div>
