@@ -2,18 +2,21 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
+  Clock,
+  Scale,
+  Building2,
+  XCircle,
+  Target,
+  FileCheck2,
+  Layers,
   Check,
   CheckCircle2,
-  ScanLine,
   Contact,
   Sparkles,
   ShieldCheck,
-  Calculator,
-  Users,
   BarChart3,
   FileSpreadsheet,
   Smartphone,
-  FileText,
   Menu,
   X,
   ChevronDown,
@@ -78,12 +81,23 @@ function Eyebrow({ children, dark = false }) {
   )
 }
 
+// Serif italic accent inside a display headline.
+function Accent({ children, dark = false }) {
+  return <span className={`block font-serif font-normal italic tracking-normal ${dark ? 'text-sky-300' : 'text-sky-600'}`}>{children}</span>
+}
+
 function SectionHeading({ eyebrow, title, text, dark = false, center = false }) {
   return (
-    <div className={center ? 'mx-auto max-w-2xl text-center' : 'max-w-2xl'}>
+    <div className={center ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl'}>
       <Eyebrow dark={dark}>{eyebrow}</Eyebrow>
-      <h2 className={`mt-3 text-3xl font-semibold tracking-tight sm:text-4xl ${dark ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
-      {text && <p className={`mt-4 text-base leading-relaxed sm:text-lg ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{text}</p>}
+      <h2
+        className={`mt-4 font-display text-[2rem] font-semibold leading-[1.08] tracking-[-0.025em] sm:text-5xl ${
+          dark ? 'text-white' : 'text-slate-950'
+        }`}
+      >
+        {title}
+      </h2>
+      {text && <p className={`mt-5 text-base leading-relaxed sm:text-lg ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{text}</p>}
     </div>
   )
 }
@@ -470,8 +484,8 @@ function FeatureRow({ eyebrow, title, text, points, visual, flip = false }) {
     <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
       <Reveal className={flip ? 'lg:order-2' : ''}>
         <Eyebrow>{eyebrow}</Eyebrow>
-        <h3 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{title}</h3>
-        <p className="mt-4 text-base leading-relaxed text-slate-600">{text}</p>
+        <h3 className="mt-4 font-display text-[1.75rem] font-semibold leading-[1.12] tracking-[-0.02em] text-slate-950 sm:text-4xl">{title}</h3>
+        <p className="mt-5 text-base leading-relaxed text-slate-600 sm:text-lg">{text}</p>
         <ul className="mt-6 space-y-3">
           {points.map((p) => (
             <li key={p} className="flex gap-3 text-sm text-slate-700">
@@ -494,12 +508,13 @@ function FeatureRow({ eyebrow, title, text, points, visual, flip = false }) {
 
 const FAQS = [
   ['Does the AI give the final mark?', 'No. Every score is a suggestion with its reasoning until a lecturer confirms it. A coordinator can choose to auto accept only high confidence scores for a session, and can switch that off at any time.'],
-  ['Do students need special answer sheets?', 'No. ScriptMark reads the answer booklets you already use. Scan pages with a phone camera, upload photos, or upload a whole PDF of scripts.'],
-  ['How does it know whose script it is?', 'It reads the reg number from the front page, including undergraduate numbers like 2017364085 and postgraduate numbers like 2025366001FN, then matches it to your class list or attendance sheet for the name.'],
-  ['What about calculations and derivations?', 'Questions can carry a step by step rubric, so working earns credit even when a final answer is wrong. Calculation heavy answers are reread straight from the page image instead of plain text.'],
-  ['What if the AI is wrong?', 'You change the score before confirming. If a confirmed score is changed later, a reason is required and the old score is kept on record. The Analytics page shows how often the AI agreed with lecturers.'],
-  ['Can several lecturers mark one exam?', 'Yes. The coordinator shares a join code, markers claim the questions they will mark, and the coordinator follows everyone’s progress from one overview.'],
-  ['What do I get at the end?', 'A result sheet in Excel or PDF with CA added and grades on the A to F scale, plus analytics on grades, pass rate and question quality.'],
+  ['Do students need special answer sheets?', 'No. ScriptMark reads the answer booklets you already use. There are no bubble sheets, QR codes or templates to print. Scan with a phone camera, upload photos, or upload a whole PDF.'],
+  ['Which universities is it built for?', 'ScriptMark was designed around the answer booklets and reg number formats of Nigerian universities, starting with Nnamdi Azikiwe University. Any booklet with a reg number on the cover works.'],
+  ['How does it know whose script it is?', 'It reads the reg number from the front page, including undergraduate numbers like 2017364085 and postgraduate numbers like 2025366001FN, then takes the name from your class list or attendance sheet.'],
+  ['Can it mark calculations and derivations?', 'Yes. Questions can carry a step by step rubric, so correct working earns credit even when the final answer is wrong. Mathematical answers are reread straight from the page image.'],
+  ['What if the AI gets a score wrong?', 'You change it before confirming. If a confirmed score is changed later, a reason is required and the old score stays on record. The Analytics page shows exactly how often the AI agreed with you.'],
+  ['Can several lecturers mark one exam?', 'Yes. The coordinator shares a join code, markers claim the questions they will mark, and the coordinator follows everyone from one overview.'],
+  ['Is there anything to install?', 'No. ScriptMark runs in the browser on a laptop, tablet or phone. Create a session, add your marking guide, and start scanning.'],
 ]
 
 function Faq() {
@@ -526,18 +541,52 @@ function Faq() {
 /* ---------- page ---------- */
 
 const NAV = [
+  ['Why ScriptMark', '#why'],
   ['How it works', '#how'],
   ['Features', '#features'],
-  ['Accuracy', '#accuracy'],
-  ['For departments', '#departments'],
+  ['For institutions', '#institutions'],
   ['FAQ', '#faq'],
 ]
 
+const PAINS = [
+  {
+    icon: Layers,
+    title: 'The pile never shrinks',
+    text: 'One course can mean hundreds of booklets, each with several answers to read, judge and total by hand, all inside a tight results deadline.',
+  },
+  {
+    icon: Scale,
+    title: 'Fatigue moves the mark',
+    text: 'The two hundredth script rarely gets the attention the first one did. Students feel the difference, and so do moderators.',
+  },
+  {
+    icon: Clock,
+    title: 'Results stall after marking',
+    text: 'Scores are retyped into spreadsheets, CA is added by hand, and every transfer is another chance for an error or a delay.',
+  },
+]
+
+const COMPARE = [
+  ['Reading the scripts', 'Every answer read line by line, by hand', 'Every answer read and scored for you, with its reasons'],
+  ['Applying the guide', 'Drifts with fatigue across the pile', 'The same guide applied to the first script and the last'],
+  ['Knowing whose script it is', 'Names copied from covers, one by one', 'Reg number read off the cover and matched to the class list'],
+  ['Totals, CA and grades', 'Added up and retyped by hand', 'Calculated and graded automatically'],
+  ['The result sheet', 'Built in a spreadsheet after marking ends', 'Ready to export the moment you confirm'],
+  ['Moderation', 'Hard to see who changed what, or why', 'Every change recorded, with a reason'],
+]
+
+const PILLARS = [
+  { icon: Clock, title: 'Results out sooner', text: 'Hours of reading become a focused review. The result sheet builds itself as you confirm.' },
+  { icon: Target, title: 'One standard for every script', text: 'Your marking guide is applied the same way to every student, so position in the pile never decides a grade.' },
+  { icon: ShieldCheck, title: 'The lecturer decides', text: 'Nothing counts until you confirm it. Every suggestion comes with its reasons and an honest confidence level.' },
+  { icon: FileCheck2, title: 'Evidence for every mark', text: 'Reasons, confidence and a full change history sit behind every score, ready for moderation and appeals.' },
+]
+
 const STEPS = [
-  { icon: Smartphone, title: 'Scan', text: 'Photograph booklets with a phone or upload a PDF. No special answer sheets.' },
-  { icon: Contact, title: 'Identify', text: 'Reg numbers are read off the front page and matched to your class list.' },
-  { icon: Sparkles, title: 'Suggest', text: 'Each answer gets a score, its reasons and a confidence level from your marking guide.' },
-  { icon: CheckCircle2, title: 'Confirm', text: 'You review beside the script, adjust what you disagree with, and confirm.' },
+  { icon: Smartphone, title: 'Scan', text: 'Photograph booklets with a phone or upload a PDF. Your usual booklets, nothing special to print.' },
+  { icon: Contact, title: 'Identify', text: 'The reg number is read off the cover and matched to your class list, so every script has a name.' },
+  { icon: Sparkles, title: 'Suggest', text: 'Every answer is marked against your guide, with a score, its reasons and a confidence level.' },
+  { icon: CheckCircle2, title: 'Confirm', text: 'Review beside the script, adjust anything you disagree with, confirm, and export the result sheet.' },
 ]
 
 export default function Landing() {
@@ -560,7 +609,7 @@ export default function Landing() {
   }
 
   return (
-    <div ref={scrollRef} className="h-screen overflow-y-auto scroll-smooth bg-white text-slate-900 antialiased">
+    <div ref={scrollRef} className="h-screen overflow-y-auto scroll-smooth bg-white font-body text-slate-900 antialiased">
       {/* Navigation */}
       <header
         className={`sticky top-0 z-40 transition-colors ${
@@ -570,20 +619,20 @@ export default function Landing() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <a href="#top" onClick={(e) => goTo(e, '#top')} className="flex items-center gap-2.5">
             <LogoMark />
-            <span className="text-lg font-semibold tracking-tight text-white">ScriptMark</span>
+            <span className="font-display text-xl font-semibold tracking-tight text-white">ScriptMark</span>
           </a>
           <nav className="hidden items-center gap-1 lg:flex">
             {NAV.map(([label, hash]) => (
-              <a key={hash} href={hash} onClick={(e) => goTo(e, hash)} className="rounded-lg px-3 py-2 text-sm text-slate-300 hover:text-white">
+              <a key={hash} href={hash} onClick={(e) => goTo(e, hash)} className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white">
                 {label}
               </a>
             ))}
           </nav>
           <div className="hidden items-center gap-2 lg:flex">
-            <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-200 hover:text-white">
+            <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-200 hover:text-white">
               Sign in
             </Link>
-            <Link to="/signup" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 hover:bg-sky-400">
+            <Link to="/signup" className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-100">
               Start marking
             </Link>
           </div>
@@ -598,15 +647,15 @@ export default function Landing() {
         {menuOpen && (
           <div className="border-t border-white/10 px-4 pb-5 pt-2 lg:hidden">
             {NAV.map(([label, hash]) => (
-              <a key={hash} href={hash} onClick={(e) => goTo(e, hash)} className="block rounded-lg px-3 py-2.5 text-base text-slate-200">
+              <a key={hash} href={hash} onClick={(e) => goTo(e, hash)} className="block rounded-lg px-3 py-2.5 text-base font-medium text-slate-200">
                 {label}
               </a>
             ))}
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <Link to="/login" className="rounded-lg border border-white/15 py-2.5 text-center text-sm font-medium text-white">
+              <Link to="/login" className="rounded-full border border-white/15 py-2.5 text-center text-sm font-semibold text-white">
                 Sign in
               </Link>
-              <Link to="/signup" className="rounded-lg bg-sky-500 py-2.5 text-center text-sm font-semibold text-white">
+              <Link to="/signup" className="rounded-full bg-white py-2.5 text-center text-sm font-semibold text-slate-950">
                 Start marking
               </Link>
             </div>
@@ -618,46 +667,48 @@ export default function Landing() {
       <section id="top" className="relative -mt-16 overflow-hidden bg-ink-950 pt-16">
         <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
         <div className="pointer-events-none absolute -top-48 left-1/2 h-[560px] w-[1100px] -translate-x-1/2 rounded-full bg-sky-500/25 blur-[120px]" />
-        <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-16 sm:px-6 sm:pt-24 lg:px-8 lg:pb-32">
-          <div className="mx-auto max-w-3xl text-center">
+        <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-14 sm:px-6 sm:pt-24 lg:px-8 lg:pb-32">
+          <div className="mx-auto max-w-5xl text-center">
             <Reveal>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-sky-200">
-                <Sparkles size={13} /> AI assisted marking for handwritten exam scripts
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-sky-200 sm:text-sm">
+                <Sparkles size={14} /> The AI marking assistant for universities that examine on paper
               </span>
             </Reveal>
             <Reveal delay={80}>
-              <h1 className="mt-7 text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-6xl">
-                Mark the whole pile.
-                <br />
-                <span className="bg-gradient-to-r from-sky-300 via-sky-400 to-cyan-300 bg-clip-text italic text-transparent">Keep the final say.</span>
+              <h1 className="mt-8 font-display text-[2.6rem] font-semibold leading-[1.02] tracking-[-0.035em] text-white sm:text-6xl lg:text-[4.6rem]">
+                The new standard for marking <br className="hidden md:block" />
+                <span className="bg-gradient-to-r from-sky-300 via-sky-400 to-cyan-300 bg-clip-text pr-2 font-serif font-normal italic tracking-normal text-transparent">
+                  handwritten exams.
+                </span>
               </h1>
             </Reveal>
             <Reveal delay={160}>
-              <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-                ScriptMark reads handwritten answer booklets, suggests a score for every answer against your marking guide,
-                and shows you why. You review beside the script and confirm. Nothing counts until you do.
+              <p className="mx-auto mt-7 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-xl">
+                ScriptMark reads every answer booklet, marks each answer against your own guide, explains every score and
+                hands you a finished result sheet. Students get results sooner, departments get marks they can defend, and
+                the lecturer signs off on every one.
               </p>
             </Reveal>
             <Reveal delay={240}>
-              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:bg-sky-400 sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-500 px-7 py-4 text-base font-semibold text-white shadow-xl shadow-sky-500/30 transition hover:bg-sky-400 sm:w-auto"
                 >
-                  Start marking <ArrowRight size={16} />
+                  Start your first session <ArrowRight size={18} />
                 </Link>
                 <a
                   href="#how"
                   onClick={(e) => goTo(e, '#how')}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10 sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-7 py-4 text-base font-semibold text-white transition hover:bg-white/10 sm:w-auto"
                 >
-                  See how it works
+                  See it in action
                 </a>
               </div>
             </Reveal>
             <Reveal delay={300}>
-              <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-400">
-                {['Works with your existing booklets', 'Lecturer confirms every score', 'Names matched by reg number'].map((t) => (
+              <ul className="mt-9 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-sm text-slate-400">
+                {['Works with the booklets you already use', 'Every mark confirmed by a lecturer', 'Nothing to install'].map((t) => (
                   <li key={t} className="flex items-center gap-2">
                     <CheckCircle2 size={15} className="text-sky-400" /> {t}
                   </li>
@@ -671,50 +722,140 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Fits how you already mark */}
-      <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
-          {[
-            [FileText, 'Your booklets', 'No QR codes or special sheets to print'],
-            [Smartphone, 'Your phone', 'Scan page by page, or upload a PDF'],
-            [Users, 'Your class list', 'Typed list or a photo of the attendance sheet'],
-            [FileSpreadsheet, 'Your result sheet', 'CA added, graded A to F, in Excel or PDF'],
-          ].map(([Icon, t, s]) => (
-            <div key={t} className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                <Icon size={19} />
-              </span>
-              <div>
-                <p className="text-sm font-semibold text-slate-900">{t}</p>
-                <p className="text-sm text-slate-500">{s}</p>
+      {/* The problem */}
+      <section id="why" className="scroll-mt-16 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+          <Reveal>
+            <SectionHeading
+              center
+              eyebrow="Why ScriptMark"
+              title={
+                <>
+                  Paper exams are here to stay. <Accent>The marking burden is not.</Accent>
+                </>
+              }
+              text="Universities still examine in handwriting, and that will not change soon. What has to change is how long marking takes, how consistent it is, and how much of it depends on one tired lecturer."
+            />
+          </Reveal>
+          <div className="mt-16 grid gap-5 md:grid-cols-3">
+            {PAINS.map(({ icon: Icon, title, text }, i) => (
+              <Reveal key={title} delay={i * 90}>
+                <div className="group h-full rounded-3xl border border-slate-200 bg-slate-50/60 p-7 transition hover:border-slate-300 hover:bg-white hover:shadow-xl hover:shadow-slate-200/60">
+                  <div className="flex items-center justify-between">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-800 shadow-sm ring-1 ring-slate-200">
+                      <Icon size={20} />
+                    </span>
+                    <span className="font-display text-sm font-semibold text-slate-300">0{i + 1}</span>
+                  </div>
+                  <p className="mt-6 font-display text-xl font-semibold tracking-tight text-slate-950">{title}</p>
+                  <p className="mt-3 text-[15px] leading-relaxed text-slate-600">{text}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Before and after */}
+      <section className="bg-slate-50">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+          <Reveal>
+            <SectionHeading
+              eyebrow="What changes"
+              title={
+                <>
+                  Same exam. Same booklets. <Accent>A completely different week.</Accent>
+                </>
+              }
+            />
+          </Reveal>
+          <Reveal delay={100} className="mt-14">
+            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+              <div className="hidden grid-cols-[1fr_1.2fr_1.2fr] border-b border-slate-200 bg-slate-50/80 text-sm font-semibold md:grid">
+                <div className="px-6 py-4 text-slate-500" />
+                <div className="px-6 py-4 text-slate-500">Marking by hand</div>
+                <div className="flex items-center gap-2 px-6 py-4 text-sky-700">
+                  <LogoMark className="h-5 w-5" /> With ScriptMark
+                </div>
               </div>
+              {COMPARE.map(([area, before, after]) => (
+                <div key={area} className="grid gap-2 border-b border-slate-100 px-5 py-5 last:border-b-0 md:grid-cols-[1fr_1.2fr_1.2fr] md:gap-0 md:p-0">
+                  <div className="font-display font-semibold text-slate-950 md:px-6 md:py-5">{area}</div>
+                  <div className="flex items-start gap-2.5 text-[15px] text-slate-500 md:px-6 md:py-5">
+                    <XCircle size={17} className="mt-0.5 shrink-0 text-slate-300" /> {before}
+                  </div>
+                  <div className="flex items-start gap-2.5 text-[15px] font-medium text-slate-800 md:bg-sky-50/40 md:px-6 md:py-5">
+                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-sky-500" /> {after}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Value pillars */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+          <div className="grid gap-14 lg:grid-cols-[1fr_1.4fr] lg:gap-20">
+            <Reveal>
+              <SectionHeading
+                eyebrow="Built for lecturers"
+                title={
+                  <>
+                    Mark faster. Mark fairer. <Accent>Stay in charge.</Accent>
+                  </>
+                }
+                text="ScriptMark does the reading, totalling and paperwork. You keep the judgement that only a lecturer should make."
+              />
+              <Link to="/signup" className="mt-9 inline-flex items-center gap-2 rounded-full bg-ink-950 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-ink-800">
+                Start marking <ArrowRight size={16} />
+              </Link>
+            </Reveal>
+            <div className="grid gap-x-10 gap-y-12 sm:grid-cols-2">
+              {PILLARS.map(({ icon: Icon, title, text }, i) => (
+                <Reveal key={title} delay={i * 80}>
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-500/25">
+                    <Icon size={22} />
+                  </span>
+                  <p className="mt-5 font-display text-xl font-semibold tracking-tight text-slate-950">{title}</p>
+                  <p className="mt-2.5 text-[15px] leading-relaxed text-slate-600">{text}</p>
+                </Reveal>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* How it works */}
-      <section id="how" className="scroll-mt-16 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+      <section id="how" className="relative scroll-mt-16 overflow-hidden bg-ink-950">
+        <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[900px] -translate-x-1/2 rounded-full bg-sky-500/15 blur-[120px]" />
+        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
           <Reveal>
             <SectionHeading
               center
+              dark
               eyebrow="How it works"
-              title="From the pile on your desk to a result sheet"
-              text="Four steps, the same for a class of thirty or three hundred."
+              title={
+                <>
+                  From the pile on your desk <Accent dark>to a signed off result sheet.</Accent>
+                </>
+              }
+              text="Four steps, whether the class has thirty students or three hundred."
             />
           </Reveal>
-          <ol className="relative mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-            <div className="absolute left-[12%] right-[12%] top-6 hidden h-px bg-gradient-to-r from-sky-200 via-sky-300 to-sky-200 lg:block" />
+          <ol className="relative mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map(({ icon: Icon, title, text }, i) => (
               <Reveal key={title} delay={i * 90}>
-                <li className="relative text-center">
-                  <span className="relative mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-ink-950 text-white shadow-lg ring-8 ring-white">
-                    <Icon size={20} />
-                    <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[10px] font-bold">{i + 1}</span>
-                  </span>
-                  <p className="mt-5 text-lg font-semibold text-slate-900">{title}</p>
-                  <p className="mx-auto mt-2 max-w-[16rem] text-sm leading-relaxed text-slate-600">{text}</p>
+                <li className="h-full rounded-3xl border border-white/10 bg-white/[0.04] p-7">
+                  <div className="flex items-center justify-between">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/30">
+                      <Icon size={20} />
+                    </span>
+                    <span className="font-serif text-3xl italic text-white/25">{i + 1}</span>
+                  </div>
+                  <p className="mt-6 font-display text-xl font-semibold text-white">{title}</p>
+                  <p className="mt-2.5 text-[15px] leading-relaxed text-slate-400">{text}</p>
                 </li>
               </Reveal>
             ))}
@@ -724,15 +865,19 @@ export default function Landing() {
 
       {/* Question types */}
       <section className="bg-slate-50">
-        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
           <Reveal>
             <SectionHeading
               eyebrow="Every kind of question"
-              title="Short answers, calculations and explanations"
-              text="Pick a question type to see what ScriptMark suggests, and what you see before you confirm."
+              title={
+                <>
+                  Definitions, calculations, essays. <Accent>Marked the way you would.</Accent>
+                </>
+              }
+              text="Pick a question type to see what ScriptMark suggests, and exactly what you see before you confirm."
             />
           </Reveal>
-          <Reveal delay={100} className="mt-10">
+          <Reveal delay={100} className="mt-12">
             <QuestionTypes />
           </Reveal>
         </div>
@@ -740,26 +885,26 @@ export default function Landing() {
 
       {/* Features */}
       <section id="features" className="scroll-mt-16 bg-white">
-        <div className="mx-auto max-w-7xl space-y-28 px-4 py-24 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl space-y-28 px-4 py-24 sm:px-6 sm:py-32 lg:space-y-36 lg:px-8">
           <FeatureRow
-            eyebrow="Know whose script it is"
-            title="Reg numbers read off the front page"
-            text="ScriptMark reads the handwritten reg number on the booklet cover, ignores the serial number and session boxes, and matches it to your class list or a photo of the attendance sheet. Names come from the list, not from guesses."
+            eyebrow="Every script, the right student"
+            title="Reg numbers read straight off the cover"
+            text="No more copying names from booklet covers. ScriptMark reads the handwritten reg number, ignores the serial number and session boxes, and takes the student's name from your class list or a photo of the attendance sheet."
             points={[
               'Undergraduate and postgraduate reg numbers, with or without a slash',
               'Small reading slips are forgiven, a different year or suffix never is',
-              'Course code, semester and session fill in if you left them blank',
+              'Course code, semester and session fill in from the cover when left blank',
             ]}
             visual={<IdentifyMockup />}
           />
           <FeatureRow
             flip
-            eyebrow="Review without the hunt"
+            eyebrow="Review in minutes, not hours"
             title="The script and the suggestion, side by side"
-            text="Every answer shows the expected answer, what the student wrote, the AI's reasons and its confidence. The page stays in view while you work down the scores, and low confidence scripts come first."
+            text="Every answer arrives with the expected answer, what the student wrote, the AI's reasons and its confidence. The page stays in view while you work down the scores, and the scripts that need you most come first."
             points={[
               'Step by step rubrics give credit for correct working',
-              'Mathematical working is reread from the page image',
+              'Mathematical working is reread from the page image itself',
               'Changing a confirmed score needs a reason, and the old score is kept',
             ]}
             visual={
@@ -790,9 +935,9 @@ export default function Landing() {
             }
           />
           <FeatureRow
-            eyebrow="See the whole class"
-            title="Analytics you can act on"
-            text="Grade spread, pass rate and averages by programme and entry year, plus a check on every question that shows whether it actually separated strong answers from weak ones."
+            eyebrow="Know how the class really did"
+            title="Analytics that improve the next exam"
+            text="See the grade spread, pass rate and averages by programme and entry year the moment marking ends. Item analysis shows which questions truly separated strong answers from weak ones, and which ones need rewriting."
             points={[
               'Totals include CA, graded on the A to F scale',
               'Compare courses across semesters and sessions',
@@ -806,41 +951,45 @@ export default function Landing() {
       {/* Accuracy and trust */}
       <section id="accuracy" className="relative scroll-mt-16 overflow-hidden bg-ink-950">
         <div className="pointer-events-none absolute -bottom-40 right-0 h-[420px] w-[700px] rounded-full bg-sky-500/15 blur-[120px]" />
-        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
           <Reveal>
             <SectionHeading
               dark
-              eyebrow="Accuracy you can check"
-              title="ScriptMark measures itself against you"
-              text="Every confirmed score is a check on the AI. The Analytics page reports how often its suggestions matched the lecturer, using the same measures examiners use to compare two human markers."
+              eyebrow="Trust, measured"
+              title={
+                <>
+                  An AI that is checked <Accent dark>on every single mark.</Accent>
+                </>
+              }
+              text="Every confirmed score is a test of the AI. ScriptMark reports how often its suggestions matched the lecturer, using the same measures examiners use to compare two human markers. No black box, no blind trust."
             />
           </Reveal>
           <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
               [Gauge, 'Agreement', 'Exact and within one mark agreement, mean error and RMSE, per answer and per script.'],
-              [BarChart3, "Cohen's kappa", 'Quadratic weighted kappa and Pearson r, the standard for marker reliability.'],
-              [Eye, 'Honest confidence', 'Errors broken down by high, medium and low confidence, so you know when to trust it.'],
+              [BarChart3, "Cohen's kappa", 'Quadratic weighted kappa and Pearson r, the standard measures of marker reliability.'],
+              [Eye, 'Honest confidence', 'Errors broken down by high, medium and low confidence, so you know when to look closer.'],
               [History, 'Full audit trail', 'Auto accepted scores are counted apart, and every change after confirmation is recorded.'],
             ].map(([Icon, t, s], i) => (
               <Reveal key={t} delay={i * 80}>
-                <div className="h-full rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+                <div className="h-full rounded-3xl border border-white/10 bg-white/[0.04] p-7">
                   <Icon size={22} className="text-sky-400" />
-                  <p className="mt-4 font-semibold text-white">{t}</p>
+                  <p className="mt-5 font-display text-lg font-semibold text-white">{t}</p>
                   <p className="mt-2 text-sm leading-relaxed text-slate-400">{s}</p>
                 </div>
               </Reveal>
             ))}
           </div>
           <Reveal delay={150}>
-            <div className="mt-10 flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-10 flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
               <div className="flex items-start gap-3">
                 <ShieldCheck size={22} className="mt-0.5 shrink-0 text-emerald-400" />
-                <p className="text-sm leading-relaxed text-slate-300">
-                  <span className="font-semibold text-white">The AI never has the last word.</span> Scores stay suggestions until a lecturer confirms
-                  them, and exports are blocked while any student's name is still in doubt.
+                <p className="text-[15px] leading-relaxed text-slate-300">
+                  <span className="font-semibold text-white">The AI never has the last word.</span> Scores stay suggestions until a lecturer
+                  confirms them, and exports are blocked while any student's name is still in doubt.
                 </p>
               </div>
-              <Link to="/signup" className="shrink-0 rounded-xl bg-white px-5 py-2.5 text-center text-sm font-semibold text-slate-900 hover:bg-slate-100">
+              <Link to="/signup" className="shrink-0 rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-slate-950 hover:bg-sky-100">
                 Try it on one course
               </Link>
             </div>
@@ -848,29 +997,56 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Departments */}
-      <section id="departments" className="scroll-mt-16 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+      {/* Institutions */}
+      <section id="institutions" className="scroll-mt-16 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
           <FeatureRow
             flip
-            eyebrow="Built for departments"
-            title="One exam, many markers, one overview"
-            text="The course coordinator creates the session and shares a join code. Colleagues claim the questions they will mark, and the coordinator follows progress, reviews overrides and exports the final sheet."
+            eyebrow="For departments and faculties"
+            title={
+              <>
+                Results your department <Accent>can stand behind.</Accent>
+              </>
+            }
+            text="Course coordinators run the whole exam from one place. Colleagues join with a code and claim the questions they will mark, and the coordinator follows progress, reviews changes and exports one final sheet for the exam officer."
             points={[
-              'Full or limited access for each marker',
+              'Full or limited access for each marker, approved by the coordinator',
               'Each marker works from their own queue of claimed questions',
-              'Coordinators approve who joins, and can revoke access',
+              'A complete record of who marked what, ready for moderation',
             ]}
             visual={<TeamMockup />}
           />
+          <div className="mt-24 grid gap-5 md:grid-cols-3">
+            {[
+              [Building2, 'Built around your booklets', 'Designed for the answer booklets and reg number formats used in Nigerian universities. No bubble sheets, no templates, no new printing.'],
+              [Smartphone, 'Runs on what you have', 'A phone camera and a browser are enough. Nothing to install, nothing for IT to maintain.'],
+              [FileSpreadsheet, 'Ready for the exam officer', 'One result sheet per course with CA added and grades on the A to F scale, in Excel or PDF.'],
+            ].map(([Icon, t, s], i) => (
+              <Reveal key={t} delay={i * 80}>
+                <div className="h-full rounded-3xl border border-slate-200 p-7">
+                  <Icon size={22} className="text-sky-600" />
+                  <p className="mt-5 font-display text-lg font-semibold text-slate-950">{t}</p>
+                  <p className="mt-2 text-[15px] leading-relaxed text-slate-600">{s}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* FAQ */}
       <section id="faq" className="scroll-mt-16 bg-slate-50">
-        <div className="mx-auto grid max-w-7xl gap-12 px-4 py-24 sm:px-6 lg:grid-cols-[1fr_1.6fr] lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-12 px-4 py-24 sm:px-6 sm:py-32 lg:grid-cols-[1fr_1.6fr] lg:px-8">
           <Reveal>
-            <SectionHeading eyebrow="Questions" title="Frequently asked" text="The things lecturers ask before marking their first set of scripts." />
+            <SectionHeading
+              eyebrow="Questions"
+              title={
+                <>
+                  Everything lecturers <Accent>ask first.</Accent>
+                </>
+              }
+              text="Still unsure? Create an account and try it on a handful of scripts before you commit a whole course."
+            />
           </Reveal>
           <Reveal delay={100}>
             <Faq />
@@ -882,19 +1058,22 @@ export default function Landing() {
       <section className="bg-white">
         <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
           <Reveal>
-            <div className="relative overflow-hidden rounded-3xl bg-ink-950 px-6 py-16 text-center sm:px-16">
+            <div className="relative overflow-hidden rounded-[2rem] bg-ink-950 px-6 py-20 text-center sm:px-16 sm:py-24">
               <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:22px_22px]" />
               <div className="pointer-events-none absolute -top-32 left-1/2 h-72 w-[700px] -translate-x-1/2 rounded-full bg-sky-500/30 blur-[100px]" />
               <div className="relative">
-                <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Try it on one set of scripts.</h2>
-                <p className="mx-auto mt-4 max-w-xl text-slate-300">
-                  Create a session, add your marking guide, and scan your first booklet. You'll see a suggested score in minutes.
+                <h2 className="mx-auto max-w-3xl font-display text-[2.2rem] font-semibold leading-[1.05] tracking-[-0.03em] text-white sm:text-6xl">
+                  Your next exam could be <Accent dark>the last one you mark alone.</Accent>
+                </h2>
+                <p className="mx-auto mt-6 max-w-xl text-base text-slate-300 sm:text-lg">
+                  Create a session, add your marking guide and scan your first booklet. Be among the first departments to mark
+                  with ScriptMark.
                 </p>
-                <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                  <Link to="/signup" className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-400">
-                    Create your account <ArrowRight size={16} />
+                <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
+                  <Link to="/signup" className="inline-flex items-center justify-center gap-2 rounded-full bg-sky-500 px-7 py-4 text-base font-semibold text-white shadow-xl shadow-sky-500/30 hover:bg-sky-400">
+                    Create your account <ArrowRight size={18} />
                   </Link>
-                  <Link to="/login" className="rounded-xl border border-white/15 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/5">
+                  <Link to="/login" className="rounded-full border border-white/15 px-7 py-4 text-base font-semibold text-white hover:bg-white/5">
                     Sign in
                   </Link>
                 </div>
@@ -910,15 +1089,15 @@ export default function Landing() {
           <div>
             <div className="flex items-center gap-2.5">
               <LogoMark />
-              <span className="text-lg font-semibold tracking-tight">ScriptMark</span>
+              <span className="font-display text-xl font-semibold tracking-tight">ScriptMark</span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">
-              AI assisted marking for handwritten exam scripts. The AI suggests, the lecturer decides.
+              The AI marking assistant for handwritten exams. The AI suggests, the lecturer decides.
             </p>
           </div>
           {[
-            ['Product', [['How it works', '#how'], ['Features', '#features'], ['Accuracy', '#accuracy'], ['For departments', '#departments']]],
-            ['Help', [['FAQ', '#faq']]],
+            ['Product', [['Why ScriptMark', '#why'], ['How it works', '#how'], ['Features', '#features'], ['Accuracy', '#accuracy']]],
+            ['Institutions', [['For departments', '#institutions'], ['FAQ', '#faq']]],
           ].map(([heading, links]) => (
             <div key={heading}>
               <p className="text-sm font-semibold text-slate-900">{heading}</p>
@@ -951,7 +1130,7 @@ export default function Landing() {
         <div className="border-t border-slate-200">
           <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-slate-400 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
             <span>© {new Date().getFullYear()} ScriptMark</span>
-            <span>A Master's research project in Electronic and Computer Engineering</span>
+            <span>Built at Nnamdi Azikiwe University, Awka</span>
           </div>
         </div>
       </footer>

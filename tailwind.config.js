@@ -4,7 +4,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Inter Variable', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body: ['Plus Jakarta Sans Variable', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Bricolage Grotesque Variable', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        serif: ['Instrument Serif', 'Georgia', 'serif'],
         hand: ['Caveat', 'cursive'],
       },
       colors: {
