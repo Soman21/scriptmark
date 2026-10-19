@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UploadCloud, Camera, CheckCircle2, Loader2, AlertCircle, FilePlus2, UserPlus, X, Sparkles } from 'lucide-react'
+import { UploadCloud, Camera, CheckCircle2, Loader2, AlertCircle, AlertTriangle, FilePlus2, UserPlus, X, Sparkles } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import BulkUploadPanel from '../components/BulkUploadPanel.jsx'
 import MultiDocUploadPanel from '../components/MultiDocUploadPanel.jsx'
@@ -28,6 +28,8 @@ export default function ScanScripts() {
   const [studentNameInput, setStudentNameInput] = useState('')
   const [regNumberInput, setRegNumberInput] = useState('')
   const [detectedFields, setDetectedFields] = useState({ name: false, regNumber: false })
+  // Other scripts in this session already holding the active script's reg number.
+  const [duplicates, setDuplicates] = useState([])
   const [activeScript, setActiveScript] = useState(null)
 
   const [scripts, setScripts] = useState([])
@@ -102,6 +104,7 @@ export default function ScanScripts() {
       setStudentNameInput(updatedScript.studentName || '')
       setRegNumberInput(updatedScript.regNumber || '')
       setDetectedFields({ name: !!detected?.name, regNumber: !!detected?.regNumber })
+      if (data.duplicates) setDuplicates(data.duplicates)
 
       setScripts((prev) => {
         const withoutThis = prev.filter((s) => s.id !== updatedScript.id)
@@ -184,6 +187,7 @@ export default function ScanScripts() {
       )
       setActiveScript(updated)
       setDetectedFields({ name: false, regNumber: false })
+      setDuplicates(updated.duplicates || [])
       setScripts((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
     } catch (err) {
       setError(err.message)
@@ -195,6 +199,7 @@ export default function ScanScripts() {
     setStudentNameInput('')
     setRegNumberInput('')
     setDetectedFields({ name: false, regNumber: false })
+    setDuplicates([])
   }
 
   async function handleDiscard() {
@@ -278,6 +283,16 @@ export default function ScanScripts() {
                 <p className="text-xs text-slate-400 mb-2">
                   Leave blank to try automatic detection from the front page, or type it in now.
                 </p>
+              )}
+
+              {activeScript && duplicates.length > 0 && (
+                <div className="mb-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                  <p>
+                    <span className="font-medium">Already scanned.</span> {activeScript.regNumber} is also on the script for{' '}
+                    {duplicates.map((d) => d.studentName || 'another student').join(', ')}. If this is the same booklet, press Discard Scan. If the reg number was misread, correct it below.
+                  </p>
+                </div>
               )}
 
               {(detectedFields.name || detectedFields.regNumber) && (

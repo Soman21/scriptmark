@@ -188,6 +188,20 @@ export default function Archive() {
               <StatCard icon={<Clock size={16} className="text-amber-500" />} label="Pending Review" value={pending} />
             </div>
 
+            {scripts.some((s) => s.duplicateOf?.length) && (
+              <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+                <p className="flex gap-2">
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                  <span>
+                    {[...new Set(scripts.filter((s) => s.duplicateOf?.length).map((s) => s.regNumber))].join(', ')} appear more than once, so the sheet would list them twice.
+                  </span>
+                </p>
+                <button type="button" onClick={() => navigate(`/sessions/${sessionId}/marking`)} className="shrink-0 font-medium underline">
+                  Fix in Marking Progress
+                </button>
+              </div>
+            )}
+
             <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-slate-900">What goes on the sheet</p>
