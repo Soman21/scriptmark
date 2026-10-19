@@ -2,16 +2,8 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { CONTACT } from '../lib/site.js'
+import { GET_STARTED_STEPS as STEPS } from '../lib/gettingStarted.js'
 
-const STEPS = [
-  ['Create a session', 'New Marking Session, then the course code, semester and year.'],
-  ['Set up the marking guide', 'Upload the question paper or type the questions. AI can write any missing model answers.'],
-  ['Add lecturers', 'Add lecturers in the session header sends an invite link. Each marker then claims their questions.'],
-  ['Scan the scripts', 'Upload the attendance sheet, then photos or PDFs of each script, one at a time or in a batch.'],
-  ['Start marking', 'Done Scanning, Start Marking. The AI suggests a score and reason for every answer.'],
-  ['Review and confirm', 'In Results, check each script. The marking assistant beside it explains and rechecks scores.'],
-  ['Export', 'Enter CA if you have it, then download Excel or PDF, with or without CA.'],
-]
 
 // The sidebar's Help: the whole marking flow on one screen.
 export default function HelpDialog({ open, onClose }) {

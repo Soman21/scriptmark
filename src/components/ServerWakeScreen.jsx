@@ -1,22 +1,13 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react'
 import { getServerState, subscribeServer, wakeServer, resetServerState } from '../lib/serverWake.js'
+import { GET_STARTED_STEPS as STEPS } from '../lib/gettingStarted.js'
 
 // Shown only when the server is slow to answer, so a warm server never
-// flashes it. Tips about the app keep the wait useful.
-export const WAKE_TIPS = [
-  { title: 'Snap the front page first', body: 'ScriptMark reads the reg number from the cover, then fills the name from your class list.' },
-  { title: 'Upload many scripts at once', body: 'Batch upload takes a whole pile of photos and starts marking as soon as they are in.' },
-  { title: 'Share the marking', body: 'Invite colleagues from Add lecturers, and each one claims the questions they will mark.' },
-  { title: 'You always have the final say', body: 'The AI only suggests a score. Nothing counts until a lecturer confirms it.' },
-  { title: 'Ask about any answer', body: 'On Results, Ask the assistant explains a score and can recheck it against your guide.' },
-  { title: 'Only review what matters', body: 'Turn on automatic acceptance and high confidence scores are accepted, so you check the uncertain ones.' },
-  { title: 'Export your way', body: 'Download exam scores only, or add CA for totals and grades, in Excel or PDF.' },
-  { title: 'Let the AI draft the guide', body: 'Upload the question paper and ScriptMark can suggest model answers for you to edit.' },
-]
+// flashes it. The wait doubles as a short intro to the marking flow, which
+// the lecturer can step through or skip.
 
 const SHOW_AFTER_MS = 1500
-const TIP_MS = 6000
 
 export function useServerState() {
   const [s, setS] = useState(getServerState())
@@ -27,96 +18,129 @@ export function useServerState() {
 export default function ServerWakeScreen() {
   const server = useServerState()
   const [visible, setVisible] = useState(false)
-  const [elapsed, setElapsed] = useState(0)
-  const [tip, setTip] = useState(() => Math.floor(Math.random() * WAKE_TIPS.length))
+  const [step, setStep] = useState(0)
+  const [touched, setTouched] = useState(false)
+  const [skipped, setSkipped] = useState(false)
 
   const waiting = server.status === 'waking' || server.status === 'down'
+  const ready = server.status === 'ready'
 
   useEffect(() => {
-    if (!waiting) {
-      setVisible(false)
-      return
-    }
+    if (!waiting) return
     const t = setTimeout(() => setVisible(true), Math.max(0, SHOW_AFTER_MS - (Date.now() - (server.startedAt || Date.now()))))
     return () => clearTimeout(t)
   }, [waiting, server.startedAt])
 
+  // Close by itself once ready, unless the lecturer is reading the intro;
+  // then they finish or press Continue.
   useEffect(() => {
-    if (!visible) return
-    const clock = setInterval(() => setElapsed(Math.floor((Date.now() - server.startedAt) / 1000)), 1000)
-    const tips = setInterval(() => setTip((i) => (i + 1) % WAKE_TIPS.length), TIP_MS)
-    return () => {
-      clearInterval(clock)
-      clearInterval(tips)
-    }
-  }, [visible, server.startedAt])
+    if (ready && (!touched || skipped)) setVisible(false)
+  }, [ready, touched, skipped])
 
   if (!visible) return null
 
   const down = server.status === 'down'
-  // Eases toward 95 percent over about a minute, the usual start up time.
-  const percent = Math.round(95 * (1 - Math.exp(-elapsed / 25)))
-  const current = WAKE_TIPS[tip]
+  const last = step === STEPS.length - 1
+  const [title, text] = STEPS[step]
+
+  function go(to) {
+    setTouched(true)
+    setStep(to)
+  }
 
   function retry() {
     resetServerState()
-    setElapsed(0)
     wakeServer()
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-50/95 px-4 backdrop-blur-sm" role="status" aria-live="polite">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
-        <div className="flex items-center gap-3">
-          <div className="relative h-11 w-11 shrink-0">
-            <div className={`absolute inset-0 rounded-full border-4 border-sky-100 ${down ? '' : 'border-t-sky-500 animate-spin'}`} />
-            <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-sky-600">S</div>
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-slate-900">{down ? 'Still starting up' : 'Getting ScriptMark ready'}</h2>
-            <p className="text-sm text-slate-500">
-              {down ? 'This is taking longer than usual.' : 'The server rests when nobody is using it. It usually starts in under a minute.'}
-            </p>
-          </div>
-        </div>
-
-        {!down && (
-          <div className="mt-5">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-sky-500 transition-all duration-1000" style={{ width: `${percent}%` }} />
-            </div>
-            <p className="mt-1.5 text-right text-xs text-slate-400">{elapsed}s</p>
-          </div>
-        )}
-
-        <div className="mt-4 rounded-xl bg-sky-50 p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-sky-600">While you wait</p>
-          <p className="mt-1 font-medium text-slate-900">{current.title}</p>
-          <p className="mt-1 min-h-[2.5rem] text-sm text-slate-600">{current.body}</p>
-          <div className="mt-3 flex items-center justify-between">
-            <div className="flex gap-1.5">
-              {WAKE_TIPS.map((_, i) => (
-                <span key={i} className={`h-1.5 rounded-full transition-all ${i === tip ? 'w-4 bg-sky-500' : 'w-1.5 bg-sky-200'}`} />
-              ))}
-            </div>
-            <div className="flex gap-1">
-              <button type="button" onClick={() => setTip((i) => (i - 1 + WAKE_TIPS.length) % WAKE_TIPS.length)} aria-label="Previous tip" className="rounded-md p-1 text-sky-600 hover:bg-sky-100">
-                <ChevronLeft size={16} />
-              </button>
-              <button type="button" onClick={() => setTip((i) => (i + 1) % WAKE_TIPS.length)} aria-label="Next tip" className="rounded-md p-1 text-sky-600 hover:bg-sky-100">
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-50 px-4" role="status" aria-live="polite">
+      <div className="w-full max-w-md">
+        <div className="flex items-center justify-center gap-2.5">
+          {ready ? (
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
+              <Check size={14} />
+            </span>
+          ) : (
+            <span className={`h-6 w-6 rounded-full border-[3px] border-sky-100 ${down ? '' : 'border-t-sky-500 animate-spin'}`} />
+          )}
+          <h2 className="text-lg font-semibold text-slate-900">
+            {ready ? 'ScriptMark is ready' : down ? 'Still getting ScriptMark ready' : 'Getting ScriptMark ready'}
+          </h2>
         </div>
 
         {down && (
           <button
             type="button"
             onClick={retry}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+            className="mx-auto mt-4 flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
           >
-            <RefreshCw size={16} /> Try again
+            <RefreshCw size={15} /> Try again
+          </button>
+        )}
+
+        {!skipped && (
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium uppercase tracking-wide text-sky-600">Get started in {STEPS.length} easy steps</p>
+              <button type="button" onClick={() => setSkipped(true)} className="text-xs font-medium text-slate-400 hover:text-slate-600">
+                Skip intro
+              </button>
+            </div>
+
+            <div className="mt-4 flex gap-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-500 text-sm font-semibold text-white">
+                {step + 1}
+              </span>
+              <div className="min-h-[5.5rem] min-w-0">
+                <p className="font-semibold text-slate-900">{title}</p>
+                <p className="mt-1 text-sm text-slate-600">{text}</p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between">
+              <div className="flex gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
+                {STEPS.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => go(i)}
+                    aria-label={`Step ${i + 1}`}
+                    className={`h-1.5 rounded-full transition-all ${i === step ? 'w-5 bg-sky-500' : 'w-1.5 bg-slate-200 hover:bg-slate-300'}`}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                {step > 0 && (
+                  <button type="button" onClick={() => go(step - 1)} aria-label="Back" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100">
+                    <ArrowLeft size={16} />
+                  </button>
+                )}
+                {last ? (
+                  <button
+                    type="button"
+                    onClick={() => (ready ? setVisible(false) : setSkipped(true))}
+                    className="rounded-lg bg-sky-500 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-400"
+                  >
+                    {ready ? 'Continue' : 'Done'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => go(step + 1)}
+                    className="flex items-center gap-1.5 rounded-lg bg-sky-500 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-400"
+                  >
+                    Next <ArrowRight size={15} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {ready && !skipped && !last && (
+          <button type="button" onClick={() => setVisible(false)} className="mx-auto mt-4 block text-sm font-medium text-sky-600 hover:text-sky-700">
+            Continue to ScriptMark
           </button>
         )}
       </div>
