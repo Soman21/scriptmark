@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react'
 import { getServerState, subscribeServer, wakeServer, resetServerState } from '../lib/serverWake.js'
 import { GET_STARTED_STEPS as STEPS } from '../lib/gettingStarted.js'
 
 // Shown only when the server is slow to answer, so a warm server never
-// flashes it. The wait doubles as a short intro to the marking flow, which
-// the lecturer can step through or skip.
+// flashes it. The wait doubles as a short intro to the marking flow: the
+// steps move on by themselves, timed so the last one lands about when a cold
+// server is up, and the screen closes as soon as the server answers.
 
 const SHOW_AFTER_MS = 1500
+const STEP_MS = 7000
 
 export function useServerState() {
   const [s, setS] = useState(getServerState())
@@ -19,7 +21,8 @@ export default function ServerWakeScreen() {
   const server = useServerState()
   const [visible, setVisible] = useState(false)
   const [step, setStep] = useState(0)
-  const [touched, setTouched] = useState(false)
+  const [stepStarted, setStepStarted] = useState(Date.now())
+  const [now, setNow] = useState(Date.now())
   const [skipped, setSkipped] = useState(false)
 
   const waiting = server.status === 'waking' || server.status === 'down'
@@ -31,11 +34,21 @@ export default function ServerWakeScreen() {
     return () => clearTimeout(t)
   }, [waiting, server.startedAt])
 
-  // Close by itself once ready, unless the lecturer is reading the intro;
-  // then they finish or press Continue.
   useEffect(() => {
-    if (ready && (!touched || skipped)) setVisible(false)
-  }, [ready, touched, skipped])
+    if (ready) setVisible(false)
+  }, [ready])
+
+  // Moves to the next step on a timer and stops on the last one.
+  useEffect(() => {
+    if (!visible) return
+    go(0)
+    const tick = setInterval(() => setNow(Date.now()), 200)
+    return () => clearInterval(tick)
+  }, [visible])
+
+  useEffect(() => {
+    if (now - stepStarted >= STEP_MS && step < STEPS.length - 1) go(step + 1)
+  }, [now])
 
   if (!visible) return null
 
@@ -44,9 +57,13 @@ export default function ServerWakeScreen() {
   const [title, text] = STEPS[step]
 
   function go(to) {
-    setTouched(true)
     setStep(to)
+    setStepStarted(Date.now())
   }
+
+  // Fills across all the steps, so a full bar means the last step.
+  const within = Math.min(1, (now - stepStarted) / STEP_MS)
+  const percent = Math.round(Math.min(98, ((step + (last ? Math.min(within, 0.9) : within)) / STEPS.length) * 100))
 
   function retry() {
     resetServerState()
@@ -57,17 +74,17 @@ export default function ServerWakeScreen() {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-50 px-4" role="status" aria-live="polite">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2.5">
-          {ready ? (
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white">
-              <Check size={14} />
-            </span>
-          ) : (
-            <span className={`h-6 w-6 rounded-full border-[3px] border-sky-100 ${down ? '' : 'border-t-sky-500 animate-spin'}`} />
-          )}
+          <span className={`h-6 w-6 rounded-full border-[3px] border-sky-100 ${down ? '' : 'border-t-sky-500 animate-spin'}`} />
           <h2 className="text-lg font-semibold text-slate-900">
-            {ready ? 'ScriptMark is ready' : down ? 'Still getting ScriptMark ready' : 'Getting ScriptMark ready'}
+            {down ? 'Still getting ScriptMark ready' : 'Getting ScriptMark ready'}
           </h2>
         </div>
+
+        {!down && (
+          <div className="mx-auto mt-4 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-200">
+            <div className="h-full rounded-full bg-sky-500 transition-all duration-200 ease-linear" style={{ width: `${percent}%` }} />
+          </div>
+        )}
 
         {down && (
           <button
@@ -116,15 +133,7 @@ export default function ServerWakeScreen() {
                     <ArrowLeft size={16} />
                   </button>
                 )}
-                {last ? (
-                  <button
-                    type="button"
-                    onClick={() => (ready ? setVisible(false) : setSkipped(true))}
-                    className="rounded-lg bg-sky-500 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-400"
-                  >
-                    {ready ? 'Continue' : 'Done'}
-                  </button>
-                ) : (
+                {!last && (
                   <button
                     type="button"
                     onClick={() => go(step + 1)}
@@ -138,11 +147,6 @@ export default function ServerWakeScreen() {
           </div>
         )}
 
-        {ready && !skipped && !last && (
-          <button type="button" onClick={() => setVisible(false)} className="mx-auto mt-4 block text-sm font-medium text-sky-600 hover:text-sky-700">
-            Continue to ScriptMark
-          </button>
-        )}
       </div>
     </div>
   )
