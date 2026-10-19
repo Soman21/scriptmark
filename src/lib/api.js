@@ -25,6 +25,8 @@ export const api = {
   verifyOtp: (payload) => request('/api/auth/verifyOtp', { method: 'POST', body: payload }),
   forgotPassword: (email) => request('/api/auth/forgotPassword', { method: 'POST', body: { email } }),
   resetPassword: (payload) => request('/api/auth/resetPassword', { method: 'POST', body: payload }),
+  updateProfile: (payload, token) => request('/api/auth/me', { method: 'PUT', body: payload, token }),
+  changePassword: (payload, token) => request('/api/auth/password', { method: 'PUT', body: payload, token }),
 
   getGuides: (token) => request('/api/guides', { token }),
   getGuide: (id, token) => request(`/api/guides/${id}`, { token }),

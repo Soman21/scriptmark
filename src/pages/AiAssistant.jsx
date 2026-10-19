@@ -18,7 +18,13 @@ export default function AiAssistant() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [listening, setListening] = useState(false)
-  const [voiceReplies, setVoiceReplies] = useState(false)
+  const [voiceReplies, setVoiceReplies] = useState(() => {
+    try {
+      return localStorage.getItem('scriptmark_voice_replies') === '1' // default set in Settings
+    } catch {
+      return false
+    }
+  })
   const [speechSupported, setSpeechSupported] = useState(true)
   const [downloading, setDownloading] = useState(null)
 

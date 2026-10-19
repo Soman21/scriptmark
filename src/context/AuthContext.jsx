@@ -46,6 +46,13 @@ export function AuthProvider({ children }) {
     return data.user
   }
 
+  // Settings: a name change comes back with a fresh token carrying it.
+  async function updateProfile({ name }) {
+    const data = await api.updateProfile({ name }, token)
+    persist(data.token, data.user)
+    return data.user
+  }
+
   function logout() {
     localStorage.removeItem('scriptmark_token')
     localStorage.removeItem('scriptmark_user')
@@ -54,7 +61,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, signup, login, verifyOtp, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, signup, login, verifyOtp, updateProfile, logout }}>
       {children}
     </AuthContext.Provider>
   )

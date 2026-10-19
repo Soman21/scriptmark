@@ -15,6 +15,7 @@ import CoordinatorDashboard from '../pages/CoordinatorDashboard.jsx'
 import Archive from '../pages/Archive.jsx'
 import ScanScripts from '../pages/ScanScripts.jsx'
 import CohortAnalytics from '../pages/CohortAnalytics.jsx'
+import Settings from '../pages/Settings.jsx'
 
 const FAKE_USER = { id: 'u1', name: 'Ann Coordinator', role: 'LECTURER' }
 const FAKE_SESSION = {
@@ -338,5 +339,47 @@ describe('Cohort analytics', () => {
     fireEvent.change(screen.getByLabelText('Academic session'), { target: { value: '2025/2026' } })
     expect(screen.queryByText('ECE305 Control')).toBeNull()
     expect(screen.getByText('ECE512 DSP')).toBeTruthy()
+  })
+})
+
+describe('Settings page', () => {
+  function renderSettings() {
+    return render(
+      <MemoryRouter initialEntries={['/settings']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    )
+  }
+
+  it('saves a new name and keeps the fresh token', async () => {
+    routes.unshift(routeFor('/api/auth/me', { token: 'tok_new', user: { ...FAKE_USER, name: 'Ann Nwachukwu' } }))
+    renderSettings()
+    const input = await screen.findByDisplayValue('Ann Coordinator')
+    fireEvent.change(input, { target: { value: 'Ann Nwachukwu' } })
+    fireEvent.click(screen.getByText('Save name'))
+    await waitFor(() => expect(screen.getByText('Name updated.')).toBeTruthy())
+    expect(localStorage.getItem('scriptmark_token')).toBe('tok_new')
+    expect(JSON.parse(localStorage.getItem('scriptmark_user')).name).toBe('Ann Nwachukwu')
+  })
+
+  it('checks the new passwords match before calling the server', async () => {
+    renderSettings()
+    await screen.findByDisplayValue('Ann Coordinator')
+    fireEvent.change(screen.getByLabelText('Current password'), { target: { value: 'oldpassword' } })
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'newpassword1' } })
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'newpassword2' } })
+    fireEvent.click(screen.getByText('Change password'))
+    expect(screen.getByText('The two new passwords do not match.')).toBeTruthy()
+    expect(global.fetch.mock.calls.some(([url]) => url.includes('/api/auth/password'))).toBe(false)
+  })
+
+  it('remembers the voice replies preference on this device', async () => {
+    renderSettings()
+    fireEvent.click(await screen.findByRole('switch', { name: 'Read AI Assistant replies aloud' }))
+    expect(localStorage.getItem('scriptmark_voice_replies')).toBe('1')
   })
 })
