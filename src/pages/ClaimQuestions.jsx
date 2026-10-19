@@ -4,12 +4,14 @@ import { Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
+import PageAssistant, { questionsText } from '../components/PageAssistant.jsx'
 
 export default function ClaimQuestions() {
   const { token, user } = useAuth()
   const { sessionId } = useSession()
 
   const [questions, setQuestions] = useState([])
+  const [chatOpen, setChatOpen] = useState(false)
   const [markers, setMarkers] = useState([])
   const [isCoordinator, setIsCoordinator] = useState(false)
   const [canManage, setCanManage] = useState(false)
@@ -119,6 +121,18 @@ export default function ClaimQuestions() {
     }
   }
 
+  // What the chat helper asked for, done with the same call as the buttons.
+  async function runAssistantAction(action) {
+    const target = action.type === 'unclaim' ? null : action.targetUserId
+    await Promise.all(action.questionIds.map((id) => api.claimQuestion(guideId, id, token, target)))
+    await loadEverything()
+    const what = questionsText(action.labels)
+    if (action.type === 'claim') return `Claimed ${what} for you.`
+    if (action.type === 'unclaim') return `Released ${what}.`
+    const name = markers.find((m) => m.id === action.targetUserId)?.name || 'that marker'
+    return `Gave ${what} to ${name}.`
+  }
+
   async function handleApprove(userId) {
     setBusyUserId(userId)
     setError('')
@@ -174,7 +188,7 @@ export default function ClaimQuestions() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6">
+    <div className={`h-full overflow-y-auto p-6 pb-24 space-y-6 ${chatOpen ? 'sm:pr-[424px]' : ''}`}>
       <h1 className="text-xl font-semibold text-slate-900">Claim Questions</h1>
 
       {questionPaperUrl && (
@@ -441,6 +455,18 @@ export default function ClaimQuestions() {
           )}
         </div>
       )}
+
+      <PageAssistant
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        page="claim"
+        sessionId={sessionId}
+        title="Claim with chat"
+        intro="Tell it which questions are yours and it claims them for you."
+        quick={['My questions are question 1', 'Claim everything nobody has taken', 'Which questions are still free?']}
+        runAction={runAssistantAction}
+        hidden={!guideId}
+      />
     </div>
   )
 }

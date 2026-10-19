@@ -4,6 +4,7 @@ import { Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
+import PageAssistant from '../components/PageAssistant.jsx'
 
 function confidenceTone(confidence) {
   if (confidence === 'high') return 'green'
@@ -17,6 +18,7 @@ export default function MyQueue() {
   const { sessionId } = useSession()
 
   const [answers, setAnswers] = useState([])
+  const [chatOpen, setChatOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [drafts, setDrafts] = useState({}) // answerId -> { score, reason }
@@ -76,6 +78,15 @@ export default function MyQueue() {
     }
   }
 
+  // Scores the chat helper prepared, saved only after the lecturer taps Confirm.
+  async function runAssistantAction(action) {
+    for (const it of action.items) {
+      await api.confirmScore(it.answerId, { confirmedScore: it.score, extractedText: it.extractedText }, token)
+    }
+    await loadQueue()
+    return `Confirmed ${action.items.length} score${action.items.length === 1 ? '' : 's'}.`
+  }
+
   // Group flat answers by question, so each question shows once with every
   // student's response underneath it, instead of one script at a time.
   const grouped = answers.reduce((acc, a) => {
@@ -90,7 +101,7 @@ export default function MyQueue() {
 
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6">
+    <div className={`h-full overflow-y-auto p-6 pb-24 space-y-6 ${chatOpen ? 'sm:pr-[424px]' : ''}`}>
       <div>
         <h1 className="text-xl font-semibold text-slate-900">My Marking Queue</h1>
         <p className="text-sm text-slate-500">Questions assigned to you in this session</p>
@@ -241,6 +252,18 @@ export default function MyQueue() {
           )
         })
       )}
+
+      <PageAssistant
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        page="queue"
+        sessionId={sessionId}
+        title="Queue assistant"
+        intro="Ask about your answers. Scores it prepares wait for your tap."
+        quick={['Confirm all the high confidence answers', 'Which answers should I look at first?', 'How many are left?']}
+        runAction={runAssistantAction}
+        hidden={answers.length === 0}
+      />
     </div>
   )
 }

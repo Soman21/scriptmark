@@ -8,11 +8,13 @@ import { StatCard } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
+import PageAssistant from '../components/PageAssistant.jsx'
 
 export default function Analytics() {
   const { token } = useAuth()
   const { session, sessionId } = useSession()
   const [data, setData] = useState(null)
+  const [chatOpen, setChatOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -43,7 +45,7 @@ export default function Analytics() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className={`flex-1 overflow-y-auto p-6 pb-24 space-y-6 ${chatOpen ? 'sm:pr-[424px]' : ''}`}>
         {loading ? (
           <p className="text-sm text-slate-400">Loading analytics...</p>
         ) : !data || data.totalScripts === 0 ? (
@@ -145,6 +147,18 @@ export default function Analytics() {
           </>
         )}
       </div>
+
+      <PageAssistant
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        page="analytics"
+        sessionId={sessionId}
+        title="Ask about results"
+        intro="Questions about this session's scores, answered from its own numbers."
+        quick={['Which question was hardest?', 'How many students scored below 40 percent?', 'Summarise how the class did']}
+        runAction={async () => ''}
+        hidden={!data || data.totalScripts === 0}
+      />
     </div>
   )
 }

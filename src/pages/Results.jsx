@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download, Sparkles } from 'lucide-react'
+import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download, Sparkles, MessageCircle } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
+import PageAssistant from '../components/PageAssistant.jsx'
 import ReviewAssistant from '../components/ReviewAssistant.jsx'
 
 function ImageViewerModal({ pages, startIndex, onClose, onIndexChange }) {
@@ -73,6 +74,7 @@ export default function Results() {
   const [pageIndex, setPageIndex] = useState(0)
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [assistantAsk, setAssistantAsk] = useState(null)
+  const [finderOpen, setFinderOpen] = useState(false)
 
   useEffect(() => {
     loadScripts()
@@ -128,7 +130,16 @@ export default function Results() {
     }
   }
 
+  // Opens the script the chat helper found.
+  async function runAssistantAction(action) {
+    const index = scripts.findIndex((x) => x.id === action.scriptId)
+    if (index < 0) throw new Error(`${action.student} has not been marked yet, so there is nothing to open.`)
+    setCurrentIndex(index)
+    return `Opened ${action.student}.`
+  }
+
   function askAbout(label) {
+    setFinderOpen(false)
     setAssistantOpen(true)
     setAssistantAsk({ text: `Check ${label} again against the guide. Is the score right?`, at: Date.now() })
   }
@@ -180,7 +191,7 @@ export default function Results() {
     : []
 
   return (
-    <div className={`flex h-full flex-col transition-[padding] ${assistantOpen ? 'xl:pr-[420px]' : ''}`}>
+    <div className={`flex h-full flex-col transition-[padding] ${assistantOpen || finderOpen ? 'xl:pr-[420px]' : ''}`}>
       <Topbar
         title="Review Suggested Scores"
         right={
@@ -446,7 +457,19 @@ export default function Results() {
               </p>
               <div className="flex items-center gap-2">
               <button
-                onClick={() => setAssistantOpen(true)}
+                onClick={() => {
+                  setAssistantOpen(false)
+                  setFinderOpen(true)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <MessageCircle size={15} /> <span className="hidden sm:inline">Find scripts</span>
+              </button>
+              <button
+                onClick={() => {
+                  setFinderOpen(false)
+                  setAssistantOpen(true)
+                }}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50"
               >
                 <Sparkles size={15} /> <span className="hidden sm:inline">Marking assistant</span>
@@ -466,6 +489,17 @@ export default function Results() {
         onClose={() => setAssistantOpen(false)}
         onUseScore={applySuggestedScore}
         ask={assistantAsk}
+      />
+      <PageAssistant
+        page="results"
+        sessionId={sessionId}
+        title="Find scripts"
+        intro="Ask about the scripts here, or say whose script to open."
+        quick={['Open the scripts with low confidence answers', 'Who scored highest?', 'Which scripts still need confirming?']}
+        runAction={runAssistantAction}
+        open={finderOpen}
+        onOpenChange={setFinderOpen}
+        noLauncher
       />
       <ImageViewerModal pages={currentPages} startIndex={viewerIndex} onClose={() => setViewerIndex(null)} onIndexChange={setViewerIndex} />
     </div>

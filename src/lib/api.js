@@ -101,6 +101,8 @@ export const api = {
 
   reviewWithAssistant: (scriptId, messages, token) =>
     request('/api/assistant/review', { method: 'POST', body: { scriptId, messages }, token }),
+  askPageAssistant: (sessionId, page, messages, token) =>
+    request('/api/assistant/page', { method: 'POST', body: { sessionId, page, messages }, token }),
   chatWithAssistant: (messages, activeSessionId, token) =>
     request('/api/assistant/chat', { method: 'POST', body: { messages, activeSessionId }, token }),
 }
