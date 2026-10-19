@@ -605,7 +605,9 @@ export default function Landing() {
   function goTo(e, hash) {
     e.preventDefault()
     setMenuOpen(false)
-    document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' })
+    // Scroll once the mobile menu has closed, otherwise its height is
+    // counted in and the page lands past the section.
+    requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' })))
   }
 
   return (
