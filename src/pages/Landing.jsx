@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import LogoMark from '../components/LogoMark.jsx'
+import SiteFooter from '../components/SiteFooter.jsx'
 import {
   ArrowRight,
   Clock,
@@ -32,16 +34,6 @@ import {
 // sharp, loads instantly and never shows a real student's details.
 
 /* ---------- small building blocks ---------- */
-
-export function LogoMark({ className = 'h-7 w-7' }) {
-  return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="#0ea5e9" />
-      <path d="M9 9h10a4 4 0 0 1 4 4v10H13a4 4 0 0 1-4-4V9Z" fill="#fff" opacity=".25" />
-      <path d="M10.5 16.5l3.5 3.5 7.5-8" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
 
 // Fades a section up the first time it scrolls into view.
 function Reveal({ children, className = '', delay = 0 }) {
@@ -594,6 +586,13 @@ export default function Landing() {
   const [scrolled, setScrolled] = useState(false)
   const scrollRef = useRef(null)
 
+  // Arriving from another page at /#section (for example from the footer
+  // on the Contact page) scrolls to that section.
+  const { hash } = useLocation()
+  useEffect(() => {
+    if (hash) requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView())
+  }, [hash])
+
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -1085,57 +1084,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr_1fr] lg:px-8">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <LogoMark />
-              <span className="font-display text-xl font-semibold tracking-tight">ScriptMark</span>
-            </div>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">
-              The AI marking assistant for handwritten exams. The AI suggests, the lecturer decides.
-            </p>
-          </div>
-          {[
-            ['Product', [['Why ScriptMark', '#why'], ['How it works', '#how'], ['Features', '#features'], ['Accuracy', '#accuracy']]],
-            ['Institutions', [['For departments', '#institutions'], ['FAQ', '#faq']]],
-          ].map(([heading, links]) => (
-            <div key={heading}>
-              <p className="text-sm font-semibold text-slate-900">{heading}</p>
-              <ul className="mt-4 space-y-2.5">
-                {links.map(([l, h]) => (
-                  <li key={l}>
-                    <a href={h} onClick={(e) => goTo(e, h)} className="text-sm text-slate-500 hover:text-slate-900">
-                      {l}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          <div>
-            <p className="text-sm font-semibold text-slate-900">Account</p>
-            <ul className="mt-4 space-y-2.5">
-              <li>
-                <Link to="/login" className="text-sm text-slate-500 hover:text-slate-900">Sign in</Link>
-              </li>
-              <li>
-                <Link to="/signup" className="text-sm text-slate-500 hover:text-slate-900">Create account</Link>
-              </li>
-              <li>
-                <Link to="/forgotPassword" className="text-sm text-slate-500 hover:text-slate-900">Reset password</Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="border-t border-slate-200">
-          <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-slate-400 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
-            <span>© {new Date().getFullYear()} ScriptMark</span>
-            <span>Built at Nnamdi Azikiwe University, Awka</span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter onSection={goTo} />
     </div>
   )
 }

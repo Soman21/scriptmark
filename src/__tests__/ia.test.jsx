@@ -407,4 +407,47 @@ describe('Home route', () => {
     await waitFor(() => expect(screen.getAllByText('ECE305 Midterm').length).toBeGreaterThan(0))
     expect(screen.queryByText(/The new standard for marking/)).toBeNull()
   })
+
+  it('links the landing footer to the Contact and Privacy pages', async () => {
+    localStorage.clear()
+    renderApp()
+    await waitFor(() => expect(screen.getByText(/The new standard for marking/)).toBeTruthy())
+    expect(screen.getByRole('link', { name: 'Contact' }).getAttribute('href')).toBe('/contact')
+    expect(screen.getByRole('link', { name: 'Privacy policy' }).getAttribute('href')).toBe('/privacy')
+  })
+})
+
+describe('Public pages', () => {
+  function renderAt(path) {
+    localStorage.clear()
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <App />
+      </MemoryRouter>
+    )
+  }
+
+  it('shows contact details and opens an email with the message filled in', async () => {
+    renderAt('/contact')
+    expect(await screen.findByText(/Let's talk about marking/)).toBeTruthy()
+    expect(screen.getAllByRole('link', { name: /maguegbo@gmail.com/ })[0].getAttribute('href')).toBe('mailto:maguegbo@gmail.com')
+    const original = window.location
+    delete window.location
+    window.location = { href: '' }
+    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Dr. Obi' } })
+    fireEvent.change(screen.getByLabelText('Your email'), { target: { value: 'obi@unizik.edu.ng' } })
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'We want a pilot.' } })
+    fireEvent.click(screen.getByRole('button', { name: /Send message/ }))
+    expect(window.location.href).toMatch(/^mailto:maguegbo@gmail\.com\?subject=ScriptMark/)
+    expect(decodeURIComponent(window.location.href)).toContain('We want a pilot.')
+    window.location = original
+  })
+
+  it('shows the privacy policy with its providers and a way to get in touch', async () => {
+    renderAt('/privacy')
+    expect(await screen.findByText(/How ScriptMark handles your information/)).toBeTruthy()
+    expect(screen.getAllByText('Google Cloud Vision').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Nigeria Data Protection Act 2023/).length).toBeGreaterThan(0)
+    expect(screen.getByRole('link', { name: 'contact page' }).getAttribute('href')).toBe('/contact')
+  })
 })

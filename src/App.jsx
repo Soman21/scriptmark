@@ -22,6 +22,8 @@ import ForgotPassword from './pages/ForgotPassword.jsx'
 import Settings from './pages/Settings.jsx'
 import CohortAnalytics from './pages/CohortAnalytics.jsx'
 import Landing from './pages/Landing.jsx'
+import Contact from './pages/Contact.jsx'
+import Privacy from './pages/Privacy.jsx'
 
 function AppLayout({ children }) {
   const { user, logout } = useAuth()
@@ -108,6 +110,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/forgotPassword" element={<ForgotPassword />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/privacy" element={<Privacy />} />
 
         {/* Tools: global, not tied to any one session */}
         <Route path="/" element={<HomeRoute />} />
