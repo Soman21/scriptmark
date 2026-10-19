@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '../context/AuthContext.jsx'
 import SignUp from '../pages/SignUp.jsx'
 import AiAssistant from '../pages/AiAssistant.jsx'
 import App from '../App.jsx'
+import ReviewAssistant from '../components/ReviewAssistant.jsx'
 
 const json = (body, status = 200) =>
   Promise.resolve({ ok: status < 400, status, headers: { get: () => 'application/json' }, json: async () => body })
@@ -139,5 +140,29 @@ describe('AI Assistant screen', () => {
     expect(calls[0].path).toBe('/api/assistant/chat')
     expect(calls[0].body.messages).toEqual([{ role: 'user', content: 'What sessions do I have?' }])
     expect(calls[0].body.activeSessionId).toBe('s1')
+  })
+})
+
+describe('Marking assistant beside a script', () => {
+  it('sends the script id, and a suggested score only goes to the score box', async () => {
+    localStorage.setItem('scriptmark_token', 'tok')
+    localStorage.setItem('scriptmark_user', JSON.stringify({ id: 'u1', name: 'Bola', role: 'LECTURER' }))
+    const proposal = { answerId: 'a2', questionId: 'q2', label: 'Question 2', score: 3, maxMarks: 5, reason: 'Misses the condition.' }
+    mockFetch(() => json({ reply: 'It misses the condition.', proposal }))
+    const onUseScore = vi.fn()
+    render(
+      <AuthProvider>
+        <ReviewAssistant script={{ id: 'sc1', studentName: 'Ada Obi' }} open onClose={() => {}} onUseScore={onUseScore} />
+      </AuthProvider>
+    )
+    await act(async () => {
+      fireEvent.click(screen.getByText('What did this student miss?'))
+    })
+    expect(await screen.findByText('Suggests 3 / 5 for Question 2')).toBeTruthy()
+    expect(calls[0].path).toBe('/api/assistant/review')
+    expect(calls[0].body).toEqual({ scriptId: 'sc1', messages: [{ role: 'user', content: 'What did this student miss?' }] })
+    fireEvent.click(screen.getByText('Use this score'))
+    expect(onUseScore).toHaveBeenCalledWith(proposal)
+    expect(calls.length).toBe(1)
   })
 })

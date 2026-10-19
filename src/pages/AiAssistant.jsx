@@ -3,34 +3,13 @@ import { Send, Mic, MicOff, Volume2, VolumeX, Sparkles, User, Download } from 'l
 import Topbar from '../components/Topbar.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import AssistantText from '../components/AssistantText.jsx'
 import { downloadSessionExport } from '../lib/download.js'
 
 const WELCOME_MESSAGE = {
   role: 'assistant',
   content:
     "Hi! I'm the ScriptMark Assistant. Ask me about any of your sessions, such as marking progress, a student's scores, analytics or marking guides, or how to use the app.",
-}
-
-// Replies are asked for in plain text, but models still slip into
-// markdown now and then, so strip emphasis and show list lines as bullets.
-function AssistantText({ text }) {
-  const lines = String(text || '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/^#{1,6}\s+/gm, '').split('\n')
-  return (
-    <div className="space-y-1.5 text-sm leading-relaxed text-slate-800">
-      {lines.map((line, i) => {
-        const item = line.match(/^\s*([•*-]|\d+[.)])\s+(.*)$/)
-        if (item) {
-          return (
-            <p key={i} className="flex gap-2 pl-1">
-              <span className="shrink-0 text-sky-500">{/\d/.test(item[1]) ? item[1].replace(')', '.') : '•'}</span>
-              <span>{item[2]}</span>
-            </p>
-          )
-        }
-        return line.trim() ? <p key={i}>{line}</p> : <div key={i} className="h-1" />
-      })}
-    </div>
-  )
 }
 
 export default function AiAssistant() {

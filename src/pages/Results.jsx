@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download, Sparkles } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
+import ReviewAssistant from '../components/ReviewAssistant.jsx'
 
 function ImageViewerModal({ pages, startIndex, onClose, onIndexChange }) {
   useEffect(() => {
@@ -70,6 +71,8 @@ export default function Results() {
   const [confirming, setConfirming] = useState(false)
   const [viewerIndex, setViewerIndex] = useState(null)
   const [pageIndex, setPageIndex] = useState(0)
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantAsk, setAssistantAsk] = useState(null)
 
   useEffect(() => {
     loadScripts()
@@ -112,6 +115,22 @@ export default function Results() {
 
   function updateReason(answerId, value) {
     setDraftReasons((prev) => ({ ...prev, [answerId]: value }))
+  }
+
+  // A score the marking assistant suggested goes into the box like a typed
+  // one; if that answer was confirmed before, its reason becomes the default
+  // explanation for the change, which the lecturer can edit.
+  function applySuggestedScore(proposal) {
+    updateDraft(proposal.answerId, String(proposal.score))
+    const answer = currentScript?.answers.find((a) => a.id === proposal.answerId)
+    if (answer?.confirmedAt && Number(answer.confirmedScore) !== proposal.score) {
+      updateReason(proposal.answerId, `Marking assistant: ${proposal.reason || 'suggested on review'}`)
+    }
+  }
+
+  function askAbout(label) {
+    setAssistantOpen(true)
+    setAssistantAsk({ text: `Check ${label} again against the guide. Is the score right?`, at: Date.now() })
   }
 
   // An answer needs a reason only when it was ALREADY confirmed once before,
@@ -161,7 +180,7 @@ export default function Results() {
     : []
 
   return (
-    <div className="flex h-full flex-col">
+    <div className={`flex h-full flex-col transition-[padding] ${assistantOpen ? 'xl:pr-[420px]' : ''}`}>
       <Topbar
         title="Review Suggested Scores"
         right={
@@ -328,6 +347,12 @@ export default function Results() {
                                 {answer.confidence.charAt(0).toUpperCase() + answer.confidence.slice(1)} confidence
                               </Badge>
                             )}
+                            <button
+                              onClick={() => askAbout(label)}
+                              className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                            >
+                              <Sparkles size={12} /> Ask the assistant
+                            </button>
                             {answer.confirmedAt && !showReasonBox && (
                               <span className="flex items-center gap-1 text-xs text-emerald-600">
                                 <CheckCircle2 size={12} /> Confirmed
@@ -419,14 +444,29 @@ export default function Results() {
               <p className="text-sm text-slate-500">
                 Total <span className="ml-1 text-lg font-semibold text-slate-900">{confirmedTotal}</span> / {maxPossible}
               </p>
+              <div className="flex items-center gap-2">
+              <button
+                onClick={() => setAssistantOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50"
+              >
+                <Sparkles size={15} /> <span className="hidden sm:inline">Marking assistant</span>
+              </button>
               <PrimaryButton onClick={handleConfirmAll} disabled={confirming} className="bg-emerald-600 hover:bg-emerald-500">
                 <CheckCircle2 size={16} /> {confirming ? 'Confirming...' : 'Confirm All Scores'}
               </PrimaryButton>
+              </div>
             </div>
           </div>
         )}
       </div>
 
+      <ReviewAssistant
+        script={currentScript}
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        onUseScore={applySuggestedScore}
+        ask={assistantAsk}
+      />
       <ImageViewerModal pages={currentPages} startIndex={viewerIndex} onClose={() => setViewerIndex(null)} onIndexChange={setViewerIndex} />
     </div>
   )

@@ -99,6 +99,8 @@ export const api = {
   scoreScript: (scriptId, guideId, token) =>
     request(`/api/results/scripts/${scriptId}/score`, { method: 'POST', body: { guideId }, token }),
 
+  reviewWithAssistant: (scriptId, messages, token) =>
+    request('/api/assistant/review', { method: 'POST', body: { scriptId, messages }, token }),
   chatWithAssistant: (messages, activeSessionId, token) =>
     request('/api/assistant/chat', { method: 'POST', body: { messages, activeSessionId }, token }),
 }
