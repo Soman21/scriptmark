@@ -25,6 +25,8 @@ import Landing from './pages/Landing.jsx'
 import Contact from './pages/Contact.jsx'
 import JoinSession from './pages/JoinSession.jsx'
 import Privacy from './pages/Privacy.jsx'
+import ServerWakeScreen from './components/ServerWakeScreen.jsx'
+import { wakeServer } from './lib/serverWake.js'
 
 function AppLayout({ children }) {
   const { user, logout } = useAuth()
@@ -104,9 +106,23 @@ function HomeRoute() {
   return user ? <Protected><Dashboard /></Protected> : <Landing />
 }
 
+// Wakes the server as soon as the app opens. Visitors reading the landing,
+// contact or privacy pages never see the loader; every page that needs the
+// server shows it until the server answers.
+function ServerWake() {
+  const { user } = useAuth()
+  const { pathname } = useLocation()
+  useEffect(() => {
+    wakeServer()
+  }, [])
+  const readingOnly = pathname === '/contact' || pathname === '/privacy' || (pathname === '/' && !user)
+  return readingOnly ? null : <ServerWakeScreen />
+}
+
 export default function App() {
   return (
     <AuthProvider>
+      <ServerWake />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/forgotPassword" element={<ForgotPassword />} />
