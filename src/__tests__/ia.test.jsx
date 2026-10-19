@@ -397,14 +397,14 @@ describe('Home route', () => {
   it('shows the landing page to a signed out visitor', async () => {
     localStorage.clear()
     renderApp()
-    await waitFor(() => expect(screen.getByText(/Mark exam scripts faster/)).toBeTruthy())
-    expect(screen.getAllByRole('link', { name: /Create account|Get started/ }).length).toBeGreaterThan(0)
+    await waitFor(() => expect(screen.getByText(/Mark the whole pile/)).toBeTruthy())
+    expect(screen.getAllByRole('link', { name: /Start marking|Create your account/ }).length).toBeGreaterThan(0)
     expect(screen.queryByText('New Marking Session')).toBeNull()
   })
 
   it('shows the dashboard once signed in', async () => {
     renderApp()
     await waitFor(() => expect(screen.getAllByText('ECE305 Midterm').length).toBeGreaterThan(0))
-    expect(screen.queryByText(/Mark exam scripts faster/)).toBeNull()
+    expect(screen.queryByText(/Mark the whole pile/)).toBeNull()
   })
 })

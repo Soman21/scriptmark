@@ -1,181 +1,958 @@
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ScanLine,
-  Sparkles,
+  ArrowRight,
+  Check,
   CheckCircle2,
+  ScanLine,
+  Contact,
+  Sparkles,
+  ShieldCheck,
+  Calculator,
   Users,
   BarChart3,
   FileSpreadsheet,
-  Calculator,
-  ShieldCheck,
-  ArrowRight,
-  Contact,
+  Smartphone,
+  FileText,
+  Menu,
+  X,
+  ChevronDown,
+  Eye,
+  History,
+  Gauge,
+  KeyRound,
 } from 'lucide-react'
 
 // Public home page for signed out visitors. Signed in users get the
-// Dashboard at the same address (see HomeRoute in App.jsx).
+// Dashboard at the same address (see HomeRoute in App.jsx). Every product
+// picture here is drawn in markup rather than a screenshot, so it stays
+// sharp, loads instantly and never shows a real student's details.
 
-const STEPS = [
-  { icon: ScanLine, title: 'Scan', text: 'Photograph or upload each answer booklet, one page at a time or as a whole PDF.' },
-  { icon: Contact, title: 'Identify', text: 'The reg number is read off the front page and matched to the class list or attendance sheet.' },
-  { icon: Sparkles, title: 'Suggest', text: 'Handwriting is read and every answer gets a suggested score, a reason and a confidence level.' },
-  { icon: CheckCircle2, title: 'Confirm', text: 'A lecturer checks each suggestion beside the script and confirms or corrects it.' },
-]
+/* ---------- small building blocks ---------- */
 
-const FEATURES = [
-  { icon: Calculator, title: 'Step by step marking', text: 'Calculation questions are marked step by step against your rubric, and reread from the page image when the working is mathematical.' },
-  { icon: ShieldCheck, title: 'Lecturers stay in charge', text: 'Every score is a suggestion until a person confirms it. Changes to a confirmed score need a reason and are kept on record.' },
-  { icon: Users, title: 'Mark as a team', text: 'Invite colleagues with a join code, split questions between markers, and follow progress from one overview.' },
-  { icon: BarChart3, title: 'Analytics that matter', text: 'Grade spread, pass rate, question quality and how closely the AI agrees with the lecturers who confirmed its scores.' },
-  { icon: FileSpreadsheet, title: 'Ready result sheets', text: 'Export to Excel or PDF with CA added and grades on the institution scale, once any name clashes are resolved.' },
-  { icon: Sparkles, title: 'Ask the assistant', text: 'Ask in plain words how a session is going, how a student did, or which question the class found hardest.' },
-]
-
-function Preview() {
-  // A small, static picture of the review screen, drawn in markup so it
-  // stays sharp at any size and needs no image file.
+export function LogoMark({ className = 'h-7 w-7' }) {
   return (
-    <div className="relative mx-auto w-full max-w-md rounded-2xl border border-white/10 bg-white p-4 text-left shadow-2xl shadow-sky-950/40">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold text-slate-900">ADA OKAFOR</p>
-          <p className="text-xs text-slate-500">2017364085</p>
-        </div>
-        <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">Needs review</span>
+    <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
+      <rect width="32" height="32" rx="8" fill="#0ea5e9" />
+      <path d="M9 9h10a4 4 0 0 1 4 4v10H13a4 4 0 0 1-4-4V9Z" fill="#fff" opacity=".25" />
+      <path d="M10.5 16.5l3.5 3.5 7.5-8" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// Fades a section up the first time it scrolls into view.
+function Reveal({ children, className = '', delay = 0 }) {
+  const ref = useRef(null)
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') return setShown(true)
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShown(true)
+          io.disconnect()
+        }
+      },
+      { threshold: 0, rootMargin: '0px 0px -8% 0px' }
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  return (
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={`transition-all duration-700 ease-out motion-reduce:transition-none ${
+        shown ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+      } ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+function Eyebrow({ children, dark = false }) {
+  return (
+    <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${dark ? 'text-sky-300' : 'text-sky-600'}`}>{children}</p>
+  )
+}
+
+function SectionHeading({ eyebrow, title, text, dark = false, center = false }) {
+  return (
+    <div className={center ? 'mx-auto max-w-2xl text-center' : 'max-w-2xl'}>
+      <Eyebrow dark={dark}>{eyebrow}</Eyebrow>
+      <h2 className={`mt-3 text-3xl font-semibold tracking-tight sm:text-4xl ${dark ? 'text-white' : 'text-slate-900'}`}>{title}</h2>
+      {text && <p className={`mt-4 text-base leading-relaxed sm:text-lg ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{text}</p>}
+    </div>
+  )
+}
+
+const Hand = ({ children, className = '' }) => (
+  <span className={`font-hand text-[1.15em] leading-snug text-indigo-900 ${className}`}>{children}</span>
+)
+
+function Pill({ tone = 'slate', children }) {
+  const tones = {
+    green: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+    amber: 'bg-amber-50 text-amber-700 ring-amber-200',
+    sky: 'bg-sky-50 text-sky-700 ring-sky-200',
+    slate: 'bg-slate-100 text-slate-600 ring-slate-200',
+    violet: 'bg-violet-50 text-violet-700 ring-violet-200',
+  }
+  return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${tones[tone]}`}>{children}</span>
+}
+
+/* ---------- product mockups ---------- */
+
+function BrowserFrame({ children, className = '' }) {
+  return (
+    <div className={`overflow-hidden rounded-2xl bg-white shadow-[0_30px_80px_-20px_rgba(2,8,23,0.55)] ring-1 ring-slate-900/10 ${className}`}>
+      <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+        <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+        <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+        <span className="ml-3 hidden rounded-md bg-white px-3 py-0.5 text-[11px] text-slate-400 ring-1 ring-slate-200 sm:block">
+          scriptmark.app/sessions/ece512/results
+        </span>
       </div>
-      <div className="mt-4 space-y-3">
-        {[
-          { q: 'Question 1a', conf: 'High confidence', tone: 'bg-emerald-100 text-emerald-700', score: '4', max: '5' },
-          { q: 'Question 2', conf: 'Medium confidence', tone: 'bg-amber-100 text-amber-700', score: '7', max: '10' },
-        ].map((row) => (
-          <div key={row.q} className="rounded-xl border border-slate-200 p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-sky-600">{row.q}</span>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${row.tone}`}>{row.conf}</span>
-              </div>
-              <span className="rounded-md border border-slate-200 px-2 py-0.5 text-sm font-semibold text-slate-900">
-                {row.score} <span className="font-normal text-slate-400">/ {row.max}</span>
-              </span>
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <div className="h-10 rounded-md bg-slate-100" />
-              <div className="h-10 rounded-md bg-sky-50" />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-        <p className="text-sm text-slate-500">
-          Total <span className="font-semibold text-slate-900">11</span> / 15
-        </p>
-        <span className="rounded-lg bg-ink-950 px-3 py-1.5 text-xs font-medium text-white">Confirm All Scores</span>
+      {children}
+    </div>
+  )
+}
+
+// A drawn answer booklet page with "handwriting", used in several mockups.
+function ScriptPage({ compact = false }) {
+  return (
+    <div className="relative h-full overflow-hidden rounded-lg bg-[#fffdf7] p-4 ring-1 ring-amber-900/10 [background-image:repeating-linear-gradient(transparent,transparent_27px,#e8eef6_28px)]">
+      <div className="absolute inset-y-0 left-8 w-px bg-rose-200" />
+      <div className="relative space-y-2 pl-6 text-sm">
+        <Hand className="block font-semibold">Q2.</Hand>
+        <Hand className="block">X[k] = Σ x[n] e^(−j2πkn/4)</Hand>
+        <Hand className="block">X[0] = 1 + 2 + 0 + 1 = 4</Hand>
+        <Hand className="block">X[1] = 1 − 2j + 0 + j = 1 − j</Hand>
+        {!compact && (
+          <>
+            <Hand className="block">X[2] = 1 − 2 + 0 − 1 = −2</Hand>
+            <Hand className="block">X[3] = 1 + j</Hand>
+            <Hand className="mt-3 block font-semibold">Q3.</Hand>
+            <Hand className="block">H(s) = ωc / (s + ωc)</Hand>
+            <Hand className="block">s = 2/T · (z − 1)/(z + 1)</Hand>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
-export default function Landing() {
+function ScoreCard({ q, conf, tone, score, max, steps, highlight = false }) {
   return (
-    <div className="h-screen overflow-y-auto bg-white text-slate-900">
-      <header className="absolute inset-x-0 top-0 z-10">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-          <span className="text-lg font-semibold tracking-tight text-white">ScriptMark</span>
-          <nav className="flex items-center gap-2 sm:gap-3">
-            <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 hover:text-white">
-              Sign in
-            </Link>
-            <Link to="/signup" className="rounded-lg bg-sky-500 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-400">
-              Create account
-            </Link>
-          </nav>
+    <div className={`rounded-xl border bg-white p-3.5 ${highlight ? 'border-sky-300 ring-4 ring-sky-100' : 'border-slate-200'}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="whitespace-nowrap text-xs font-semibold text-sky-600">{q}</span>
+          <Pill tone={tone}>{conf}</Pill>
         </div>
-      </header>
+        <span className="whitespace-nowrap rounded-md border border-slate-200 px-2 py-0.5 text-sm font-semibold text-slate-900">
+          {score} <span className="font-normal text-slate-400">/ {max}</span>
+        </span>
+      </div>
+      {steps && (
+        <div className="mt-2.5 space-y-1.5">
+          {steps.map(([label, got, of]) => (
+            <div key={label} className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1.5 text-slate-600">
+                <span className={`h-1.5 w-1.5 rounded-full ${got === of ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                {label}
+              </span>
+              <span className="font-medium text-slate-700">
+                {got} / {of}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
-      <section className="relative overflow-hidden bg-ink-950">
-        <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[900px] -translate-x-1/2 rounded-full bg-sky-500/20 blur-3xl" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-28 sm:px-6 lg:grid-cols-2 lg:pb-28 lg:pt-36">
-          <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-sky-300">
-              <Sparkles size={13} /> AI assisted marking for handwritten scripts
-            </p>
-            <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
-              Mark exam scripts faster, <span className="text-sky-400">without giving up the final say.</span>
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
-              ScriptMark reads handwritten answer booklets, suggests a score for every answer with its reasons, and
-              leaves the decision to the lecturer. It works the way Nigerian universities mark, with reg numbers, CA and the A to F scale.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link
-                to="/signup"
-                className="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-5 py-3 text-sm font-semibold text-white hover:bg-sky-400"
-              >
-                Get started <ArrowRight size={16} />
-              </Link>
-              <Link to="/login" className="rounded-lg border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/5">
-                Sign in
-              </Link>
+function HeroMockup() {
+  return (
+    <div className="relative">
+      <BrowserFrame>
+        <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr]">
+          <div className="hidden min-h-full bg-ink-950 p-3 sm:block">
+            <div className="flex items-center gap-2">
+              <LogoMark className="h-5 w-5" />
+              <span className="text-xs font-semibold text-white">ScriptMark</span>
+            </div>
+            <div className="mt-4 rounded-md bg-sky-500 py-1.5 text-center text-[10px] font-medium text-white">New session</div>
+            <div className="mt-4 space-y-1.5">
+              {['Dashboard', 'Marking Guides', 'Cohort Analytics', 'AI Assistant'].map((t) => (
+                <div key={t} className="rounded px-2 py-1 text-[10px] text-slate-400">{t}</div>
+              ))}
+            </div>
+            <p className="mt-4 px-2 text-[9px] uppercase tracking-wider text-slate-600">Sessions</p>
+            <div className="mt-1 rounded bg-white/10 px-2 py-1 text-[10px] text-white">ECE512 Digital Signal…</div>
+            <div className="px-2 py-1 text-[10px] text-slate-400">ECE305 Control Systems</div>
+          </div>
+          <div className="bg-slate-50">
+            <div className="border-b border-slate-200 bg-white px-4 py-3">
+              <p className="text-[10px] text-slate-400">Sessions › ECE512</p>
+              <p className="text-sm font-semibold text-slate-900">ECE512 Digital Signal Processing</p>
+              <div className="mt-2 flex gap-1 overflow-hidden whitespace-nowrap text-[10px]">
+                {['Scan Scripts', 'Marking Progress', 'Results', 'Analytics'].map((t) => (
+                  <span key={t} className={`rounded-md px-2 py-1 ${t === 'Results' ? 'bg-slate-900 text-white' : 'text-slate-500'}`}>{t}</span>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-900">ADA OKAFOR</span>
+                <span className="text-[11px] text-slate-500">2017364085</span>
+                <Pill tone="amber">Needs review</Pill>
+              </div>
+              <span className="hidden text-[10px] text-slate-400 sm:block">Script 12 of 46</span>
+            </div>
+            <div className="grid gap-3 p-3 sm:grid-cols-[1fr_1.1fr] sm:p-4">
+              <div className="h-56 sm:h-72">
+                <ScriptPage />
+              </div>
+              <div className="space-y-2.5">
+                <ScoreCard q="Question 1a" conf="High confidence" tone="green" score="4" max="5" />
+                <ScoreCard
+                  q="Question 2"
+                  conf="Medium confidence"
+                  tone="amber"
+                  score="7"
+                  max="10"
+                  highlight
+                  steps={[
+                    ['States the DFT formula', 3, 3],
+                    ['Computes all four values', 4, 7],
+                  ]}
+                />
+                <div className="flex items-center justify-between rounded-xl bg-white px-3.5 py-2.5 ring-1 ring-slate-200">
+                  <span className="text-xs text-slate-500">
+                    Total <span className="text-sm font-semibold text-slate-900">11</span> / 15
+                  </span>
+                  <span className="rounded-md bg-ink-950 px-2.5 py-1 text-[10px] font-medium text-white">Confirm All Scores</span>
+                </div>
+              </div>
             </div>
           </div>
-          <Preview />
         </div>
-      </section>
+      </BrowserFrame>
 
-      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-        <p className="text-sm font-semibold text-sky-600">How it works</p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight">From answer booklet to result sheet</h2>
-        <ol className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map(({ icon: Icon, title, text }, i) => (
-            <li key={title} className="rounded-2xl border border-slate-200 p-5">
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
-                  <Icon size={18} />
-                </span>
-                <span className="text-xs font-semibold text-slate-400">Step {i + 1}</span>
-              </div>
-              <p className="mt-4 font-semibold">{title}</p>
-              <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{text}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <div className="absolute -left-4 top-24 hidden w-56 rounded-xl bg-white p-3 shadow-xl ring-1 ring-slate-900/10 lg:block xl:-left-14">
+        <p className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+          <Contact size={13} className="text-sky-500" /> Front page read
+        </p>
+        <p className="mt-1 text-sm font-semibold text-slate-900">2017364085</p>
+        <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-600">
+          <CheckCircle2 size={12} /> Matched to class list
+        </p>
+      </div>
+      <div className="absolute -bottom-6 -right-3 hidden w-60 rounded-xl bg-white p-3 shadow-xl ring-1 ring-slate-900/10 lg:block xl:-right-10">
+        <p className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+          <Sparkles size={13} className="text-violet-500" /> AI reasoning
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-slate-700">All four values are right, but the working for X[1] skips the sum. 4 of 7 for this step.</p>
+      </div>
+    </div>
+  )
+}
 
-      <section className="bg-slate-50">
-        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-          <p className="text-sm font-semibold text-sky-600">Features</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight">Everything a marking session needs</h2>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(({ icon: Icon, title, text }) => (
-              <div key={title} className="rounded-2xl border border-slate-200 bg-white p-6">
-                <Icon size={20} className="text-sky-600" />
-                <p className="mt-4 font-semibold">{title}</p>
-                <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{text}</p>
-              </div>
+/* ---------- question type tabs ---------- */
+
+const QUESTION_TYPES = [
+  {
+    key: 'short',
+    label: 'Short answer',
+    question: 'Define the z transform of a discrete time signal and state one property.',
+    answer: ['X(z) = Σ x[n] z^−n over all n.', 'It is linear: a x₁ + b x₂ → a X₁ + b X₂.'],
+    score: '4 / 5',
+    conf: ['High confidence', 'green'],
+    reason: 'Correct definition and a valid property. The region of convergence is not mentioned, so one mark is held back.',
+  },
+  {
+    key: 'calc',
+    label: 'Calculation',
+    question: 'Find the DFT of x[n] = {1, 2, 0, 1}.',
+    answer: ['X[0] = 4', 'X[1] = 1 − j', 'X[2] = −2', 'X[3] = 1 + j'],
+    score: '7 / 10',
+    conf: ['Medium confidence', 'amber'],
+    reason: 'Marked step by step against the rubric, and reread straight from the page image because the working is mathematical.',
+    steps: [
+      ['States the DFT formula', '3 / 3'],
+      ['Computes all four values', '4 / 7'],
+    ],
+  },
+  {
+    key: 'essay',
+    label: 'Explain or discuss',
+    question: 'Explain why aliasing occurs and how it is prevented in practice.',
+    answer: ['Aliasing happens when a signal is sampled', 'below twice its highest frequency, so high', 'frequencies fold back as false low ones.', 'An anti aliasing low pass filter is used.'],
+    score: '8 / 10',
+    conf: ['High confidence', 'green'],
+    reason: 'Covers the Nyquist condition and the filter. No example frequencies are given, which the marking guide asks for.',
+  },
+]
+
+function QuestionTypes() {
+  const [active, setActive] = useState(QUESTION_TYPES[1].key)
+  const t = QUESTION_TYPES.find((x) => x.key === active)
+  return (
+    <div>
+      <div role="tablist" aria-label="Question types" className="inline-flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1">
+        {QUESTION_TYPES.map((x) => (
+          <button
+            key={x.key}
+            role="tab"
+            aria-selected={x.key === active}
+            onClick={() => setActive(x.key)}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              x.key === active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {x.label}
+          </button>
+        ))}
+      </div>
+      <div className="mt-6 grid gap-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Student's script</p>
+          <div className="mt-2 rounded-lg bg-[#fffdf7] p-4 ring-1 ring-amber-900/10 [background-image:repeating-linear-gradient(transparent,transparent_27px,#e8eef6_28px)]">
+            {t.answer.map((line) => (
+              <Hand key={line} className="block">
+                {line}
+              </Hand>
             ))}
           </div>
         </div>
-      </section>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">What the lecturer sees</p>
+          <div className="mt-2 rounded-xl border border-slate-200 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-medium text-slate-800">{t.question}</p>
+              <span className="shrink-0 rounded-md border border-slate-200 px-2 py-0.5 text-sm font-semibold text-slate-900">{t.score}</span>
+            </div>
+            <div className="mt-2">
+              <Pill tone={t.conf[1]}>{t.conf[0]}</Pill>
+            </div>
+            {t.steps && (
+              <div className="mt-3 divide-y divide-slate-100 rounded-lg border border-slate-200">
+                {t.steps.map(([s, m]) => (
+                  <div key={s} className="flex justify-between px-3 py-2 text-sm">
+                    <span className="text-slate-600">{s}</span>
+                    <span className="font-medium text-slate-800">{m}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              <span className="text-slate-400">AI reasoning: </span>
+              {t.reason}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <span className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white">Confirm</span>
+              <span className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700">Change score</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-        <div className="rounded-3xl bg-ink-950 px-6 py-12 text-center sm:px-12">
-          <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">The AI suggests. The lecturer decides.</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-slate-300">
-            Create a session, upload your marking guide, and scan your first script in a few minutes.
-          </p>
-          <Link
-            to="/signup"
-            className="mt-7 inline-flex items-center gap-2 rounded-lg bg-sky-500 px-5 py-3 text-sm font-semibold text-white hover:bg-sky-400"
+/* ---------- feature rows ---------- */
+
+function IdentifyMockup() {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="rounded-lg border border-slate-300 bg-[#fbfbf8] p-4">
+        <p className="text-center text-[11px] font-bold tracking-wide text-slate-700">ANSWER BOOKLET</p>
+        <div className="mt-3 space-y-3">
+          <div>
+            <div className="rounded border-2 border-sky-400 bg-sky-50/60 px-3 py-1.5">
+              <Hand>2025366001 FN</Hand>
+            </div>
+            <p className="mt-0.5 text-center text-[9px] font-semibold tracking-wide text-slate-500">STUDENT'S REG. NO</p>
+          </div>
+          <div>
+            <div className="rounded border border-slate-300 px-3 py-1.5">
+              <Hand>ECE 512</Hand>
+            </div>
+            <p className="mt-0.5 text-center text-[9px] font-semibold tracking-wide text-slate-500">COURSE CODE</p>
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-3 rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-200">
+        <CheckCircle2 className="shrink-0 text-emerald-600" size={20} />
+        <div className="text-sm">
+          <p className="font-semibold text-slate-900">CHIDI EZE</p>
+          <p className="text-slate-600">2025366001FN, postgraduate, matched from the attendance sheet</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AnalyticsMockup() {
+  const bars = [7, 9, 12, 6, 5, 7]
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          ['Pass rate', '84.8%'],
+          ['Average', '54.6'],
+          ['Quadratic kappa', '0.89'],
+        ].map(([l, v]) => (
+          <div key={l} className="rounded-lg border border-slate-200 p-3">
+            <p className="text-[11px] text-slate-500">{l}</p>
+            <p className="mt-1 text-lg font-semibold text-slate-900">{v}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 flex h-32 items-end gap-3 border-b border-slate-200 px-2">
+        {bars.map((b, i) => (
+          <div key={i} className="flex h-full flex-1 items-end">
+            <div className={`w-full rounded-t-md ${i === 5 ? 'bg-rose-400' : 'bg-sky-500'}`} style={{ height: `${(b / 12) * 100}%` }} />
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 flex gap-3 px-2 text-center text-[11px] text-slate-400">
+        {['A', 'B', 'C', 'D', 'E', 'F'].map((g) => (
+          <span key={g} className="flex-1">{g}</span>
+        ))}
+      </div>
+      <div className="mt-4 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-xs ring-1 ring-amber-200">
+        <span className="text-slate-700">Q1a barely separates strong and weak answers</span>
+        <Pill tone="amber">Review question</Pill>
+      </div>
+    </div>
+  )
+}
+
+function TeamMockup() {
+  const markers = [
+    ['Dr. A. Obi', 'Q1 to Q3', 82],
+    ['Mr. K. Eze', 'Q4 and Q5', 64],
+    ['Mrs. N. Uche', 'Q6', 41],
+  ]
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-slate-900">Coordinator Overview</p>
+        <span className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 font-mono text-xs text-slate-700">
+          <KeyRound size={12} /> K3M7QZ
+        </span>
+      </div>
+      <div className="mt-4 space-y-3">
+        {markers.map(([n, q, p]) => (
+          <div key={n}>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-800">{n}</span>
+              <span className="text-slate-500">{q}</span>
+            </div>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-sky-500" style={{ width: `${p}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function FeatureRow({ eyebrow, title, text, points, visual, flip = false }) {
+  return (
+    <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      <Reveal className={flip ? 'lg:order-2' : ''}>
+        <Eyebrow>{eyebrow}</Eyebrow>
+        <h3 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{title}</h3>
+        <p className="mt-4 text-base leading-relaxed text-slate-600">{text}</p>
+        <ul className="mt-6 space-y-3">
+          {points.map((p) => (
+            <li key={p} className="flex gap-3 text-sm text-slate-700">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+                <Check size={12} strokeWidth={3} />
+              </span>
+              {p}
+            </li>
+          ))}
+        </ul>
+      </Reveal>
+      <Reveal delay={120} className={flip ? 'lg:order-1' : ''}>
+        {visual}
+      </Reveal>
+    </div>
+  )
+}
+
+/* ---------- FAQ ---------- */
+
+const FAQS = [
+  ['Does the AI give the final mark?', 'No. Every score is a suggestion with its reasoning until a lecturer confirms it. A coordinator can choose to auto accept only high confidence scores for a session, and can switch that off at any time.'],
+  ['Do students need special answer sheets?', 'No. ScriptMark reads the answer booklets you already use. Scan pages with a phone camera, upload photos, or upload a whole PDF of scripts.'],
+  ['How does it know whose script it is?', 'It reads the reg number from the front page, including undergraduate numbers like 2017364085 and postgraduate numbers like 2025366001FN, then matches it to your class list or attendance sheet for the name.'],
+  ['What about calculations and derivations?', 'Questions can carry a step by step rubric, so working earns credit even when a final answer is wrong. Calculation heavy answers are reread straight from the page image instead of plain text.'],
+  ['What if the AI is wrong?', 'You change the score before confirming. If a confirmed score is changed later, a reason is required and the old score is kept on record. The Analytics page shows how often the AI agreed with lecturers.'],
+  ['Can several lecturers mark one exam?', 'Yes. The coordinator shares a join code, markers claim the questions they will mark, and the coordinator follows everyone’s progress from one overview.'],
+  ['What do I get at the end?', 'A result sheet in Excel or PDF with CA added and grades on the A to F scale, plus analytics on grades, pass rate and question quality.'],
+]
+
+function Faq() {
+  const [open, setOpen] = useState(0)
+  return (
+    <div className="divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
+      {FAQS.map(([q, a], i) => (
+        <div key={q}>
+          <button
+            onClick={() => setOpen(open === i ? -1 : i)}
+            aria-expanded={open === i}
+            className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left sm:px-6"
           >
-            Create your account <ArrowRight size={16} />
-          </Link>
+            <span className="font-medium text-slate-900">{q}</span>
+            <ChevronDown size={18} className={`shrink-0 text-slate-400 transition-transform ${open === i ? 'rotate-180' : ''}`} />
+          </button>
+          {open === i && <p className="px-5 pb-5 text-sm leading-relaxed text-slate-600 sm:px-6">{a}</p>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ---------- page ---------- */
+
+const NAV = [
+  ['How it works', '#how'],
+  ['Features', '#features'],
+  ['Accuracy', '#accuracy'],
+  ['For departments', '#departments'],
+  ['FAQ', '#faq'],
+]
+
+const STEPS = [
+  { icon: Smartphone, title: 'Scan', text: 'Photograph booklets with a phone or upload a PDF. No special answer sheets.' },
+  { icon: Contact, title: 'Identify', text: 'Reg numbers are read off the front page and matched to your class list.' },
+  { icon: Sparkles, title: 'Suggest', text: 'Each answer gets a score, its reasons and a confidence level from your marking guide.' },
+  { icon: CheckCircle2, title: 'Confirm', text: 'You review beside the script, adjust what you disagree with, and confirm.' },
+]
+
+export default function Landing() {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const scrollRef = useRef(null)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => setScrolled(el.scrollTop > 12)
+    el.addEventListener('scroll', onScroll)
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  function goTo(e, hash) {
+    e.preventDefault()
+    setMenuOpen(false)
+    document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  return (
+    <div ref={scrollRef} className="h-screen overflow-y-auto scroll-smooth bg-white text-slate-900 antialiased">
+      {/* Navigation */}
+      <header
+        className={`sticky top-0 z-40 transition-colors ${
+          scrolled || menuOpen ? 'border-b border-white/10 bg-ink-950/[0.97] shadow-lg shadow-black/10 backdrop-blur-md' : 'bg-transparent'
+        }`}
+      >
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <a href="#top" onClick={(e) => goTo(e, '#top')} className="flex items-center gap-2.5">
+            <LogoMark />
+            <span className="text-lg font-semibold tracking-tight text-white">ScriptMark</span>
+          </a>
+          <nav className="hidden items-center gap-1 lg:flex">
+            {NAV.map(([label, hash]) => (
+              <a key={hash} href={hash} onClick={(e) => goTo(e, hash)} className="rounded-lg px-3 py-2 text-sm text-slate-300 hover:text-white">
+                {label}
+              </a>
+            ))}
+          </nav>
+          <div className="hidden items-center gap-2 lg:flex">
+            <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-slate-200 hover:text-white">
+              Sign in
+            </Link>
+            <Link to="/signup" className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-500/25 hover:bg-sky-400">
+              Start marking
+            </Link>
+          </div>
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-white lg:hidden"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          >
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+        {menuOpen && (
+          <div className="border-t border-white/10 px-4 pb-5 pt-2 lg:hidden">
+            {NAV.map(([label, hash]) => (
+              <a key={hash} href={hash} onClick={(e) => goTo(e, hash)} className="block rounded-lg px-3 py-2.5 text-base text-slate-200">
+                {label}
+              </a>
+            ))}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Link to="/login" className="rounded-lg border border-white/15 py-2.5 text-center text-sm font-medium text-white">
+                Sign in
+              </Link>
+              <Link to="/signup" className="rounded-lg bg-sky-500 py-2.5 text-center text-sm font-semibold text-white">
+                Start marking
+              </Link>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Hero */}
+      <section id="top" className="relative -mt-16 overflow-hidden bg-ink-950 pt-16">
+        <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+        <div className="pointer-events-none absolute -top-48 left-1/2 h-[560px] w-[1100px] -translate-x-1/2 rounded-full bg-sky-500/25 blur-[120px]" />
+        <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-16 sm:px-6 sm:pt-24 lg:px-8 lg:pb-32">
+          <div className="mx-auto max-w-3xl text-center">
+            <Reveal>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-sky-200">
+                <Sparkles size={13} /> AI assisted marking for handwritten exam scripts
+              </span>
+            </Reveal>
+            <Reveal delay={80}>
+              <h1 className="mt-7 text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-6xl">
+                Mark the whole pile.
+                <br />
+                <span className="bg-gradient-to-r from-sky-300 via-sky-400 to-cyan-300 bg-clip-text italic text-transparent">Keep the final say.</span>
+              </h1>
+            </Reveal>
+            <Reveal delay={160}>
+              <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+                ScriptMark reads handwritten answer booklets, suggests a score for every answer against your marking guide,
+                and shows you why. You review beside the script and confirm. Nothing counts until you do.
+              </p>
+            </Reveal>
+            <Reveal delay={240}>
+              <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Link
+                  to="/signup"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 transition hover:bg-sky-400 sm:w-auto"
+                >
+                  Start marking <ArrowRight size={16} />
+                </Link>
+                <a
+                  href="#how"
+                  onClick={(e) => goTo(e, '#how')}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10 sm:w-auto"
+                >
+                  See how it works
+                </a>
+              </div>
+            </Reveal>
+            <Reveal delay={300}>
+              <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-400">
+                {['Works with your existing booklets', 'Lecturer confirms every score', 'Names matched by reg number'].map((t) => (
+                  <li key={t} className="flex items-center gap-2">
+                    <CheckCircle2 size={15} className="text-sky-400" /> {t}
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+          </div>
+          <Reveal delay={200} className="mx-auto mt-16 max-w-5xl">
+            <HeroMockup />
+          </Reveal>
         </div>
       </section>
 
-      <footer className="border-t border-slate-200">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <span className="font-semibold text-slate-700">ScriptMark</span>
-          <span>A Master's research project in Electronic and Computer Engineering.</span>
+      {/* Fits how you already mark */}
+      <section className="border-b border-slate-200 bg-white">
+        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
+          {[
+            [FileText, 'Your booklets', 'No QR codes or special sheets to print'],
+            [Smartphone, 'Your phone', 'Scan page by page, or upload a PDF'],
+            [Users, 'Your class list', 'Typed list or a photo of the attendance sheet'],
+            [FileSpreadsheet, 'Your result sheet', 'CA added, graded A to F, in Excel or PDF'],
+          ].map(([Icon, t, s]) => (
+            <div key={t} className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                <Icon size={19} />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">{t}</p>
+                <p className="text-sm text-slate-500">{s}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how" className="scroll-mt-16 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+          <Reveal>
+            <SectionHeading
+              center
+              eyebrow="How it works"
+              title="From the pile on your desk to a result sheet"
+              text="Four steps, the same for a class of thirty or three hundred."
+            />
+          </Reveal>
+          <ol className="relative mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+            <div className="absolute left-[12%] right-[12%] top-6 hidden h-px bg-gradient-to-r from-sky-200 via-sky-300 to-sky-200 lg:block" />
+            {STEPS.map(({ icon: Icon, title, text }, i) => (
+              <Reveal key={title} delay={i * 90}>
+                <li className="relative text-center">
+                  <span className="relative mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-ink-950 text-white shadow-lg ring-8 ring-white">
+                    <Icon size={20} />
+                    <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[10px] font-bold">{i + 1}</span>
+                  </span>
+                  <p className="mt-5 text-lg font-semibold text-slate-900">{title}</p>
+                  <p className="mx-auto mt-2 max-w-[16rem] text-sm leading-relaxed text-slate-600">{text}</p>
+                </li>
+              </Reveal>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* Question types */}
+      <section className="bg-slate-50">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+          <Reveal>
+            <SectionHeading
+              eyebrow="Every kind of question"
+              title="Short answers, calculations and explanations"
+              text="Pick a question type to see what ScriptMark suggests, and what you see before you confirm."
+            />
+          </Reveal>
+          <Reveal delay={100} className="mt-10">
+            <QuestionTypes />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="scroll-mt-16 bg-white">
+        <div className="mx-auto max-w-7xl space-y-28 px-4 py-24 sm:px-6 lg:px-8">
+          <FeatureRow
+            eyebrow="Know whose script it is"
+            title="Reg numbers read off the front page"
+            text="ScriptMark reads the handwritten reg number on the booklet cover, ignores the serial number and session boxes, and matches it to your class list or a photo of the attendance sheet. Names come from the list, not from guesses."
+            points={[
+              'Undergraduate and postgraduate reg numbers, with or without a slash',
+              'Small reading slips are forgiven, a different year or suffix never is',
+              'Course code, semester and session fill in if you left them blank',
+            ]}
+            visual={<IdentifyMockup />}
+          />
+          <FeatureRow
+            flip
+            eyebrow="Review without the hunt"
+            title="The script and the suggestion, side by side"
+            text="Every answer shows the expected answer, what the student wrote, the AI's reasons and its confidence. The page stays in view while you work down the scores, and low confidence scripts come first."
+            points={[
+              'Step by step rubrics give credit for correct working',
+              'Mathematical working is reread from the page image',
+              'Changing a confirmed score needs a reason, and the old score is kept',
+            ]}
+            visual={
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="h-64">
+                    <ScriptPage compact />
+                  </div>
+                  <div className="space-y-2.5">
+                    <ScoreCard
+                      q="Q2"
+                      conf="Medium"
+                      tone="amber"
+                      score="7"
+                      max="10"
+                      steps={[
+                        ['States the formula', 3, 3],
+                        ['Computes the values', 4, 7],
+                      ]}
+                    />
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-xs text-slate-700">
+                      <p className="mb-1 font-semibold uppercase tracking-wide text-violet-500">Reread from page image</p>
+                      X[1] = 1 − 2j + 0 + j = 1 − j
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          />
+          <FeatureRow
+            eyebrow="See the whole class"
+            title="Analytics you can act on"
+            text="Grade spread, pass rate and averages by programme and entry year, plus a check on every question that shows whether it actually separated strong answers from weak ones."
+            points={[
+              'Totals include CA, graded on the A to F scale',
+              'Compare courses across semesters and sessions',
+              'Ask the AI Assistant in plain words, like how did ECE512 go',
+            ]}
+            visual={<AnalyticsMockup />}
+          />
+        </div>
+      </section>
+
+      {/* Accuracy and trust */}
+      <section id="accuracy" className="relative scroll-mt-16 overflow-hidden bg-ink-950">
+        <div className="pointer-events-none absolute -bottom-40 right-0 h-[420px] w-[700px] rounded-full bg-sky-500/15 blur-[120px]" />
+        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+          <Reveal>
+            <SectionHeading
+              dark
+              eyebrow="Accuracy you can check"
+              title="ScriptMark measures itself against you"
+              text="Every confirmed score is a check on the AI. The Analytics page reports how often its suggestions matched the lecturer, using the same measures examiners use to compare two human markers."
+            />
+          </Reveal>
+          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              [Gauge, 'Agreement', 'Exact and within one mark agreement, mean error and RMSE, per answer and per script.'],
+              [BarChart3, "Cohen's kappa", 'Quadratic weighted kappa and Pearson r, the standard for marker reliability.'],
+              [Eye, 'Honest confidence', 'Errors broken down by high, medium and low confidence, so you know when to trust it.'],
+              [History, 'Full audit trail', 'Auto accepted scores are counted apart, and every change after confirmation is recorded.'],
+            ].map(([Icon, t, s], i) => (
+              <Reveal key={t} delay={i * 80}>
+                <div className="h-full rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+                  <Icon size={22} className="text-sky-400" />
+                  <p className="mt-4 font-semibold text-white">{t}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-400">{s}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={150}>
+            <div className="mt-10 flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <ShieldCheck size={22} className="mt-0.5 shrink-0 text-emerald-400" />
+                <p className="text-sm leading-relaxed text-slate-300">
+                  <span className="font-semibold text-white">The AI never has the last word.</span> Scores stay suggestions until a lecturer confirms
+                  them, and exports are blocked while any student's name is still in doubt.
+                </p>
+              </div>
+              <Link to="/signup" className="shrink-0 rounded-xl bg-white px-5 py-2.5 text-center text-sm font-semibold text-slate-900 hover:bg-slate-100">
+                Try it on one course
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Departments */}
+      <section id="departments" className="scroll-mt-16 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+          <FeatureRow
+            flip
+            eyebrow="Built for departments"
+            title="One exam, many markers, one overview"
+            text="The course coordinator creates the session and shares a join code. Colleagues claim the questions they will mark, and the coordinator follows progress, reviews overrides and exports the final sheet."
+            points={[
+              'Full or limited access for each marker',
+              'Each marker works from their own queue of claimed questions',
+              'Coordinators approve who joins, and can revoke access',
+            ]}
+            visual={<TeamMockup />}
+          />
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="scroll-mt-16 bg-slate-50">
+        <div className="mx-auto grid max-w-7xl gap-12 px-4 py-24 sm:px-6 lg:grid-cols-[1fr_1.6fr] lg:px-8">
+          <Reveal>
+            <SectionHeading eyebrow="Questions" title="Frequently asked" text="The things lecturers ask before marking their first set of scripts." />
+          </Reveal>
+          <Reveal delay={100}>
+            <Faq />
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Closing call to action */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+          <Reveal>
+            <div className="relative overflow-hidden rounded-3xl bg-ink-950 px-6 py-16 text-center sm:px-16">
+              <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:22px_22px]" />
+              <div className="pointer-events-none absolute -top-32 left-1/2 h-72 w-[700px] -translate-x-1/2 rounded-full bg-sky-500/30 blur-[100px]" />
+              <div className="relative">
+                <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">Try it on one set of scripts.</h2>
+                <p className="mx-auto mt-4 max-w-xl text-slate-300">
+                  Create a session, add your marking guide, and scan your first booklet. You'll see a suggested score in minutes.
+                </p>
+                <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+                  <Link to="/signup" className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/30 hover:bg-sky-400">
+                    Create your account <ArrowRight size={16} />
+                  </Link>
+                  <Link to="/login" className="rounded-xl border border-white/15 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/5">
+                    Sign in
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr_1fr] lg:px-8">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <LogoMark />
+              <span className="text-lg font-semibold tracking-tight">ScriptMark</span>
+            </div>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">
+              AI assisted marking for handwritten exam scripts. The AI suggests, the lecturer decides.
+            </p>
+          </div>
+          {[
+            ['Product', [['How it works', '#how'], ['Features', '#features'], ['Accuracy', '#accuracy'], ['For departments', '#departments']]],
+            ['Help', [['FAQ', '#faq']]],
+          ].map(([heading, links]) => (
+            <div key={heading}>
+              <p className="text-sm font-semibold text-slate-900">{heading}</p>
+              <ul className="mt-4 space-y-2.5">
+                {links.map(([l, h]) => (
+                  <li key={l}>
+                    <a href={h} onClick={(e) => goTo(e, h)} className="text-sm text-slate-500 hover:text-slate-900">
+                      {l}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Account</p>
+            <ul className="mt-4 space-y-2.5">
+              <li>
+                <Link to="/login" className="text-sm text-slate-500 hover:text-slate-900">Sign in</Link>
+              </li>
+              <li>
+                <Link to="/signup" className="text-sm text-slate-500 hover:text-slate-900">Create account</Link>
+              </li>
+              <li>
+                <Link to="/forgotPassword" className="text-sm text-slate-500 hover:text-slate-900">Reset password</Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-slate-200">
+          <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-slate-400 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
+            <span>© {new Date().getFullYear()} ScriptMark</span>
+            <span>A Master's research project in Electronic and Computer Engineering</span>
+          </div>
         </div>
       </footer>
     </div>
