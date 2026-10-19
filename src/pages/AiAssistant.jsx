@@ -8,7 +8,29 @@ import { downloadSessionExport } from '../lib/download.js'
 const WELCOME_MESSAGE = {
   role: 'assistant',
   content:
-    "Hi! I'm the ScriptMark Assistant. Ask me about any of your sessions — progress, a student's scores, analytics, marking guides — or just how to use the app.",
+    "Hi! I'm the ScriptMark Assistant. Ask me about any of your sessions, such as marking progress, a student's scores, analytics or marking guides, or how to use the app.",
+}
+
+// Replies are asked for in plain text, but models still slip into
+// markdown now and then, so strip emphasis and show list lines as bullets.
+function AssistantText({ text }) {
+  const lines = String(text || '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/^#{1,6}\s+/gm, '').split('\n')
+  return (
+    <div className="space-y-1.5 text-sm leading-relaxed text-slate-800">
+      {lines.map((line, i) => {
+        const item = line.match(/^\s*([•*-]|\d+[.)])\s+(.*)$/)
+        if (item) {
+          return (
+            <p key={i} className="flex gap-2 pl-1">
+              <span className="shrink-0 text-sky-500">{/\d/.test(item[1]) ? item[1].replace(')', '.') : '•'}</span>
+              <span>{item[2]}</span>
+            </p>
+          )
+        }
+        return line.trim() ? <p key={i}>{line}</p> : <div key={i} className="h-1" />
+      })}
+    </div>
+  )
 }
 
 export default function AiAssistant() {
@@ -86,7 +108,8 @@ export default function AiAssistant() {
     setSending(true)
 
     try {
-      const historyForApi = nextMessages.map((m) => ({ role: m.role, content: m.content }))
+      // The greeting is shown here only; the server never needs it.
+      const historyForApi = nextMessages.filter((m) => m !== WELCOME_MESSAGE).map((m) => ({ role: m.role, content: m.content }))
       const activeSessionId = localStorage.getItem('scriptmark_active_session')
       const data = await api.chatWithAssistant(historyForApi, activeSessionId, token)
       const updated = [...nextMessages, { role: 'assistant', content: data.reply, action: data.action }]
@@ -137,7 +160,7 @@ export default function AiAssistant() {
 
       {!speechSupported && (
         <div className="mx-6 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
-          Voice input is not supported in this browser — try Chrome or Edge. Typing still works fine.
+          Voice input is not supported in this browser. Try Chrome or Edge, or just type.
         </div>
       )}
 
@@ -161,7 +184,7 @@ export default function AiAssistant() {
                 <Sparkles size={16} />
               </div>
               <div className="max-w-xl rounded-2xl border border-sky-100 bg-sky-50 px-5 py-3">
-                <p className="text-sm text-slate-800 whitespace-pre-wrap">{m.content}</p>
+                <AssistantText text={m.content} />
                 {m.action?.type === 'export' && (
                   <div className="mt-3 flex gap-2 border-t border-sky-100 pt-3">
                     {(m.action.format === 'xlsx' || m.action.format === 'both') && (

@@ -14,6 +14,9 @@ async function request(path, { method = 'GET', body, token } = {}) {
   const data = isJson ? await res.json() : null
 
   if (!res.ok) {
+    // A signed in request rejected as unauthorised means the saved sign in
+    // has expired or was revoked; AuthContext signs out and shows the login.
+    if (res.status === 401 && token) window.dispatchEvent(new Event('scriptmark:signed-out'))
     throw new Error(data?.error || `Request failed (${res.status})`)
   }
   return data

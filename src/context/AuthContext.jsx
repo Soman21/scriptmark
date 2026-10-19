@@ -3,6 +3,8 @@ import { api } from '../lib/api.js'
 
 const AuthContext = createContext(null)
 
+const WORKSPACE_KEYS = ['scriptmark_active_session', 'scriptmark_active_session_title', 'scriptmark_active_script']
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
@@ -18,7 +20,20 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }, [])
 
+  useEffect(() => {
+    window.addEventListener('scriptmark:signed-out', logout)
+    return () => window.removeEventListener('scriptmark:signed-out', logout)
+  }, [])
+
+  // What one person last had open must never carry over to the next
+  // person who signs in on the same browser.
+  function clearWorkspace() {
+    for (const key of WORKSPACE_KEYS) localStorage.removeItem(key)
+  }
+
   function persist(nextToken, nextUser) {
+    const previous = JSON.parse(localStorage.getItem('scriptmark_user') || 'null')
+    if (previous?.id !== nextUser.id) clearWorkspace()
     localStorage.setItem('scriptmark_token', nextToken)
     localStorage.setItem('scriptmark_user', JSON.stringify(nextUser))
     setToken(nextToken)
@@ -54,6 +69,7 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
+    clearWorkspace()
     localStorage.removeItem('scriptmark_token')
     localStorage.removeItem('scriptmark_user')
     setToken(null)

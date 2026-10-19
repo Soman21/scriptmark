@@ -7,7 +7,6 @@ import { PrimaryButton } from '../components/ui.jsx'
 const roles = [
   { key: 'LECTURER', label: 'Lecturer', icon: User },
   { key: 'REVIEWER', label: 'Reviewer', icon: ClipboardCheck },
-  { key: 'ADMIN', label: 'Admin', icon: ShieldCheck },
 ]
 
 export default function SignUp() {
@@ -27,7 +26,7 @@ export default function SignUp() {
     setError('')
 
     if (!agreed) {
-      setError('Please agree to the Terms of Service and Privacy Policy to continue.')
+      setError('Please agree to the Privacy Policy to continue.')
       return
     }
 
@@ -47,7 +46,7 @@ export default function SignUp() {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-slate-900">ScriptMark</h1>
-          <p className="text-sm text-slate-500 mt-1">Institutional AI Assessment Infrastructure</p>
+          <p className="text-sm text-slate-500 mt-1">The AI marking assistant for handwritten exams</p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
@@ -111,7 +110,7 @@ export default function SignUp() {
 
               <div>
                 <label className="text-sm font-medium text-slate-700">Select your role</label>
-                <div className="mt-1.5 grid grid-cols-3 gap-3">
+                <div className="mt-1.5 grid grid-cols-2 gap-3">
                   {roles.map(({ key, label, icon: Icon }) => (
                     <button
                       type="button"
@@ -149,8 +148,11 @@ export default function SignUp() {
 
               <label className="flex items-start gap-2 text-sm text-slate-600">
                 <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5" />
-                I agree to the <a className="text-sky-600 underline">Terms of Service</a> and{' '}
-                <a className="text-sky-600 underline">Privacy Policy</a>.
+                I agree to the{' '}
+                <Link to="/privacy" target="_blank" className="text-sky-600 underline">
+                  Privacy Policy
+                </Link>
+                .
               </label>
 
               <PrimaryButton type="submit" disabled={submitting} className="w-full justify-center py-2.5">
@@ -169,10 +171,10 @@ export default function SignUp() {
 
         <div className="flex items-center justify-center gap-6 mt-6 text-xs text-slate-400">
           <span className="flex items-center gap-1.5">
-            <ShieldCheck size={14} /> FERPA Compliant
+            <ShieldCheck size={14} /> Email code at every sign in
           </span>
           <span className="flex items-center gap-1.5">
-            <Lock size={14} /> 256-bit Encryption
+            <Lock size={14} /> Encrypted connection
           </span>
         </div>
       </div>

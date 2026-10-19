@@ -62,7 +62,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-slate-900">ScriptMark</h1>
-          <p className="text-sm text-slate-500 mt-1">Institutional AI Assessment Infrastructure</p>
+          <p className="text-sm text-slate-500 mt-1">The AI marking assistant for handwritten exams</p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-8">
@@ -170,10 +170,10 @@ export default function Login() {
 
         <div className="flex items-center justify-center gap-6 mt-6 text-xs text-slate-400">
           <span className="flex items-center gap-1.5">
-            <ShieldCheck size={14} /> FERPA Compliant
+            <ShieldCheck size={14} /> Email code at every sign in
           </span>
           <span className="flex items-center gap-1.5">
-            <Lock size={14} /> 256-bit Encryption
+            <Lock size={14} /> Encrypted connection
           </span>
         </div>
       </div>
