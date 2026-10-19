@@ -20,6 +20,7 @@ import SignUp from './pages/SignUp.jsx'
 import Login from './pages/Login.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import Settings from './pages/Settings.jsx'
+import CohortAnalytics from './pages/CohortAnalytics.jsx'
 
 function AppLayout({ children }) {
   const { user, logout } = useAuth()
@@ -104,6 +105,7 @@ export default function App() {
         <Route path="/" element={<Protected><Dashboard /></Protected>} />
         <Route path="/guides" element={<Protected><MarkingGuides /></Protected>} />
         <Route path="/assistant" element={<Protected><AiAssistant /></Protected>} />
+        <Route path="/cohorts" element={<Protected><CohortAnalytics /></Protected>} />
         <Route path="/settings" element={<Protected><Settings /></Protected>} />
 
         {/* A session's own workspace: tab bar + nested pages, all scoped to :id */}

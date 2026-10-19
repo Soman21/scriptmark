@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
-import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, PanelLeftClose, PanelLeftOpen, X, Users } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 
 const toolItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
   { to: '/guides', label: 'Marking Guides', icon: BookOpen, restrictedTo: ['LECTURER', 'ADMIN'] },
+  { to: '/cohorts', label: 'Cohort Analytics', icon: Users },
   { to: '/assistant', label: 'AI Assistant', icon: Sparkles },
 ]
 

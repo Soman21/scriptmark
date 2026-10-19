@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recha
 import { LayoutGrid, Trophy, Flag, FileText, AlertCircle, AlertTriangle } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import AiAgreementPanel from '../components/AiAgreementPanel.jsx'
+import CohortPanel from '../components/CohortPanel.jsx'
 import { StatCard } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
@@ -62,7 +63,8 @@ export default function Analytics() {
               <StatCard
                 icon={<LayoutGrid size={16} className="text-sky-500" />}
                 label="Class Average"
-                value={data.average != null ? `${data.average}%` : '—'}
+                value={data.average != null ? `${data.average}` : '—'}
+                sub="exam marks"
               />
               <StatCard
                 icon={<Trophy size={16} className="text-amber-500" />}
@@ -136,6 +138,8 @@ export default function Analytics() {
                 </tbody>
               </table>
             </div>
+
+            <CohortPanel sessionId={sessionId} />
 
             <AiAgreementPanel sessionId={sessionId} sessionTitle={session.title} />
           </>

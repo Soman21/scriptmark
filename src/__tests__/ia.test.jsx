@@ -14,6 +14,7 @@ import MyQueue from '../pages/MyQueue.jsx'
 import CoordinatorDashboard from '../pages/CoordinatorDashboard.jsx'
 import Archive from '../pages/Archive.jsx'
 import ScanScripts from '../pages/ScanScripts.jsx'
+import CohortAnalytics from '../pages/CohortAnalytics.jsx'
 
 const FAKE_USER = { id: 'u1', name: 'Ann Coordinator', role: 'LECTURER' }
 const FAKE_SESSION = {
@@ -291,5 +292,51 @@ describe('Results review screen', () => {
     await waitFor(() => expect(screen.getByAltText('Page 1')).toBeTruthy())
     fireEvent.click(screen.getByLabelText('Next page'))
     expect(screen.getByAltText('Page 2').getAttribute('src')).toBe('p2.jpg')
+  })
+})
+
+describe('Cohort analytics', () => {
+  beforeEach(() => {
+    global.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} }
+  })
+
+  const cohort = {
+    scoredScripts: 8, totalScripts: 8,
+    summary: { n: 8, mean: 54.4, median: 52.5, sd: 15.2, min: 35, max: 70, passRate: 0.875 },
+    gradeDistribution: [{ grade: 'A', count: 1 }, { grade: 'B', count: 2 }, { grade: 'C', count: 1 }, { grade: 'D', count: 2 }, { grade: 'E', count: 1 }, { grade: 'F', count: 1 }],
+    byEntryYear: [{ group: '2021', n: 6, mean: 55.8, passRate: 0.833 }],
+    byProgramme: [{ group: 'Postgraduate', n: 2, mean: 40, passRate: 0.5 }],
+    items: [{ question: 'Q1', text: 'Easy one', maxMarks: 10, responses: 8, facility: 0.8, discrimination: 0.05, needsReview: true }],
+  }
+
+  it('shows pass rate, groups and flags a weak question on the session Analytics page', async () => {
+    routes.unshift(
+      routeFor('/api/sessions/s1/analytics', { totalScripts: 8, scoredCount: 8, flaggedCount: 0, lowConfidenceCount: 0, average: 50, highest: 70, distribution: [], perQuestion: [] }),
+      routeFor('/api/sessions/s1/cohort', cohort),
+    )
+    renderAt('/sessions/s1/analytics', null)
+    await waitFor(() => expect(screen.getByText('87.5%')).toBeTruthy())
+    expect(screen.getByText('Postgraduate')).toBeTruthy()
+    expect(screen.getByText('Review question')).toBeTruthy()
+  })
+
+  it('compares sessions and filters by academic session', async () => {
+    routes.unshift(routeFor('/api/sessions/cohort/compare', [
+      { id: 's1', title: 'ECE512 DSP', courseCode: 'ECE512', academicSession: '2025/2026', semester: 'First', scoredScripts: 40, mean: 55, sd: 12, passRate: 0.8 },
+      { id: 's2', title: 'ECE305 Control', courseCode: 'ECE305', academicSession: '2024/2025', semester: 'Second', scoredScripts: 30, mean: 48, sd: 14, passRate: 0.6 },
+    ]))
+    render(
+      <MemoryRouter initialEntries={['/cohorts']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/cohorts" element={<CohortAnalytics />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    )
+    await waitFor(() => expect(screen.getByText('ECE305 Control')).toBeTruthy())
+    fireEvent.change(screen.getByLabelText('Academic session'), { target: { value: '2025/2026' } })
+    expect(screen.queryByText('ECE305 Control')).toBeNull()
+    expect(screen.getByText('ECE512 DSP')).toBeTruthy()
   })
 })

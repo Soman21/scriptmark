@@ -79,6 +79,8 @@ export const api = {
     request(`/api/sessions/${sessionId}/scripts/${scriptId}`, { method: 'DELETE', token }),
   getAnalytics: (sessionId, token) => request(`/api/sessions/${sessionId}/analytics`, { token }),
   getEvaluation: (sessionId, token) => request(`/api/sessions/${sessionId}/evaluation`, { token }),
+  getCohort: (sessionId, token) => request(`/api/sessions/${sessionId}/cohort`, { token }),
+  compareSessions: (token) => request('/api/sessions/cohort/compare', { token }),
 
   startMarking: (sessionId, token) =>
     request(`/api/sessions/${sessionId}/mark`, { method: 'POST', token }),
