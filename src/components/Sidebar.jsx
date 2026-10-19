@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, PanelLeftClose, PanelLeftOpen, X, Users } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import NewSessionDialog from './NewSessionDialog.jsx'
 
 const toolItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
@@ -29,7 +30,7 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
   const { token } = useAuth()
   const navigate = useNavigate()
   const { id: activeSessionId } = useParams()
-  const [creating, setCreating] = useState(false)
+  const [showNew, setShowNew] = useState(false)
   const [sessions, setSessions] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(true)
 
@@ -51,18 +52,6 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
       .finally(() => setLoadingSessions(false))
   }
 
-  async function handleNewSession() {
-    setCreating(true)
-    try {
-      const session = await api.createSession({ title: `Marking Session, ${new Date().toLocaleDateString()}` }, token)
-      setSessions((prev) => [session, ...prev])
-      navigate(`/sessions/${session.id}/marking`)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setCreating(false)
-    }
-  }
 
   const canManage = user?.role === 'LECTURER' || user?.role === 'ADMIN'
   const visibleToolItems = toolItems.filter((item) => !item.restrictedTo || canManage)
@@ -73,8 +62,24 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
   const itemIdle = 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
   const itemActive = 'bg-white/[0.08] text-white font-medium'
 
+  function handleCreated(session) {
+    setShowNew(false)
+    setSessions((prev) => [session, ...prev])
+    onCloseMobile?.()
+    navigate(`/guides?session=${session.id}`)
+  }
+
   return (
     <>
+      <NewSessionDialog
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        onCreated={handleCreated}
+        onOpenExisting={(s) => {
+          setShowNew(false)
+          navigate(`/guides?session=${s.id}`)
+        }}
+      />
       {mobileOpen && <div className="fixed inset-0 z-30 bg-slate-950/50 md:hidden" onClick={onCloseMobile} aria-hidden="true" />}
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 flex-col bg-ink-950 text-slate-100 transition-transform duration-200 md:static md:z-auto md:translate-x-0 md:transition-[width] ${
@@ -108,15 +113,14 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
         <div className={`flex min-h-0 flex-1 flex-col ${rail ? 'px-2' : 'px-3'} pb-3`}>
           {canManage && (
             <button
-              onClick={handleNewSession}
-              disabled={creating}
+              onClick={() => setShowNew(true)}
               title="New Marking Session"
               className={`mb-3 flex items-center rounded-lg bg-sky-500 hover:bg-sky-400 transition-colors text-white font-medium text-sm disabled:opacity-60 ${
                 rail ? 'justify-center h-10 w-10 mx-auto' : 'justify-center gap-2 py-2.5'
               }`}
             >
               <Plus size={16} />
-              {!rail && (creating ? 'Creating...' : 'New Marking Session')}
+              {!rail && 'New Marking Session'}
             </button>
           )}
 

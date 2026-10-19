@@ -4,6 +4,8 @@ import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import NewSessionDialog from '../components/NewSessionDialog.jsx'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -72,13 +74,8 @@ export default function MarkingGuides() {
   const [sessions, setSessions] = useState([])
   const [chosenSessionId, setChosenSessionId] = useState(localStorage.getItem('scriptmark_active_session') || '')
   const [showNewSessionForm, setShowNewSessionForm] = useState(false)
-  const [newSessionTitle, setNewSessionTitle] = useState('')
-  const [newSessionDept, setNewSessionDept] = useState('')
-  const [newSessionFaculty, setNewSessionFaculty] = useState('')
-  const [newCourseCode, setNewCourseCode] = useState('')
-  const [newAcademicSession, setNewAcademicSession] = useState('')
-  const [newSemester, setNewSemester] = useState('')
-  const [newAutoAccept, setNewAutoAccept] = useState(true)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [joinCodeInput, setJoinCodeInput] = useState('')
   const [joiningSession, setJoiningSession] = useState(false)
   const [showBrowse, setShowBrowse] = useState(false)
@@ -129,6 +126,15 @@ export default function MarkingGuides() {
     loadSessions()
     loadGuides()
   }, [])
+
+  // A session just created from the dashboard or sidebar arrives as
+  // ?session=id and opens straight on its guide.
+  useEffect(() => {
+    const id = searchParams.get('session')
+    if (!id) return
+    setSearchParams({}, { replace: true })
+    enterSession({ id })
+  }, [searchParams])
 
   async function loadSessions() {
     try {
@@ -209,8 +215,11 @@ export default function MarkingGuides() {
     setError('')
     try {
       const session = await api.joinSession(joinCodeInput.trim(), token)
-      await loadSessions()
-      enterSession(session)
+      // A marker who joined works from the session itself; the guide belongs
+      // to the Coordinator.
+      localStorage.setItem('scriptmark_active_session', session.id)
+      localStorage.setItem('scriptmark_active_session_title', session.title)
+      navigate(`/sessions/${session.id}/claim-questions`)
     } catch (err) {
       setError(err.message)
       setJoiningSession(false)
@@ -262,32 +271,10 @@ export default function MarkingGuides() {
     }
   }
 
-  async function handleStartNewSession() {
-    if (!newSessionTitle.trim()) {
-      setError('Give the new session a course/exam title.')
-      return
-    }
-    setLoadingSession(true)
-    setError('')
-    try {
-      const session = await api.createSession(
-        {
-          title: newSessionTitle.trim(),
-          department: newSessionDept.trim(),
-          faculty: newSessionFaculty.trim(),
-          courseCode: newCourseCode.trim(),
-          academicSession: newAcademicSession.trim(),
-          semester: newSemester.trim(),
-          autoAcceptHighConfidence: newAutoAccept,
-        },
-        token
-      )
-      await loadSessions()
-      enterSession(session)
-    } catch (err) {
-      setError(err.message)
-      setLoadingSession(false)
-    }
+  async function handleSessionCreated(session) {
+    setShowNewSessionForm(false)
+    await loadSessions()
+    enterSession(session)
   }
 
   function addGroup() {
@@ -606,8 +593,20 @@ export default function MarkingGuides() {
     return blanks
   }
 
-  async function handleGenerateAnswers() {
-    const blanks = getBlankAnswerParts()
+  // With a part id, writes the answer for just that part (the button beside
+  // its Model Answer box); without one, fills every blank answer.
+  async function handleGenerateAnswers(onlyPartId) {
+    let blanks = getBlankAnswerParts()
+    if (onlyPartId) {
+      const group = groups.find((g) => g.parts.some((p) => p.id === onlyPartId))
+      const pi = group.parts.findIndex((p) => p.id === onlyPartId)
+      const part = group.parts[pi]
+      if (!part.text.trim()) {
+        setError('Type the question first, then generate its answer.')
+        return
+      }
+      blanks = [{ groupId: group.id, partId: part.id, number: group.number, subLabel: group.parts.length > 1 ? letterLabel(pi) : null, text: part.text, maxMarks: part.marks }]
+    }
     if (blanks.length === 0) return
 
     setGeneratingAnswers(true)
@@ -725,7 +724,15 @@ export default function MarkingGuides() {
               </div>
             )}
 
-            {!showNewSessionForm ? (
+            <NewSessionDialog
+              open={showNewSessionForm}
+              onClose={() => setShowNewSessionForm(false)}
+              onCreated={handleSessionCreated}
+              onOpenExisting={(existing) => {
+                setShowNewSessionForm(false)
+                enterSession(existing)
+              }}
+            />
               <>
                 <label className="block text-xs font-medium text-slate-500 mt-5">Continue with a session</label>
                 <select
@@ -811,84 +818,6 @@ export default function MarkingGuides() {
                   </div>
                 )}
               </>
-            ) : (
-              <>
-                <label className="block text-xs font-medium text-slate-500 mt-5">Course / Exam Title</label>
-                <input
-                  value={newSessionTitle}
-                  onChange={(e) => setNewSessionTitle(e.target.value)}
-                  placeholder="CS101 Midterm"
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-                />
-                <label className="block text-xs font-medium text-slate-500 mt-3">Department</label>
-                <input
-                  value={newSessionDept}
-                  onChange={(e) => setNewSessionDept(e.target.value)}
-                  placeholder="Computer Science"
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-                />
-                <label className="block text-xs font-medium text-slate-500 mt-3">Faculty</label>
-                <input
-                  value={newSessionFaculty}
-                  onChange={(e) => setNewSessionFaculty(e.target.value)}
-                  placeholder="Physical Sciences"
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-                />
-
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500">Course Code</label>
-                    <input
-                      value={newCourseCode}
-                      onChange={(e) => setNewCourseCode(e.target.value)}
-                      placeholder="CSC401"
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500">Academic Session</label>
-                    <input
-                      value={newAcademicSession}
-                      onChange={(e) => setNewAcademicSession(e.target.value)}
-                      placeholder="2025/2026"
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500">Semester</label>
-                    <input
-                      value={newSemester}
-                      onChange={(e) => setNewSemester(e.target.value)}
-                      placeholder="First"
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-                    />
-                  </div>
-                </div>
-
-                <p className="mt-4 text-xs text-slate-400">
-                  Other markers join this session themselves using a code, shown to you right after you create it.
-                </p>
-
-                <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
-                  <input type="checkbox" checked={newAutoAccept} onChange={(e) => setNewAutoAccept(e.target.checked)} />
-                  Auto-accept high-confidence AI scores, so lecturers only review flagged or uncertain cases
-                </label>
-
-                <PrimaryButton
-                  onClick={handleStartNewSession}
-                  disabled={loadingSession}
-                  className="mt-4 w-full justify-center bg-sky-500 hover:bg-sky-400"
-                >
-                  {loadingSession ? 'Creating...' : 'Create & Continue'}
-                </PrimaryButton>
-                <button
-                  onClick={() => setShowNewSessionForm(false)}
-                  className="mt-3 w-full text-center text-xs text-slate-400 hover:text-slate-600"
-                >
-                  Back to session list
-                </button>
-              </>
-            )}
           </div>
         </div>
       </div>
@@ -1034,7 +963,7 @@ export default function MarkingGuides() {
                   {getBlankAnswerParts().length} question{getBlankAnswerParts().length !== 1 ? 's have' : ' has'} no answer yet.
                 </span>
                 <button
-                  onClick={handleGenerateAnswers}
+                  onClick={() => handleGenerateAnswers()}
                   disabled={generatingAnswers}
                   className="flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-400 disabled:opacity-60"
                 >
@@ -1235,8 +1164,9 @@ export default function MarkingGuides() {
                         <label className="text-sm font-medium text-slate-700">Model Answer</label>
                         <button
                           type="button"
-                          onClick={() => setError('Automatic generation is coming in a later phase (LLM integration).')}
-                          className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                          onClick={() => handleGenerateAnswers(part.id)}
+                          disabled={generatingAnswers}
+                          className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700 disabled:opacity-60"
                         >
                           <Sparkles size={12} /> Generate with AI
                         </button>

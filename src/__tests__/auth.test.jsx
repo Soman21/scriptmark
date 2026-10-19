@@ -30,7 +30,7 @@ beforeEach(() => {
 })
 
 describe('Sign up', () => {
-  it('offers Lecturer and Reviewer only, and links the privacy policy', () => {
+  it('signs everyone up as a Lecturer with no role to pick, and links the privacy policy', () => {
     render(
       <MemoryRouter>
         <AuthProvider>
@@ -38,9 +38,9 @@ describe('Sign up', () => {
         </AuthProvider>
       </MemoryRouter>
     )
-    expect(screen.getByRole('button', { name: /Lecturer/ })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Reviewer/ })).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /Admin/ })).toBeNull()
+    expect(screen.queryByText(/Select your role/)).toBeNull()
+    expect(screen.queryByRole('button', { name: /Admin|Reviewer/ })).toBeNull()
+    expect(screen.queryByText(/SSO/)).toBeNull()
     expect(screen.getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe('/privacy')
   })
 })

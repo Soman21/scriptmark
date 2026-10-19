@@ -11,11 +11,13 @@ import {
   ClipboardCheck,
   BarChart3,
   ChevronRight,
+  UserPlus,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import { SessionProvider } from '../context/SessionContext.jsx'
 import { Badge } from './ui.jsx'
+import AddLecturersDialog from './AddLecturersDialog.jsx'
 
 export default function SessionWorkspace() {
   const { id } = useParams()
@@ -26,6 +28,7 @@ export default function SessionWorkspace() {
   const navRef = useRef(null)
   const location = useLocation()
   const [moreToRight, setMoreToRight] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
 
   function updateFade() {
     const el = navRef.current
@@ -110,6 +113,15 @@ export default function SessionWorkspace() {
                 {session.courseCode && <Badge tone="slate">{session.courseCode}</Badge>}
                 <Badge tone={session.status === 'ACTIVE' ? 'green' : 'slate'}>{session.status}</Badge>
               </div>
+              {isCoordinator && session.joinCode && (
+                <button
+                  type="button"
+                  onClick={() => setShowAdd(true)}
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  <UserPlus size={15} /> Add lecturers
+                </button>
+              )}
             </div>
           </div>
           <nav
@@ -138,6 +150,7 @@ export default function SessionWorkspace() {
             ))}
           </nav>
         </header>
+        <AddLecturersDialog session={session} open={showAdd} onClose={() => setShowAdd(false)} />
         <div className="min-h-0 flex-1 overflow-hidden">
           <Outlet />
         </div>

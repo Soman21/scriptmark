@@ -23,6 +23,7 @@ import Settings from './pages/Settings.jsx'
 import CohortAnalytics from './pages/CohortAnalytics.jsx'
 import Landing from './pages/Landing.jsx'
 import Contact from './pages/Contact.jsx'
+import JoinSession from './pages/JoinSession.jsx'
 import Privacy from './pages/Privacy.jsx'
 
 function AppLayout({ children }) {
@@ -115,6 +116,7 @@ export default function App() {
 
         {/* Tools: global, not tied to any one session */}
         <Route path="/" element={<HomeRoute />} />
+        <Route path="/join/:code" element={<Protected><JoinSession /></Protected>} />
         <Route path="/guides" element={<Protected><MarkingGuides /></Protected>} />
         <Route path="/assistant" element={<Protected><AiAssistant /></Protected>} />
         <Route path="/cohorts" element={<Protected><CohortAnalytics /></Protected>} />

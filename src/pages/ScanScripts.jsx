@@ -102,7 +102,6 @@ export default function ScanScripts() {
       setStudentNameInput(updatedScript.studentName || '')
       setRegNumberInput(updatedScript.regNumber || '')
       setDetectedFields({ name: !!detected?.name, regNumber: !!detected?.regNumber })
-      setScoreResult(null)
 
       setScripts((prev) => {
         const withoutThis = prev.filter((s) => s.id !== updatedScript.id)
@@ -196,7 +195,6 @@ export default function ScanScripts() {
     setStudentNameInput('')
     setRegNumberInput('')
     setDetectedFields({ name: false, regNumber: false })
-    setScoreResult(null)
   }
 
   async function handleDiscard() {

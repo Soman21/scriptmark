@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { safeNext, withNext } from '../lib/next.js'
 import { Lock, Mail, Eye, EyeOff, ArrowRight, ShieldCheck, KeyRound } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { PrimaryButton } from '../components/ui.jsx'
@@ -7,6 +8,7 @@ import { PrimaryButton } from '../components/ui.jsx'
 export default function Login() {
   const { login, verifyOtp } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -27,7 +29,7 @@ export default function Login() {
         setPendingToken(result.pendingToken)
         setOtpEmail(result.email)
       } else {
-        navigate('/')
+        navigate(safeNext(location.search))
       }
     } catch (err) {
       setError(err.message)
@@ -42,7 +44,7 @@ export default function Login() {
     setSubmitting(true)
     try {
       await verifyOtp({ pendingToken, code })
-      navigate('/')
+      navigate(safeNext(location.search))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -123,7 +125,7 @@ export default function Login() {
 
               <p className="text-center text-sm text-slate-500 mt-6">
                 Do not have an account?{' '}
-                <Link to="/signup" className="text-sky-600 font-medium">
+                <Link to={withNext('/signup', location.search)} className="text-sky-600 font-medium">
                   Create one
                 </Link>
               </p>
