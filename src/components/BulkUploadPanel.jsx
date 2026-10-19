@@ -186,7 +186,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
       // Kick off background marking for the whole session, then take the
       // lecturer straight to the live Marking page to watch progress.
       await api.startMarking(sessionId, token).catch(() => {})
-      navigate('/marking')
+      navigate(`/sessions/${sessionId}/marking`)
     } catch (err) {
       setError(err.message)
     } finally {

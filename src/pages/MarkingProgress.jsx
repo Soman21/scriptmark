@@ -88,7 +88,7 @@ export default function MarkingProgress() {
 
         if (data.total > 0 && data.markedCount === data.total && !redirectedRef.current) {
           redirectedRef.current = true
-          setTimeout(() => navigate('/results'), 1200)
+          setTimeout(() => navigate(`/sessions/${sessionId}/results`), 1200)
         }
       } catch (err) {
         if (!cancelled) setError(err.message)
@@ -207,7 +207,7 @@ export default function MarkingProgress() {
                       <RefreshCw size={12} /> Remark
                     </button>
                     <button
-                      onClick={() => navigate('/results')}
+                      onClick={() => navigate(`/sessions/${sessionId}/results`)}
                       className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
                       title="Edit in Results"
                     >
@@ -237,7 +237,7 @@ export default function MarkingProgress() {
         </table>
       </div>
 
-      <SecondaryButton onClick={() => navigate('/results')}>Go to Results now</SecondaryButton>
+      <SecondaryButton onClick={() => navigate(`/sessions/${sessionId}/results`)}>Go to Results now</SecondaryButton>
     </div>
   )
 }

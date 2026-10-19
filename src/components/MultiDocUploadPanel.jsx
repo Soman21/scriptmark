@@ -62,7 +62,7 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated }) {
       setExpanded(false)
 
       await api.startMarking(sessionId, token).catch(() => {})
-      navigate('/marking')
+      navigate(`/sessions/${sessionId}/marking`)
     } catch (err) {
       setError(err.message)
     } finally {
