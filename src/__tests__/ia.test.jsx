@@ -16,6 +16,7 @@ import Archive from '../pages/Archive.jsx'
 import ScanScripts from '../pages/ScanScripts.jsx'
 import CohortAnalytics from '../pages/CohortAnalytics.jsx'
 import Settings from '../pages/Settings.jsx'
+import App from '../App.jsx'
 
 const FAKE_USER = { id: 'u1', name: 'Ann Coordinator', role: 'LECTURER' }
 const FAKE_SESSION = {
@@ -381,5 +382,29 @@ describe('Settings page', () => {
     renderSettings()
     fireEvent.click(await screen.findByRole('switch', { name: 'Read AI Assistant replies aloud' }))
     expect(localStorage.getItem('scriptmark_voice_replies')).toBe('1')
+  })
+})
+
+describe('Home route', () => {
+  function renderApp() {
+    return render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    )
+  }
+
+  it('shows the landing page to a signed out visitor', async () => {
+    localStorage.clear()
+    renderApp()
+    await waitFor(() => expect(screen.getByText(/Mark exam scripts faster/)).toBeTruthy())
+    expect(screen.getAllByRole('link', { name: /Create account|Get started/ }).length).toBeGreaterThan(0)
+    expect(screen.queryByText('New Marking Session')).toBeNull()
+  })
+
+  it('shows the dashboard once signed in', async () => {
+    renderApp()
+    await waitFor(() => expect(screen.getAllByText('ECE305 Midterm').length).toBeGreaterThan(0))
+    expect(screen.queryByText(/Mark exam scripts faster/)).toBeNull()
   })
 })

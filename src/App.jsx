@@ -21,6 +21,7 @@ import Login from './pages/Login.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import Settings from './pages/Settings.jsx'
 import CohortAnalytics from './pages/CohortAnalytics.jsx'
+import Landing from './pages/Landing.jsx'
 
 function AppLayout({ children }) {
   const { user, logout } = useAuth()
@@ -93,6 +94,13 @@ function Protected({ children }) {
   )
 }
 
+// "/" is the landing page for visitors and the Dashboard once signed in.
+function HomeRoute() {
+  const { user, loading } = useAuth()
+  if (loading) return null
+  return user ? <Protected><Dashboard /></Protected> : <Landing />
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -102,7 +110,7 @@ export default function App() {
         <Route path="/signup" element={<SignUp />} />
 
         {/* Tools: global, not tied to any one session */}
-        <Route path="/" element={<Protected><Dashboard /></Protected>} />
+        <Route path="/" element={<HomeRoute />} />
         <Route path="/guides" element={<Protected><MarkingGuides /></Protected>} />
         <Route path="/assistant" element={<Protected><AiAssistant /></Protected>} />
         <Route path="/cohorts" element={<Protected><CohortAnalytics /></Protected>} />
