@@ -4,6 +4,7 @@ import { UploadCloud, Camera, CheckCircle2, Loader2, AlertCircle, FilePlus2, Use
 import Topbar from '../components/Topbar.jsx'
 import BulkUploadPanel from '../components/BulkUploadPanel.jsx'
 import MultiDocUploadPanel from '../components/MultiDocUploadPanel.jsx'
+import AttendanceUploadCard from '../components/AttendanceUploadCard.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
@@ -265,6 +266,14 @@ export default function ScanScripts() {
 
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-2xl space-y-6">
+            <AttendanceUploadCard
+              sessionId={sessionId}
+              onUploaded={() => {
+                // Names on already scanned scripts may have just been matched
+                api.getSessionScripts(sessionId, token).then(setScripts).catch(() => {})
+              }}
+            />
+
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Current Student</label>

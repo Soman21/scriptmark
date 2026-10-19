@@ -169,3 +169,38 @@ describe('Sidebar', () => {
     expect(screen.queryByText('Export')).toBeNull()
   })
 })
+
+describe('Attendance sheet upload on Scan Scripts', () => {
+  const twoStudents = [
+    { id: 'c1', name: 'ADA OKAFOR', regNumber: '2017364085', flagged: false },
+    { id: 'c2', name: 'CHIDI EZE', regNumber: '2025366001FN', flagged: true, conflict: { name: 'CHIDI EZEH' } },
+  ]
+
+  it('shows how many students are on the class list and any name conflicts', async () => {
+    routes.unshift(routeFor('/api/sessions/s1/classList', { classList: twoStudents, classListUploads: [] }))
+    renderAt('/sessions/s1/scan', null)
+    await waitFor(() => expect(screen.getByText('2 students on the class list.')).toBeTruthy())
+    expect(screen.getByText(/1 name conflict to review before export/)).toBeTruthy()
+  })
+
+  it('uploads a sheet, reports what changed, and refreshes the scripts list', async () => {
+    renderAt('/sessions/s1/scan', null)
+    await waitFor(() => expect(screen.getByText('No students on the class list yet.')).toBeTruthy())
+
+    routes.unshift(routeFor('/api/sessions/s1/classList', {
+      classList: twoStudents, classListUploads: [], addedCount: 2, flaggedCount: 1, rematchedCount: 1,
+    }))
+    const input = screen.getByLabelText('Upload attendance sheet')
+    fireEvent.change(input, { target: { files: [new File(['x'], 'attendance.jpg', { type: 'image/jpeg' })] } })
+
+    await waitFor(() => expect(screen.getByText('2 students added, 1 scanned script matched.')).toBeTruthy())
+    expect(screen.getByText('2 students on the class list.')).toBeTruthy()
+
+    const post = global.fetch.mock.calls.find(([url, opts]) => url.endsWith('/api/sessions/s1/classList') && opts?.method === 'POST')
+    expect(post[1].body.get('document').name).toBe('attendance.jpg')
+    await waitFor(() => {
+      const scriptFetches = global.fetch.mock.calls.filter(([url]) => url.endsWith('/api/sessions/s1/scripts'))
+      expect(scriptFetches.length).toBeGreaterThanOrEqual(2)
+    })
+  })
+})
