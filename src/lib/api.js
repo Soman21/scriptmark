@@ -87,6 +87,8 @@ export const api = {
   getCohort: (sessionId, token) => request(`/api/sessions/${sessionId}/cohort`, { token }),
   compareSessions: (token) => request('/api/sessions/cohort/compare', { token }),
 
+  remarkQuestions: (sessionId, questionIds, token) =>
+    request(`/api/sessions/${sessionId}/remark`, { method: 'POST', body: { questionIds }, token }),
   startMarking: (sessionId, token) =>
     request(`/api/sessions/${sessionId}/mark`, { method: 'POST', token }),
   getMarkingStatus: (sessionId, token) =>

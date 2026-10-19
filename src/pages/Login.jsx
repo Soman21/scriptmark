@@ -18,6 +18,7 @@ export default function Login() {
   const [pendingToken, setPendingToken] = useState(null)
   const [otpEmail, setOtpEmail] = useState('')
   const [code, setCode] = useState('')
+  const [resent, setResent] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -31,6 +32,24 @@ export default function Login() {
       } else {
         navigate(safeNext(location.search))
       }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Emails a fresh code with the details already typed, for when the first
+  // one never arrived or has expired.
+  async function handleResend() {
+    setError('')
+    setSubmitting(true)
+    try {
+      const result = await login({ email, password })
+      setPendingToken(result.pendingToken)
+      setCode('')
+      setResent(true)
+      setTimeout(() => setResent(false), 30000)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -163,7 +182,20 @@ export default function Login() {
                 </PrimaryButton>
               </form>
 
-              <button onClick={backToPasswordStep} className="mt-4 w-full text-center text-sm text-slate-500 hover:text-slate-700">
+              <p className="mt-4 text-center text-sm text-slate-500">
+                {resent ? (
+                  'A new code is on its way.'
+                ) : (
+                  <>
+                    No code?{' '}
+                    <button type="button" onClick={handleResend} disabled={submitting} className="font-medium text-sky-600 hover:text-sky-700 disabled:opacity-60">
+                      Send a new one
+                    </button>
+                  </>
+                )}
+              </p>
+
+              <button onClick={backToPasswordStep} className="mt-2 w-full text-center text-sm text-slate-500 hover:text-slate-700">
                 Use a different account
               </button>
             </>

@@ -98,6 +98,8 @@ export default function MarkingGuides() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [remarkOffer, setRemarkOffer] = useState(null) // questions changed after scripts were marked
+  const [remarking, setRemarking] = useState(false)
   const [autoGenerateOnParse, setAutoGenerateOnParse] = useState(false)
   const [generatingAnswers, setGeneratingAnswers] = useState(false)
   const [pendingAutoGenerate, setPendingAutoGenerate] = useState(false)
@@ -629,6 +631,24 @@ export default function MarkingGuides() {
   }
 
 
+  async function handleRemark() {
+    setRemarking(true)
+    setError('')
+    try {
+      const r = await api.remarkQuestions(currentSession.id, remarkOffer.map((q) => q.id), token)
+      setRemarkOffer(null)
+      setSuccessMsg(
+        r.answers
+          ? `Re marking ${r.answers} answer${r.answers !== 1 ? 's' : ''} now. They will be back in Results for review shortly.`
+          : 'Every marked answer was already confirmed by a lecturer, so nothing was re marked.'
+      )
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRemarking(false)
+    }
+  }
+
   async function handleSave(isDraft) {
     setError('')
     setSuccessMsg('')
@@ -675,8 +695,10 @@ export default function MarkingGuides() {
         questionPaperUrl: questionPaperDocUrl,
         questionPaperMimeType: questionPaperDocMimeType,
       }
+      setRemarkOffer(null)
       if (currentGuideId) {
         guide = await api.updateGuide(currentGuideId, payload, token)
+        if (currentSession && guide.changedMarkedQuestions?.length) setRemarkOffer(guide.changedMarkedQuestions)
       } else {
         guide = await api.createGuide(payload, token)
         setCurrentGuideId(guide.id)
@@ -856,6 +878,22 @@ export default function MarkingGuides() {
               }`}
             >
               {error || successMsg}
+            </div>
+          )}
+
+          {remarkOffer && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <span>
+                Scripts were already marked against {remarkOffer.map((q) => q.label).join(', ')}. Re mark them with this version? Scores a lecturer
+                already confirmed by hand are kept.
+              </span>
+              <button
+                onClick={handleRemark}
+                disabled={remarking}
+                className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-500 disabled:opacity-60"
+              >
+                {remarking ? 'Starting...' : 'Re mark now'}
+              </button>
             </div>
           )}
 

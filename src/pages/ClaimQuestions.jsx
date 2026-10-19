@@ -160,6 +160,7 @@ export default function ClaimQuestions() {
   }
 
   async function handleRevoke(marker) {
+    if (!window.confirm(`Remove ${marker.name} from this session? Any questions they claimed go back to unclaimed.`)) return
     setBusyUserId(marker.id)
     setError('')
     try {
