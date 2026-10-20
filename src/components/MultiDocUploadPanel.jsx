@@ -12,10 +12,17 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 // or a PDF, short or long). Unlike Bulk PDF Upload, there is no grouping
 // step, since each file already is one whole submission. No OCR happens
 // here either, digitizing and detection happen automatically in Marking.
-export default function MultiDocUploadPanel({ sessionId, onScriptsCreated }) {
+// Files sent per request, so a big batch never hits the server's limit of
+// 50 files and the lecturer sees progress as it goes.
+const CHUNK = 10
+const isAccepted = (f) => f.type === 'application/pdf' || f.type.startsWith('image/')
+
+export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, embedded = false }) {
   const { token } = useAuth()
   const navigate = useNavigate()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(embedded)
+  const [progress, setProgress] = useState(null)
+  const [skipped, setSkipped] = useState([])
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
@@ -23,7 +30,13 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated }) {
 
   function addFiles(fileList) {
     const picked = Array.from(fileList || [])
-    setFiles((prev) => [...prev, ...picked])
+    const left = picked.filter((f) => !isAccepted(f)).map((f) => f.name)
+    if (left.length) setSkipped(left)
+    setFiles((prev) => {
+      // The same file picked twice would become two scripts for one student.
+      const seen = new Set(prev.map((f) => `${f.name}:${f.size}`))
+      return [...prev, ...picked.filter((f) => isAccepted(f) && !seen.has(`${f.name}:${f.size}`))]
+    })
   }
 
   function handleFilesSelected(e) {
@@ -45,49 +58,60 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated }) {
     if (files.length === 0) return
     setUploading(true)
     setError('')
+    const created = []
     try {
-      const formData = new FormData()
-      files.forEach((f) => formData.append('files', f))
+      for (let i = 0; i < files.length; i += CHUNK) {
+        setProgress({ done: i, total: files.length })
+        const formData = new FormData()
+        files.slice(i, i + CHUNK).forEach((f) => formData.append('files', f))
+        const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/scripts/batchUpload`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Upload failed')
+        created.push(...data.scripts)
+      }
 
-      const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/scripts/batchUpload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Upload failed')
-
-      onScriptsCreated?.(data.scripts)
+      onScriptsCreated?.(created)
       setFiles([])
+      setSkipped([])
       setExpanded(false)
 
       await api.startMarking(sessionId, token).catch(() => {})
       navigate(`/sessions/${sessionId}/marking`)
     } catch (err) {
-      setError(err.message)
+      // Files already sent are saved; keep only the ones still to go.
+      if (created.length) {
+        onScriptsCreated?.(created)
+        setFiles((prev) => prev.slice(created.length))
+      }
+      setError(created.length ? `${err.message} ${created.length} file${created.length !== 1 ? 's were' : ' was'} saved. Press Upload All to send the rest.` : err.message)
     } finally {
       setUploading(false)
+      setProgress(null)
     }
   }
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white">
       <button
-        onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        onClick={() => !embedded && setExpanded((v) => !v)}
+        className={`w-full flex items-center justify-between px-4 py-3 text-left ${embedded ? 'cursor-default' : ''}`}
       >
         <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <Files size={16} className="text-violet-500" /> Batch Upload (Multiple Students)
+          <Files size={16} className="text-violet-500" /> One file per student
         </span>
-        {expanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+        {!embedded && (expanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />)}
       </button>
 
       {expanded && (
         <div className="border-t border-slate-100 p-4 space-y-4">
           <p className="text-xs text-slate-500">
-            Select several files at once, each one being one student's complete script. A file can be a single page
-            image, or a PDF of any length belonging to just that student. Use this when you already have separate
-            files per student, not one big PDF that still needs splitting.
+            Each file becomes one student's script: a PDF of any length, or a single photo. If a student's script is
+            several photos, put them in one PDF first, or use One script at a time, otherwise each photo becomes its
+            own script.
           </p>
 
           <div
@@ -105,12 +129,9 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated }) {
               <UploadCloud size={20} />
             </div>
             <p className="text-sm font-medium text-slate-800">Drag files here, as many as you like at once</p>
-            <p className="mt-1 text-xs text-slate-400">
-              Select multiple files in your own file explorer first, then drag the whole group in. No special key
-              needed.
-            </p>
-            <label className="mt-3 inline-block cursor-pointer text-xs font-medium text-violet-600 hover:text-violet-700">
-              Or click to browse (hold Ctrl or Cmd to pick more than one, or click Browse again to add more)
+            <p className="mt-1 text-xs text-slate-400">PDFs and photos only. You can add more files as many times as you like before uploading.</p>
+            <label className="mt-3 inline-block cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-100">
+              Choose files
               <input
                 type="file"
                 multiple
@@ -120,6 +141,12 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated }) {
               />
             </label>
           </div>
+
+          {skipped.length > 0 && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              <AlertCircle size={14} className="mt-0.5 shrink-0" /> Left out {skipped.join(', ')}. Only PDFs and photos can be uploaded.
+            </div>
+          )}
 
           {error && (
             <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
@@ -162,11 +189,11 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated }) {
           >
             {uploading ? (
               <>
-                <Loader2 size={16} className="animate-spin" /> Uploading...
+                <Loader2 size={16} className="animate-spin" /> {progress ? `Uploading ${Math.min(progress.done + CHUNK, progress.total)} of ${progress.total}...` : 'Uploading...'}
               </>
             ) : (
               <>
-                <CheckCircle2 size={16} /> Upload All
+                <CheckCircle2 size={16} /> Upload All{files.length ? ` (${files.length} script${files.length !== 1 ? 's' : ''})` : ''}
               </>
             )}
           </PrimaryButton>

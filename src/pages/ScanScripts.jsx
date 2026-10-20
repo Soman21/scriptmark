@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UploadCloud, Camera, CheckCircle2, Loader2, AlertCircle, AlertTriangle, FilePlus2, UserPlus, X, Sparkles } from 'lucide-react'
+import { UploadCloud, Camera, CheckCircle2, Loader2, AlertCircle, AlertTriangle, FilePlus2, UserPlus, X, Sparkles, BookOpen, FileStack, Files } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import BulkUploadPanel from '../components/BulkUploadPanel.jsx'
 import MultiDocUploadPanel from '../components/MultiDocUploadPanel.jsx'
@@ -12,6 +12,32 @@ import { api } from '../lib/api.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
+// The three ways scripts arrive, named by what the lecturer has in hand
+// rather than by how the upload works.
+export const SCAN_METHODS = [
+  {
+    id: 'single',
+    icon: BookOpen,
+    title: 'One script at a time',
+    has: 'You have the paper booklets',
+    text: 'Photograph each page with your phone or webcam, or pick the photos. You finish one student, then start the next.',
+  },
+  {
+    id: 'pdf',
+    icon: FileStack,
+    title: 'One PDF, many students',
+    has: 'The scanner made one big file',
+    text: 'Upload the single PDF holding everyone. ScriptMark splits it into one script per student, and you check the split before saving.',
+  },
+  {
+    id: 'files',
+    icon: Files,
+    title: 'One file per student',
+    has: 'Each student already has a file',
+    text: 'Pick or drag in many files at once. Each file, a PDF or one photo, becomes one student\'s script.',
+  },
+]
+
 export default function ScanScripts() {
   const { token, user } = useAuth()
   const { session, sessionId } = useSession()
@@ -21,6 +47,20 @@ export default function ScanScripts() {
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
 
+  const [method, setMethod] = useState(() => {
+    try {
+      const saved = localStorage.getItem('scriptmark_scan_method')
+      return SCAN_METHODS.some((m) => m.id === saved) ? saved : 'single'
+    } catch {
+      return 'single'
+    }
+  })
+  function chooseMethod(id) {
+    setMethod(id)
+    try {
+      localStorage.setItem('scriptmark_scan_method', id)
+    } catch {}
+  }
   const [cameraOpen, setCameraOpen] = useState(false)
   const [cameraError, setCameraError] = useState('')
 
@@ -266,6 +306,35 @@ export default function ScanScripts() {
               }}
             />
 
+            <section aria-labelledby="scan-method-heading">
+              <h2 id="scan-method-heading" className="text-sm font-semibold text-slate-900">
+                How are your scripts?
+              </h2>
+              <p className="text-xs text-slate-500">Pick what you have. You can mix them in one session, for example a big PDF first and a few late scripts one at a time.</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="How are your scripts?">
+                {SCAN_METHODS.map((m) => {
+                  const on = method === m.id
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => chooseMethod(m.id)}
+                      className={`rounded-xl border p-3 text-left transition ${on ? 'border-sky-400 bg-sky-50 ring-1 ring-sky-400' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
+                    >
+                      <m.icon size={18} className={on ? 'text-sky-600' : 'text-slate-400'} />
+                      <span className="mt-2 block text-sm font-semibold text-slate-900">{m.title}</span>
+                      <span className="block text-xs font-medium text-sky-700">{m.has}</span>
+                      <span className="mt-1 block text-xs text-slate-500">{m.text}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+
+            {method === 'single' && (
+            <>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Current Student</label>
@@ -340,13 +409,6 @@ export default function ScanScripts() {
                   )}
                 </>
               )}
-            </div>
-
-            <div className="mb-1">
-              <p className="text-sm font-semibold text-slate-900">Scan One Script</p>
-              <p className="text-xs text-slate-500">
-                Use this when you have one physical script in front of you right now. Type the student's details once below, then add each page as you go, by camera or photo.
-              </p>
             </div>
 
             <div className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-8 text-center">
@@ -435,20 +497,28 @@ export default function ScanScripts() {
                 </SecondaryButton>
               </div>
             )}
+            </>
+            )}
 
+            {method === 'pdf' && (
             <BulkUploadPanel
+              embedded
               sessionId={sessionId}
               onScriptsCreated={(newScripts) => {
                 setScripts((prev) => [...newScripts, ...prev])
               }}
             />
+            )}
 
+            {method === 'files' && (
             <MultiDocUploadPanel
+              embedded
               sessionId={sessionId}
               onScriptsCreated={(newScripts) => {
                 setScripts((prev) => [...newScripts, ...prev])
               }}
             />
+            )}
 
             <div className="rounded-xl border border-slate-200 bg-white">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">

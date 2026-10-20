@@ -33,10 +33,11 @@ const MODES = [
   },
 ]
 
-export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
+export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded = false }) {
   const { token } = useAuth()
   const navigate = useNavigate()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(embedded)
+  const [dropTarget, setDropTarget] = useState(null)
   const [pdfFile, setPdfFile] = useState(null)
   const [mode, setMode] = useState('auto')
   const [splitInfo, setSplitInfo] = useState(null)
@@ -183,6 +184,18 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
       return next.filter((g) => g.pages.length > 0)
     })
     setDragSource(null)
+    setDropTarget(null)
+  }
+
+  // While a page is being dragged, nearing the top or bottom of the scroll
+  // area scrolls it, so a page can travel to a script that is off screen.
+  function autoScroll(e) {
+    if (!dragSource) return
+    let el = e.currentTarget.parentElement
+    while (el && !(el.scrollHeight > el.clientHeight && /auto|scroll/.test(getComputedStyle(el).overflowY))) el = el.parentElement
+    const box = el ? el.getBoundingClientRect() : { top: 0, bottom: window.innerHeight }
+    const dy = e.clientY < box.top + 90 ? -20 : e.clientY > box.bottom - 90 ? 20 : 0
+    if (dy) (el || window).scrollBy(0, dy)
   }
 
   async function handleConfirm() {
@@ -239,21 +252,21 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white">
       <button
-        onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        onClick={() => !embedded && setExpanded((v) => !v)}
+        className={`w-full flex items-center justify-between px-4 py-3 text-left ${embedded ? 'cursor-default' : ''}`}
       >
         <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <FileUp size={16} className="text-sky-500" /> Bulk PDF Upload
+          <FileUp size={16} className="text-sky-500" /> One PDF, many students
         </span>
-        {expanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+        {!embedded && (expanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />)}
       </button>
 
       {expanded && (
         <div className="border-t border-slate-100 p-4 space-y-4">
           <p className="text-xs text-slate-500">
-            Use this when you have one big PDF holding many students' scripts, scanned all together and not yet
-            split apart. Review and adjust the split before anything is saved. OCR and student detection happen
-            automatically afterward, during Marking, so this stays fast.
+            For one big PDF holding many students' scripts, scanned together. ScriptMark splits it into one script per
+            student and shows you the result. Nothing is saved until you confirm. Reg numbers are read later, during
+            Marking, so splitting stays quick.
           </p>
 
           {error && (
@@ -326,7 +339,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
                     : `${groups.length} proposed submissions.`}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Check each script before confirming. Use Split here on a page to start a new script from it, or Merge next to join two. You can also drag pages between scripts on a computer.
+                  Check each script before confirming. On a computer, drag any page onto another page or script to move it; the script you are over lights up. On any device, Split here starts a new script from a page and Merge next joins two.
                 </p>
                 {splitInfo?.mode === 'auto' && groups.length === 1 && splitInfo.pageCount > 1 && (
                   <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
@@ -334,13 +347,22 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
                   </p>
                 )}
               </div>
-              <div className="space-y-3 max-h-[32rem] overflow-y-auto">
+              <div className="space-y-3" onDragOver={autoScroll}>
                 {groups.map((g, gi) => (
                   <div
                     key={gi}
-                    onDragOver={(e) => e.preventDefault()}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      if (dragSource && dropTarget !== gi) setDropTarget(gi)
+                    }}
                     onDrop={() => handleDropOnGroup(gi)}
-                    className={`rounded-lg border p-3 ${odd.has(gi) ? 'border-amber-300 bg-amber-50/40' : 'border-slate-200'}`}
+                    className={`rounded-lg border p-3 transition ${
+                      dragSource && dropTarget === gi
+                        ? 'border-sky-400 bg-sky-50 ring-2 ring-sky-300'
+                        : odd.has(gi)
+                        ? 'border-amber-300 bg-amber-50/40'
+                        : 'border-slate-200'
+                    }`}
                   >
                     {odd.has(gi) && (
                       <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-amber-700">
@@ -379,12 +401,16 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated }) {
                       </div>
                     </div>
 
-                    <div className="mb-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                    <div className="mb-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6 lg:grid-cols-8">
                       {g.pages.map((p, pi) => (
                         <div
                           key={`${gi}-${p.imageUrl}-${pi}`}
                           draggable
                           onDragStart={() => handleDragStart(gi, pi)}
+                          onDragEnd={() => {
+                            setDragSource(null)
+                            setDropTarget(null)
+                          }}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
                             e.stopPropagation()
