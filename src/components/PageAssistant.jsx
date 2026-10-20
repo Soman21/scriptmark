@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Loader2, Check, AlertCircle } from 'lucide-reac
 import AssistantText from './AssistantText.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import VoiceButton from './VoiceButton.jsx'
 
 // The chat helper on a session page. The lecturer types what they want and
 // the page carries it out with the same calls its buttons make. Claiming
@@ -123,7 +124,7 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {messages.length === 0 && (
           <p className="text-sm text-slate-500">
-            Tap a shortcut below or type what you want in your own words. Press / on the page to open this chat.
+            Tap a shortcut below, type what you want in your own words, or tap the mic and say it. Press / on the page to open this chat.
           </p>
         )}
         {messages.map((m, i) =>
@@ -206,10 +207,11 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
           ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a request"
+          placeholder="Type a request or tap the mic"
           aria-label={`Message the ${title}`}
           className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
         />
+        <VoiceButton onText={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))} disabled={sending} />
         <button type="submit" disabled={sending || !input.trim()} aria-label="Send" className="rounded-lg bg-sky-500 px-3 text-white hover:bg-sky-400 disabled:opacity-50">
           <Send size={16} />
         </button>

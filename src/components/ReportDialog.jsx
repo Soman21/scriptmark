@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { X, FileText, Copy, Download, RotateCcw, Check } from 'lucide-react'
+import { X, FileText, Copy, Download, RotateCcw, Check, Pencil } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { PrimaryButton, SecondaryButton } from './ui.jsx'
-import { reportRows, reportToText, reportToWordHtml } from '../lib/reportText.js'
+import { reportRows, reportToText, reportToWordHtml, applyEdits, editsFrom } from '../lib/reportText.js'
 
 function Table({ head = [], rows }) {
   return (
@@ -35,6 +35,19 @@ function Table({ head = [], rows }) {
   )
 }
 
+const box = 'w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-sky-400'
+
+// Each session's last report and the lecturer's edits stay in this browser,
+// so closing the dialog does not lose what they typed.
+const savedKey = (id) => `scriptmark_report_${id}`
+function loadSaved(id) {
+  try {
+    return JSON.parse(localStorage.getItem(savedKey(id))) || null
+  } catch {
+    return null
+  }
+}
+
 export default function ReportDialog({ token, onClose }) {
   const [sessions, setSessions] = useState([])
   const [sessionId, setSessionId] = useState('')
@@ -42,6 +55,23 @@ export default function ReportDialog({ token, onClose }) {
   const [drafting, setDrafting] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const [edits, setEdits] = useState(null)
+  const [editing, setEditing] = useState(false)
+
+  useEffect(() => {
+    if (!sessionId) return
+    const saved = loadSaved(sessionId)
+    setReport(saved?.report || null)
+    setEdits(saved?.edits || null)
+    setEditing(false)
+  }, [sessionId])
+
+  useEffect(() => {
+    if (!report || !sessionId) return
+    try {
+      localStorage.setItem(savedKey(sessionId), JSON.stringify({ report, edits }))
+    } catch {}
+  }, [report, edits, sessionId])
 
   useEffect(() => {
     api
@@ -66,9 +96,12 @@ export default function ReportDialog({ token, onClose }) {
   async function draft() {
     setDrafting(true)
     setError('')
-    setReport(null)
     try {
-      setReport(await api.draftReport(sessionId, token))
+      const fresh = await api.draftReport(sessionId, token)
+      setReport(fresh)
+      // A new draft replaces the AI wording but keeps the lecturer's notes.
+      setEdits((prev) => ({ ...editsFrom(fresh), notes: prev?.notes || '' }))
+      setEditing(false)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -78,7 +111,7 @@ export default function ReportDialog({ token, onClose }) {
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(reportToText(report))
+      await navigator.clipboard.writeText(reportToText(final))
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -87,7 +120,7 @@ export default function ReportDialog({ token, onClose }) {
   }
 
   function download() {
-    const blob = new Blob(['﻿', reportToWordHtml(report)], { type: 'application/msword' })
+    const blob = new Blob(['\ufeff', reportToWordHtml(final)], { type: 'application/msword' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -96,7 +129,10 @@ export default function ReportDialog({ token, onClose }) {
     URL.revokeObjectURL(url)
   }
 
-  const rows = report && reportRows(report)
+  const final = report && applyEdits(report, edits || editsFrom(report))
+  const rows = final && reportRows(final)
+  const current = edits || (report && editsFrom(report))
+  const edit = (patch) => setEdits({ ...current, ...patch })
   const label = (s) => (s.courseCode && !String(s.title || '').startsWith(s.courseCode) ? `${s.courseCode} ${s.title}` : s.title)
 
   return (
@@ -113,7 +149,7 @@ export default function ReportDialog({ token, onClose }) {
             <h2 id="report-heading" className="text-lg font-semibold text-slate-900">
               Examiner's report
             </h2>
-            <p className="mt-0.5 text-sm text-slate-500">The numbers come from your marked scripts. The wording is drafted by AI, so read it before you share it.</p>
+            <p className="mt-0.5 text-sm text-slate-500">The numbers come from your marked scripts. The wording is drafted by AI, and you can change any of it or add your own notes.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <X size={18} />
@@ -144,7 +180,7 @@ export default function ReportDialog({ token, onClose }) {
 
         <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6">
           {error && <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>}
-          {drafting && <p className="text-sm text-slate-400">Reading the marked scripts and drafting the report...</p>}
+          {drafting && <p className="mb-3 text-sm text-slate-400">Reading the marked scripts and drafting the report...</p>}
           {!report && !drafting && !error && (
             <p className="text-sm text-slate-500">Pick a session and tap Draft report. You get an overview, a table per question with what students commonly missed, how the AI marking went, and a few recommendations.</p>
           )}
@@ -154,9 +190,14 @@ export default function ReportDialog({ token, onClose }) {
                 <h3 className="text-base font-semibold text-slate-900">{report.facts.title}</h3>
                 <p className="text-xs text-slate-500">{[report.facts.examinationType, report.facts.semester, report.facts.academicSession].filter(Boolean).join(', ')}</p>
               </div>
+              {editing && <p className="rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-700">Type over any of the text below. Your changes go into Copy and Download Word.</p>}
               <section>
                 <h4 className="mb-1 font-semibold text-slate-900">Overview</h4>
-                <p className="leading-relaxed">{report.overview}</p>
+                {editing ? (
+                  <textarea aria-label="Overview" rows={5} value={current.overview} onChange={(e) => edit({ overview: e.target.value })} className={box} />
+                ) : (
+                  <p className="whitespace-pre-line leading-relaxed">{final.overview}</p>
+                )}
               </section>
               <section>
                 <h4 className="mb-1.5 font-semibold text-slate-900">At a glance</h4>
@@ -168,28 +209,75 @@ export default function ReportDialog({ token, onClose }) {
               </section>
               <section>
                 <h4 className="mb-1.5 font-semibold text-slate-900">Questions</h4>
-                <Table head={['Question', 'Marks', 'Average', 'Answers', 'Comment']} rows={rows.questions} />
+                <Table
+                  head={['Question', 'Marks', 'Average', 'Answers', 'Comment']}
+                  rows={
+                    editing
+                      ? rows.questions.map((r) => [
+                          ...r.slice(0, 4),
+                          <textarea
+                            key={r[0]}
+                            aria-label={`Comment on ${r[0]}`}
+                            rows={2}
+                            value={current.comments?.[r[0]] ?? ''}
+                            placeholder="Add a comment"
+                            onChange={(e) => edit({ comments: { ...current.comments, [r[0]]: e.target.value } })}
+                            className={`${box} min-w-[180px]`}
+                          />,
+                        ])
+                      : rows.questions
+                  }
+                />
               </section>
               <section>
                 <h4 className="mb-1.5 font-semibold text-slate-900">How the marking went</h4>
                 <Table rows={rows.marking} />
               </section>
-              {report.recommendations.length > 0 && (
+              {(editing || final.recommendations.length > 0) && (
                 <section>
                   <h4 className="mb-1 font-semibold text-slate-900">Recommendations</h4>
-                  <ul className="list-disc space-y-1 pl-5">
-                    {report.recommendations.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
+                  {editing ? (
+                    <>
+                      <textarea aria-label="Recommendations" rows={4} value={current.recommendations} onChange={(e) => edit({ recommendations: e.target.value })} className={box} />
+                      <p className="mt-1 text-xs text-slate-400">One recommendation per line.</p>
+                    </>
+                  ) : (
+                    <ul className="list-disc space-y-1 pl-5">
+                      {final.recommendations.map((r, i) => (
+                        <li key={i}>{r}</li>
+                      ))}
+                    </ul>
+                  )}
                 </section>
               )}
+              <section>
+                <h4 className="mb-1 font-semibold text-slate-900">Your own notes</h4>
+                {editing ? (
+                  <textarea
+                    aria-label="Your own notes"
+                    rows={5}
+                    value={current.notes}
+                    placeholder="Anything you want to add in your own words, for example remarks for the department or the external examiner."
+                    onChange={(e) => edit({ notes: e.target.value })}
+                    className={box}
+                  />
+                ) : final.notes?.trim() ? (
+                  <p className="whitespace-pre-line leading-relaxed">{final.notes}</p>
+                ) : (
+                  <button onClick={() => setEditing(true)} className="text-sm font-medium text-sky-600 hover:text-sky-700">
+                    Add your own notes
+                  </button>
+                )}
+              </section>
             </article>
           )}
         </div>
 
         {report && (
           <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-3 sm:px-6">
+            <SecondaryButton onClick={() => setEditing((v) => !v)} className={editing ? 'border-sky-300 bg-sky-50 text-sky-700' : ''}>
+              {editing ? <Check size={15} /> : <Pencil size={15} />} {editing ? 'Done editing' : 'Edit text'}
+            </SecondaryButton>
             <SecondaryButton onClick={copy}>
               {copied ? <Check size={15} /> : <Copy size={15} />} {copied ? 'Copied' : 'Copy'}
             </SecondaryButton>

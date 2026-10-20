@@ -39,3 +39,17 @@ describe('examiner report text', () => {
     expect(html).not.toContain('background')
   })
 })
+
+describe('editing the report', () => {
+  it('typed text replaces the draft and notes are added at the end', async () => {
+    const { applyEdits, editsFrom } = await import('../lib/reportText.js')
+    const edits = { ...editsFrom(report), overview: 'My own overview.', comments: { Q2: 'Weak on limits.' }, recommendations: '• Set more practice\n\nReview Q2 in class', notes: 'Shared with the HOD.' }
+    const final = applyEdits(report, edits)
+    expect(final.overview).toBe('My own overview.')
+    expect(final.questions).toEqual([{ question: 'Q2', comment: 'Weak on limits.' }])
+    expect(final.recommendations).toEqual(['Set more practice', 'Review Q2 in class'])
+    const text = reportToText(final)
+    expect(text).toContain("Lecturer's notes\nShared with the HOD.")
+    expect(reportToWordHtml(final)).toContain('<p>Shared with the HOD.</p>')
+  })
+})

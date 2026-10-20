@@ -3,6 +3,7 @@ import { Sparkles, X, Send, Loader2, Check } from 'lucide-react'
 import AssistantText from './AssistantText.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import VoiceButton from './VoiceButton.jsx'
 
 const QUICK = ['Why did each question get its score?', 'Check every answer again against the guide.', 'What did this student miss?']
 
@@ -140,10 +141,11 @@ export default function ReviewAssistant({ script, open, onClose, onUseScore, ask
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about this script"
+          placeholder="Ask about this script or tap the mic"
           aria-label="Ask the marking assistant"
           className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
         />
+        <VoiceButton onText={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))} disabled={sending} />
         <button type="submit" disabled={sending || !input.trim()} aria-label="Send" className="rounded-lg bg-sky-500 px-3 text-white hover:bg-sky-400 disabled:opacity-50">
           <Send size={16} />
         </button>

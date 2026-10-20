@@ -50,6 +50,7 @@ export function reportToText(report) {
     ...block('How the marking went', rows.marking),
     'Recommendations',
     ...report.recommendations.map((r) => `• ${r}`),
+    ...(report.notes?.trim() ? ['', "Lecturer's notes", report.notes.trim()] : []),
   ]
     .filter((line, i, all) => line !== '' || all[i - 1] !== '')
     .join('\n')
@@ -77,5 +78,30 @@ export function reportToWordHtml(report) {
 <h2 style="font-size:13pt">Questions</h2>${table(['Question', 'Marks', 'Average', 'Answers', 'Comment'], rows.questions)}
 <h2 style="font-size:13pt">How the marking went</h2>${table([], rows.marking)}
 <h2 style="font-size:13pt">Recommendations</h2><ul>${report.recommendations.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+${report.notes?.trim() ? `<h2 style="font-size:13pt">Lecturer's notes</h2>${report.notes.trim().split(/\n+/).map((para) => `<p>${esc(para)}</p>`).join('')}` : ''}
 </body></html>`
+}
+
+// The lecturer's own wording laid over the draft: edits replace the AI
+// text, and blank recommendation lines are dropped.
+export function applyEdits(report, edits) {
+  if (!edits) return report
+  return {
+    ...report,
+    overview: edits.overview ?? report.overview,
+    questions: report.facts.perQuestion
+      .map((q) => ({ question: q.question, comment: (edits.comments?.[q.question] ?? report.questions.find((x) => x.question === q.question)?.comment ?? '').trim() }))
+      .filter((q) => q.comment),
+    recommendations: edits.recommendations == null ? report.recommendations : edits.recommendations.split('\n').map((r) => r.replace(/^\s*[•*]\s*/, '').trim()).filter(Boolean),
+    notes: edits.notes || '',
+  }
+}
+
+export function editsFrom(report) {
+  return {
+    overview: report.overview,
+    comments: Object.fromEntries(report.questions.map((q) => [q.question, q.comment])),
+    recommendations: report.recommendations.join('\n'),
+    notes: '',
+  }
 }
