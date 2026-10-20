@@ -130,7 +130,7 @@ export default function ClaimQuestions() {
     const what = questionsText(action.labels)
     if (action.type === 'claim') return `Claimed ${what} for you.`
     if (action.type === 'unclaim') return `Released ${what}.`
-    const name = markers.find((m) => m.id === action.targetUserId)?.name || 'that marker'
+    const name = markers.find((m) => m.id === action.targetUserId)?.name || 'that lecturer'
     return `Gave ${what} to ${name}.`
   }
 
@@ -282,7 +282,7 @@ export default function ClaimQuestions() {
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <div className="mb-2 flex items-center gap-2">
             <Users size={16} className="text-slate-400" />
-            <span className="text-xs font-medium text-slate-500">Markers on this session</span>
+            <span className="text-xs font-medium text-slate-500">Lecturers on this session</span>
           </div>
           <div className="space-y-1.5">
             {markers.map((m) => (
@@ -409,7 +409,7 @@ export default function ClaimQuestions() {
 
                           {isTaken && (
                             <div className="flex flex-col items-end gap-1.5">
-                              <Badge tone="slate">Claimed by {q.assignedMarker?.name || 'another marker'}</Badge>
+                              <Badge tone="slate">Claimed by {q.assignedMarker?.name || 'another lecturer'}</Badge>
                               {canManage && reassigningId !== q.id && (
                                 <button
                                   onClick={() => setReassigningId(q.id)}

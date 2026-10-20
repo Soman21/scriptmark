@@ -18,7 +18,7 @@ const SECTIONS = [
     id: 'covers',
     title: 'Who this policy covers',
     list: [
-      'Lecturers, coordinators and markers who create a ScriptMark account.',
+      'Lecturers and coordinators who create a ScriptMark account.',
       'Students whose examination scripts, names and reg numbers are uploaded by their lecturers.',
       'Visitors to the ScriptMark website.',
     ],
@@ -30,7 +30,7 @@ const SECTIONS = [
       ['Account details', 'Your name, email address and password. Passwords are stored only as a secure hash, never as plain text. We also keep the one time codes used to verify your email.'],
       ['Examination material', 'Scanned pages and photos of answer booklets, the text read from them, marking guides, suggested and confirmed scores, the reasons and confidence levels behind them, and a record of changes made after confirmation.'],
       ['Student details', 'Names and reg numbers from class lists and attendance sheets you upload, and the reg number, course code, semester and session read from booklet covers.'],
-      ['Session and team details', 'Course titles, join codes, the markers in a session, the questions they claimed and their access level.'],
+      ['Session and team details', 'Course titles, join codes, the lecturers in a session, the questions they claimed and their access level.'],
       ['Technical information', 'Basic logs created when you use the service, such as the time of a request and errors, which help us keep ScriptMark running.'],
     ],
   },
@@ -40,7 +40,7 @@ const SECTIONS = [
     list: [
       'To read handwritten scripts and suggest scores against the marking guide you provide.',
       'To match each script to the right student and build result sheets and analytics for the lecturer.',
-      'To let coordinators and markers work together on the sessions they belong to.',
+      'To let coordinators and lecturers work together on the sessions they belong to.',
       'To measure how often AI suggestions agree with lecturers, so the service can be checked and improved.',
       'To sign you in, verify your email and keep your account secure.',
     ],
@@ -81,7 +81,7 @@ const SECTIONS = [
     id: 'sharing',
     title: 'Who can see your information',
     list: [
-      'Lecturers and markers who belong to the session, with the access the coordinator gives them.',
+      'Lecturers who belong to the session, with the access the coordinator gives them.',
       'The service providers listed above, only to run ScriptMark.',
       'Authorities, where the law requires it.',
     ],

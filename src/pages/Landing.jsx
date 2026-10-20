@@ -505,7 +505,7 @@ const FAQS = [
   ['How does it know whose script it is?', 'It reads the reg number from the front page, including undergraduate numbers like 2017364085 and postgraduate numbers like 2025366001FN, then takes the name from your class list or attendance sheet.'],
   ['Can it mark calculations and derivations?', 'Yes. Questions can carry a step by step rubric, so correct working earns credit even when the final answer is wrong. Mathematical answers are reread straight from the page image.'],
   ['What if the AI gets a score wrong?', 'You change it before confirming. If a confirmed score is changed later, a reason is required and the old score stays on record. The Analytics page shows exactly how often the AI agreed with you.'],
-  ['Can several lecturers mark one exam?', 'Yes. The coordinator shares a join code, markers claim the questions they will mark, and the coordinator follows everyone from one overview.'],
+  ['Can several lecturers mark one exam?', 'Yes. The coordinator shares a join code, lecturers claim the questions they will mark, and the coordinator follows everyone from one overview.'],
   ['Is there anything to install?', 'No. ScriptMark runs in the browser on a laptop, tablet or phone. Create a session, add your marking guide, and start scanning.'],
 ]
 
@@ -1011,8 +1011,8 @@ export default function Landing() {
             }
             text="Course coordinators run the whole exam from one place. Colleagues join with a code and claim the questions they will mark, and the coordinator follows progress, reviews changes and exports one final sheet for the exam officer."
             points={[
-              'Full or limited access for each marker, approved by the coordinator',
-              'Each marker works from their own queue of claimed questions',
+              'Full or limited access for each lecturer, approved by the coordinator',
+              'Each lecturer works from their own queue of claimed questions',
               'A complete record of who marked what, ready for moderation',
             ]}
             visual={<TeamMockup />}

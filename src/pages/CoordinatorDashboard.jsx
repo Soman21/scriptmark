@@ -47,7 +47,7 @@ export default function CoordinatorDashboard() {
     <div className="h-full overflow-y-auto p-6 space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-slate-900">Coordinator Overview</h1>
-        <p className="text-sm text-slate-500">How far each marker has got with this session.</p>
+        <p className="text-sm text-slate-500">Progress per lecturer.</p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -88,14 +88,14 @@ export default function CoordinatorDashboard() {
         <StatCard label="Scripts" value={overview.scriptCount} />
         <StatCard label="Answers marked by AI" value={overview.aiMarked} />
         <StatCard label="Auto accepted" value={overview.autoAccepted} subColor="text-emerald-600" />
-        <StatCard label="Confirmed by markers" value={overview.humanReviewCompleted} subColor="text-emerald-600" />
+        <StatCard label="Confirmed by lecturers" value={overview.humanReviewCompleted} subColor="text-emerald-600" />
         <StatCard label="Left to confirm" value={overview.pendingReview} subColor="text-amber-600" />
       </div>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
           <Users size={16} className="text-slate-400" />
-          <p className="text-sm font-semibold text-slate-900">Marker progress</p>
+          <p className="text-sm font-semibold text-slate-900">Lecturer progress</p>
         </div>
         <div className="divide-y divide-slate-100">
           {overview.perMarker.map((m) => {
@@ -119,7 +119,7 @@ export default function CoordinatorDashboard() {
             )
           })}
           {overview.perMarker.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-slate-400">No markers are attached to this session yet.</p>
+            <p className="px-4 py-6 text-center text-sm text-slate-400">No lecturers have joined yet.</p>
           )}
         </div>
       </div>

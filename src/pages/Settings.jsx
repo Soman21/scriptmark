@@ -143,7 +143,7 @@ export default function Settings() {
       <Topbar title="Settings" />
       <div className="flex-1 overflow-y-auto px-4 sm:px-6">
         <div className="mx-auto max-w-4xl">
-          <Section title="Profile" description="How your name appears to other markers in ScriptMark.">
+          <Section title="Profile" description="How your name appears to other lecturers.">
             <form onSubmit={handleSaveName} className="space-y-3">
               <Field label="Full name">
                 <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
