@@ -123,7 +123,11 @@ describe('AI Assistant screen', () => {
     localStorage.setItem('scriptmark_token', 'tok')
     localStorage.setItem('scriptmark_user', JSON.stringify({ id: 'u1', name: 'Bola', role: 'LECTURER' }))
     localStorage.setItem('scriptmark_active_session', 's1')
-    mockFetch(() => json({ reply: 'Your sessions:\n- **ECE512** Digital Signal Processing\n- ECE305 Control Systems', action: null }))
+    mockFetch((path) =>
+      path === '/api/assistant/today'
+        ? json({ items: [{ sessionId: 's1', session: 'ECE512', kind: 'queue', text: '3 answers are waiting for you to confirm', link: '/sessions/s1/my-queue' }] })
+        : json({ reply: 'Your sessions:\n- **ECE512** Digital Signal Processing\n- ECE305 Control Systems', action: null })
+    )
     render(
       <MemoryRouter>
         <AuthProvider>
@@ -137,9 +141,10 @@ describe('AI Assistant screen', () => {
     })
     expect(await screen.findByText('ECE512 Digital Signal Processing')).toBeTruthy()
     expect(screen.queryByText(/\*\*/)).toBeNull()
-    expect(calls[0].path).toBe('/api/assistant/chat')
-    expect(calls[0].body.messages).toEqual([{ role: 'user', content: 'What sessions do I have?' }])
-    expect(calls[0].body.activeSessionId).toBe('s1')
+    expect(screen.getByText('3 answers are waiting for you to confirm').closest('a').getAttribute('href')).toBe('/sessions/s1/my-queue')
+    const chat = calls.find((c) => c.path === '/api/assistant/chat')
+    expect(chat.body.messages).toEqual([{ role: 'user', content: 'What sessions do I have?' }])
+    expect(chat.body.activeSessionId).toBe('s1')
   })
 })
 

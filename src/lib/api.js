@@ -103,6 +103,8 @@ export const api = {
     request('/api/assistant/review', { method: 'POST', body: { scriptId, messages }, token }),
   askPageAssistant: (sessionId, page, messages, token) =>
     request('/api/assistant/page', { method: 'POST', body: { sessionId, page, messages }, token }),
+  getToday: (token) => request('/api/assistant/today', { token }),
+  draftReport: (sessionId, token) => request('/api/assistant/report', { method: 'POST', body: { sessionId }, token }),
   chatWithAssistant: (messages, activeSessionId, token) =>
     request('/api/assistant/chat', { method: 'POST', body: { messages, activeSessionId }, token }),
 }
