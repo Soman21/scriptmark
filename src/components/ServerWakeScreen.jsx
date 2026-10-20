@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react'
 import { getServerState, subscribeServer, wakeServer, resetServerState } from '../lib/serverWake.js'
 import { GET_STARTED_STEPS as STEPS } from '../lib/gettingStarted.js'
@@ -11,10 +11,11 @@ import { GET_STARTED_STEPS as STEPS } from '../lib/gettingStarted.js'
 const SHOW_AFTER_MS = 1500
 const STEP_MS = 7000
 
+// useSyncExternalStore reads the state again when it subscribes, so an
+// answer that lands between the first render and the subscription is not
+// missed (that left the loader up on a server that was already awake).
 export function useServerState() {
-  const [s, setS] = useState(getServerState())
-  useEffect(() => subscribeServer(setS), [])
-  return s
+  return useSyncExternalStore(subscribeServer, getServerState)
 }
 
 export default function ServerWakeScreen() {

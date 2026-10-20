@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 import PageAssistant from '../components/PageAssistant.jsx'
+import { queueShortcuts } from '../lib/chatShortcuts.js'
 
 function confidenceTone(confidence) {
   if (confidence === 'high') return 'green'
@@ -260,7 +261,7 @@ export default function MyQueue() {
         sessionId={sessionId}
         title="Queue assistant"
         intro="Ask about your answers. Scores it prepares wait for your tap."
-        quick={['Confirm all the high confidence answers', 'Which answers should I look at first?', 'How many are left?']}
+        quick={queueShortcuts(answers)}
         runAction={runAssistantAction}
         hidden={answers.length === 0}
       />

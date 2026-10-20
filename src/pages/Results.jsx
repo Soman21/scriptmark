@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 import PageAssistant from '../components/PageAssistant.jsx'
+import { resultsShortcuts } from '../lib/chatShortcuts.js'
 import ReviewAssistant from '../components/ReviewAssistant.jsx'
 
 function ImageViewerModal({ pages, startIndex, onClose, onIndexChange }) {
@@ -495,10 +496,11 @@ export default function Results() {
         sessionId={sessionId}
         title="Find scripts"
         intro="Ask about the scripts here, or say whose script to open."
-        quick={['Open the scripts with low confidence answers', 'Who scored highest?', 'Which scripts still need confirming?']}
+        quick={resultsShortcuts(scripts)}
         runAction={runAssistantAction}
         open={finderOpen}
         onOpenChange={setFinderOpen}
+        onOpen={() => setAssistantOpen(false)}
         noLauncher
       />
       <ImageViewerModal pages={currentPages} startIndex={viewerIndex} onClose={() => setViewerIndex(null)} onIndexChange={setViewerIndex} />

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 import PageAssistant, { questionsText } from '../components/PageAssistant.jsx'
+import { claimShortcuts } from '../lib/chatShortcuts.js'
 
 export default function ClaimQuestions() {
   const { token, user } = useAuth()
@@ -463,7 +464,7 @@ export default function ClaimQuestions() {
         sessionId={sessionId}
         title="Claim with chat"
         intro="Tell it which questions are yours and it claims them for you."
-        quick={['My questions are question 1', 'Claim everything nobody has taken', 'Which questions are still free?']}
+        quick={claimShortcuts(questions, user?.id, canManage)}
         runAction={runAssistantAction}
         hidden={!guideId}
       />

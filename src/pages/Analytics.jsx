@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 import PageAssistant from '../components/PageAssistant.jsx'
+import { ANALYTICS_SHORTCUTS } from '../lib/chatShortcuts.js'
 
 export default function Analytics() {
   const { token } = useAuth()
@@ -155,7 +156,7 @@ export default function Analytics() {
         sessionId={sessionId}
         title="Ask about results"
         intro="Questions about this session's scores, answered from its own numbers."
-        quick={['Which question was hardest?', 'How many students scored below 40 percent?', 'Summarise how the class did']}
+        quick={ANALYTICS_SHORTCUTS}
         runAction={async () => ''}
         hidden={!data || data.totalScripts === 0}
       />

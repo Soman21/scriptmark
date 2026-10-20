@@ -24,6 +24,22 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
   const inputRef = useRef(null)
 
   useEffect(() => endRef.current?.scrollIntoView?.({ block: 'end' }), [messages, sending])
+
+  // "/" opens the chat from anywhere on the page, unless someone is typing.
+  useEffect(() => {
+    if (hidden) return
+    const onKey = (e) => {
+      const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable
+      if (e.key === '/' && !typing && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault()
+        setOpen(true)
+        onOpen?.()
+      }
+      if (e.key === 'Escape' && open) setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [hidden, open])
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 0)
   }, [open])
@@ -105,15 +121,10 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {messages.length === 0 && quick.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm text-slate-500">Type what you want, or try one of these.</p>
-            {quick.map((q) => (
-              <button key={q} onClick={() => send(q)} className="block w-full rounded-lg border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
-                {q}
-              </button>
-            ))}
-          </div>
+        {messages.length === 0 && (
+          <p className="text-sm text-slate-500">
+            Tap a shortcut below or type what you want in your own words. Press / on the page to open this chat.
+          </p>
         )}
         {messages.map((m, i) =>
           m.role === 'user' ? (
@@ -165,12 +176,31 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
         <div ref={endRef} />
       </div>
 
+      {quick.length > 0 && (
+        <div className="border-t border-slate-200 px-3 pt-2.5">
+          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">Shortcuts</p>
+          <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:flex-wrap sm:overflow-visible">
+            {quick.map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => send(q)}
+                disabled={sending}
+                className="shrink-0 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <form
         onSubmit={(e) => {
           e.preventDefault()
           send(input)
         }}
-        className="flex gap-2 border-t border-slate-200 p-3"
+        className="flex gap-2 p-3"
       >
         <input
           ref={inputRef}
