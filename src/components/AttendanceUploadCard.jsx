@@ -65,8 +65,7 @@ export default function AttendanceUploadCard({ sessionId, onUploaded }) {
         <div>
           <p className="text-sm font-semibold text-slate-900">Attendance Sheet</p>
           <p className="text-xs text-slate-500 mt-1">
-            Upload the attendance sheet for this exam, as a photo, PDF or Word file. Scripts are matched to students
-            by reg number, so names come from the sheet instead of being guessed.
+            Matches scripts to students by reg number. Photo, PDF or Word.
           </p>
           <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-600">
             <Users size={13} />

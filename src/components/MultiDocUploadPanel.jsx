@@ -87,7 +87,7 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, embed
         onScriptsCreated?.(created)
         setFiles((prev) => prev.slice(created.length))
       }
-      setError(created.length ? `${err.message} ${created.length} file${created.length !== 1 ? 's were' : ' was'} saved. Press Upload All to send the rest.` : err.message)
+      setError(created.length ? `${err.message} ${created.length} uploaded, ${files.length - created.length} remaining.` : err.message)
     } finally {
       setUploading(false)
       setProgress(null)
@@ -101,18 +101,14 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, embed
         className={`w-full flex items-center justify-between px-4 py-3 text-left ${embedded ? 'cursor-default' : ''}`}
       >
         <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <Files size={16} className="text-violet-500" /> One file per student
+          <Files size={16} className="text-violet-500" /> Batch Upload
         </span>
         {!embedded && (expanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />)}
       </button>
 
       {expanded && (
         <div className="border-t border-slate-100 p-4 space-y-4">
-          <p className="text-xs text-slate-500">
-            Each file becomes one student's script: a PDF of any length, or a single photo. If a student's script is
-            several photos, put them in one PDF first, or use One script at a time, otherwise each photo becomes its
-            own script.
-          </p>
+          <p className="text-xs text-slate-500">Each file is one student's script.</p>
 
           <div
             onDragOver={(e) => {
@@ -128,8 +124,8 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, embed
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-violet-50 text-violet-500">
               <UploadCloud size={20} />
             </div>
-            <p className="text-sm font-medium text-slate-800">Drag files here, as many as you like at once</p>
-            <p className="mt-1 text-xs text-slate-400">PDFs and photos only. You can add more files as many times as you like before uploading.</p>
+            <p className="text-sm font-medium text-slate-800">Drop files here</p>
+            <p className="mt-1 text-xs text-slate-400">PDF or image</p>
             <label className="mt-3 inline-block cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-100">
               Choose files
               <input
@@ -144,7 +140,7 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, embed
 
           {skipped.length > 0 && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              <AlertCircle size={14} className="mt-0.5 shrink-0" /> Left out {skipped.join(', ')}. Only PDFs and photos can be uploaded.
+              <AlertCircle size={14} className="mt-0.5 shrink-0" /> Unsupported, skipped: {skipped.join(', ')}
             </div>
           )}
 

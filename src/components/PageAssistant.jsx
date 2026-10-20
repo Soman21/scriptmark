@@ -124,7 +124,7 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
       <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
         {messages.length === 0 && (
           <p className="text-sm text-slate-500">
-            Tap a shortcut below, type what you want in your own words, or tap the mic and say it. Press / on the page to open this chat.
+            Tap a shortcut, type, or use the mic. Press / to open.
           </p>
         )}
         {messages.map((m, i) =>

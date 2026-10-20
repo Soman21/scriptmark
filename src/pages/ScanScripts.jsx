@@ -12,29 +12,25 @@ import { api } from '../lib/api.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-// The three ways scripts arrive, named by what the lecturer has in hand
-// rather than by how the upload works.
+// The three ways scripts arrive.
 export const SCAN_METHODS = [
   {
     id: 'single',
     icon: BookOpen,
-    title: 'One script at a time',
-    has: 'You have the paper booklets',
-    text: 'Photograph each page with your phone or webcam, or pick the photos. You finish one student, then start the next.',
+    title: 'Single Script',
+    text: 'Scan page by page',
   },
   {
     id: 'pdf',
     icon: FileStack,
-    title: 'One PDF, many students',
-    has: 'The scanner made one big file',
-    text: 'Upload the single PDF holding everyone. ScriptMark splits it into one script per student, and you check the split before saving.',
+    title: 'Bulk PDF Upload',
+    text: 'One PDF, many students',
   },
   {
     id: 'files',
     icon: Files,
-    title: 'One file per student',
-    has: 'Each student already has a file',
-    text: 'Pick or drag in many files at once. Each file, a PDF or one photo, becomes one student\'s script.',
+    title: 'Batch Upload',
+    text: 'One file per student',
   },
 ]
 
@@ -307,11 +303,10 @@ export default function ScanScripts() {
             />
 
             <section aria-labelledby="scan-method-heading">
-              <h2 id="scan-method-heading" className="text-sm font-semibold text-slate-900">
-                How are your scripts?
+              <h2 id="scan-method-heading" className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Upload method
               </h2>
-              <p className="text-xs text-slate-500">Pick what you have. You can mix them in one session, for example a big PDF first and a few late scripts one at a time.</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="How are your scripts?">
+              <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Upload method">
                 {SCAN_METHODS.map((m) => {
                   const on = method === m.id
                   return (
@@ -325,8 +320,7 @@ export default function ScanScripts() {
                     >
                       <m.icon size={18} className={on ? 'text-sky-600' : 'text-slate-400'} />
                       <span className="mt-2 block text-sm font-semibold text-slate-900">{m.title}</span>
-                      <span className="block text-xs font-medium text-sky-700">{m.has}</span>
-                      <span className="mt-1 block text-xs text-slate-500">{m.text}</span>
+                      <span className="block text-xs text-slate-500">{m.text}</span>
                     </button>
                   )
                 })}
@@ -350,7 +344,7 @@ export default function ScanScripts() {
 
               {!activeScript && (
                 <p className="text-xs text-slate-400 mb-2">
-                  Leave blank to try automatic detection from the front page, or type it in now.
+                  Optional. Detected from the cover if left blank.
                 </p>
               )}
 

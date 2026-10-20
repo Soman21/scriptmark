@@ -23,13 +23,13 @@ const MODES = [
     id: 'auto',
     icon: ScanSearch,
     title: 'Auto split',
-    text: 'Finds the front cover of each answer booklet and starts a new script there, so scripts can have any number of pages. The PDF must start on a front cover.',
+    text: 'Splits at each booklet cover',
   },
   {
     id: 'manual',
     icon: Rows3,
     title: 'Fixed pages',
-    text: 'Cuts the PDF every few pages. Use it when every script has the same number of pages, or there are no printed covers.',
+    text: 'Splits every N pages',
   },
 ]
 
@@ -256,18 +256,13 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
         className={`w-full flex items-center justify-between px-4 py-3 text-left ${embedded ? 'cursor-default' : ''}`}
       >
         <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <FileUp size={16} className="text-sky-500" /> One PDF, many students
+          <FileUp size={16} className="text-sky-500" /> Bulk PDF Upload
         </span>
         {!embedded && (expanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />)}
       </button>
 
       {expanded && (
         <div className="border-t border-slate-100 p-4 space-y-4">
-          <p className="text-xs text-slate-500">
-            For one big PDF holding many students' scripts, scanned together. ScriptMark splits it into one script per
-            student and shows you the result. Nothing is saved until you confirm. Reg numbers are read later, during
-            Marking, so splitting stays quick.
-          </p>
 
           {error && (
             <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
@@ -335,15 +330,13 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
               <div className="text-sm text-slate-800">
                 <p className="font-medium">
                   {splitInfo?.mode === 'auto'
-                    ? `Found ${groups.length} front cover${groups.length !== 1 ? 's' : ''} in ${splitInfo.pageCount} pages, so ${groups.length} script${groups.length !== 1 ? 's' : ''}.`
-                    : `${groups.length} proposed submissions.`}
+                    ? `${groups.length} script${groups.length !== 1 ? 's' : ''} detected from ${splitInfo.pageCount} pages`
+                    : `${groups.length} script${groups.length !== 1 ? 's' : ''} from ${flat.length} pages`}
                 </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Check each script before confirming. On a computer, drag any page onto another page or script to move it; the script you are over lights up. On any device, Split here starts a new script from a page and Merge next joins two.
-                </p>
+                <p className="mt-0.5 text-xs text-slate-500">Drag pages to rearrange. Review before confirming.</p>
                 {splitInfo?.mode === 'auto' && groups.length === 1 && splitInfo.pageCount > 1 && (
                   <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                    Only one front cover was found. Make sure the PDF starts on a front cover, or use Fixed pages instead.
+                    Only one cover detected. Try Fixed pages.
                   </p>
                 )}
               </div>
@@ -366,7 +359,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                   >
                     {odd.has(gi) && (
                       <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-amber-700">
-                        <AlertCircle size={13} /> Check this one: {g.pages.length} page{g.pages.length !== 1 ? 's' : ''}, while most scripts here are a different length.
+                        <AlertCircle size={13} /> Unusual page count
                       </p>
                     )}
                     <div className="mb-2">
@@ -420,7 +413,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                         >
                           {p.unsure && (
                             <span className="absolute inset-x-1 bottom-7 z-10 rounded bg-amber-500 px-1 text-center text-[9px] font-semibold text-white">
-                              {pi === 0 ? 'Is this a cover?' : 'Could be a cover'}
+                              Cover?
                             </span>
                           )}
                           {pi === 0 && (

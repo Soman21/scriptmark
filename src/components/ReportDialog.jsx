@@ -149,7 +149,7 @@ export default function ReportDialog({ token, onClose }) {
             <h2 id="report-heading" className="text-lg font-semibold text-slate-900">
               Examiner's report
             </h2>
-            <p className="mt-0.5 text-sm text-slate-500">The numbers come from your marked scripts. The wording is drafted by AI, and you can change any of it or add your own notes.</p>
+            <p className="mt-0.5 text-sm text-slate-500">Figures from marked scripts. Text is editable.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <X size={18} />
@@ -180,9 +180,9 @@ export default function ReportDialog({ token, onClose }) {
 
         <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6">
           {error && <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>}
-          {drafting && <p className="mb-3 text-sm text-slate-400">Reading the marked scripts and drafting the report...</p>}
+          {drafting && <p className="mb-3 text-sm text-slate-400">Drafting...</p>}
           {!report && !drafting && !error && (
-            <p className="text-sm text-slate-500">Pick a session and tap Draft report. You get an overview, a table per question with what students commonly missed, how the AI marking went, and a few recommendations.</p>
+            <p className="text-sm text-slate-500">Select a session to draft the report.</p>
           )}
           {report && (
             <article className="space-y-4 text-sm text-slate-700" data-testid="report">
@@ -190,7 +190,6 @@ export default function ReportDialog({ token, onClose }) {
                 <h3 className="text-base font-semibold text-slate-900">{report.facts.title}</h3>
                 <p className="text-xs text-slate-500">{[report.facts.examinationType, report.facts.semester, report.facts.academicSession].filter(Boolean).join(', ')}</p>
               </div>
-              {editing && <p className="rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-700">Type over any of the text below. Your changes go into Copy and Download Word.</p>}
               <section>
                 <h4 className="mb-1 font-semibold text-slate-900">Overview</h4>
                 {editing ? (
@@ -257,7 +256,7 @@ export default function ReportDialog({ token, onClose }) {
                     aria-label="Your own notes"
                     rows={5}
                     value={current.notes}
-                    placeholder="Anything you want to add in your own words, for example remarks for the department or the external examiner."
+                    placeholder="Add notes"
                     onChange={(e) => edit({ notes: e.target.value })}
                     className={box}
                   />
