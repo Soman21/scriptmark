@@ -18,7 +18,7 @@ const DOT = {
   export: 'bg-emerald-500',
 }
 
-// "What needs you today": one list across every open session, each item a
+// "Today's tasks": one list across every open session, each item a
 // link straight to the page where it gets done.
 export default function TodayList({ token }) {
   const [items, setItems] = useState(null)
@@ -44,7 +44,7 @@ export default function TodayList({ token }) {
     <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5" aria-labelledby="today-heading">
       <div className="flex items-center justify-between gap-3">
         <h2 id="today-heading" className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <ListChecks size={16} className="text-sky-600" /> What needs you today
+          <ListChecks size={16} className="text-sky-600" /> Today's tasks
         </h2>
         <button onClick={load} className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-100" aria-label="Refresh the list">
           <RefreshCw size={12} /> Refresh
@@ -55,7 +55,7 @@ export default function TodayList({ token }) {
       {!items && !error && <p className="mt-3 text-sm text-slate-400">Checking your sessions...</p>}
       {items && items.length === 0 && (
         <p className="mt-3 flex items-center gap-2 text-sm text-slate-500">
-          <CheckCircle2 size={16} className="text-emerald-500" /> Nothing needs you right now.
+          <CheckCircle2 size={16} className="text-emerald-500" /> No pending tasks.
         </p>
       )}
 

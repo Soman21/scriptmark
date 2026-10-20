@@ -11,13 +11,13 @@ import ReportDialog from '../components/ReportDialog.jsx'
 const WELCOME_MESSAGE = {
   role: 'assistant',
   content:
-    "Hi! I'm the ScriptMark Assistant. I can see all your sessions at once. Ask what needs you today, find a student in any course, have me draft an examiner's report, or ask how to do something in the app.",
+    "Hi! I'm the ScriptMark Assistant. I can see all your sessions at once. Ask for your pending tasks, find a student in any course, have me draft an examiner's report, or ask how to do something in the app.",
 }
 
 // Tapped instead of typed. "send" asks the question at once, "fill" puts a
 // start in the box for the lecturer to finish, "report" opens the report.
 const SHORTCUTS = [
-  { label: 'What needs me today?', send: 'What needs me today across all my sessions?' },
+  { label: 'My tasks today', send: 'What are my pending tasks across all my sessions?' },
   { label: 'Write an examiner\'s report', report: true },
   { label: 'Find a student', fill: 'Find the student ' },
   { label: 'Compare my sessions', send: 'Compare my sessions: averages, pass rates and the weakest question in each.' },
