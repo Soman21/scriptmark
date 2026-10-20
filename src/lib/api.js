@@ -84,6 +84,8 @@ export const api = {
     request(`/api/sessions/${sessionId}/scripts/${scriptId}`, { method: 'DELETE', token }),
   getAnalytics: (sessionId, token) => request(`/api/sessions/${sessionId}/analytics`, { token }),
   getEvaluation: (sessionId, token) => request(`/api/sessions/${sessionId}/evaluation`, { token }),
+  getTranscriptionSample: (sessionId, n, token) => request(`/api/results/transcriptionSample?sessionId=${sessionId}&n=${n}`, { token }),
+  saveReferenceText: (answerId, text, token) => request(`/api/results/${answerId}/reference`, { method: 'PUT', body: { text }, token }),
   getCohort: (sessionId, token) => request(`/api/sessions/${sessionId}/cohort`, { token }),
   compareSessions: (token) => request('/api/sessions/cohort/compare', { token }),
 

@@ -20,6 +20,7 @@ const SHORTCUTS = [
   { label: 'What needs me today?', send: 'What needs me today across all my sessions?' },
   { label: 'Write an examiner\'s report', report: true },
   { label: 'Find a student', fill: 'Find the student ' },
+  { label: 'Compare my sessions', send: 'Compare my sessions: averages, pass rates and the weakest question in each.' },
   { label: 'Which session is furthest behind?', send: 'Which of my sessions is furthest behind on marking?' },
   { label: 'How do I add lecturers?', send: 'How do I add other lecturers to a session?' },
 ]

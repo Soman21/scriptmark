@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Download, Info } from 'lucide-react'
+import { Download, Info, PenLine } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import { downloadEvaluationCsv } from '../lib/download.js'
+import TranscriptionCheckDialog from './TranscriptionCheckDialog.jsx'
 
 const pct = (x) => (x == null ? 'N/A' : `${Math.round(x * 1000) / 10}%`)
 const num = (x) => (x == null ? 'N/A' : x.toFixed(2))
@@ -24,10 +25,12 @@ export default function AiAgreementPanel({ sessionId, sessionTitle }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [downloading, setDownloading] = useState(false)
+  const [checking, setChecking] = useState(false)
 
-  useEffect(() => {
+  function load() {
     api.getEvaluation(sessionId, token).then(setData).catch((err) => setError(err.message))
-  }, [sessionId])
+  }
+  useEffect(load, [sessionId])
 
   async function handleDownload() {
     setDownloading(true)
@@ -127,6 +130,37 @@ export default function AiAgreementPanel({ sessionId, sessionTitle }) {
           </>
         )}
 
+        {data && (
+          <div className="border-t border-slate-100 pt-5">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium text-slate-900">Transcription accuracy</p>
+                <p className="text-xs text-slate-500">Word and character error rate of the text the AI marked.</p>
+              </div>
+              <button
+                onClick={() => setChecking(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <PenLine size={14} /> Check transcriptions
+              </button>
+            </div>
+            {data.transcription?.n > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Metric label="WER" value={pct(data.transcription.wer)} hint={`${data.transcription.words} words`} />
+                <Metric label="CER" value={pct(data.transcription.cer)} />
+                <Metric label="Answers checked" value={data.transcription.n} />
+                <Metric
+                  label="WER by method"
+                  value={`${pct(data.transcription.standardOcr.wer)} / ${pct(data.transcription.visionReread.wer)}`}
+                  hint="OCR / vision reread"
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">No answers checked yet.</p>
+            )}
+          </div>
+        )}
+
         {data?.answersScored > 0 && (
           <p className="flex items-start gap-2 text-xs text-slate-500">
             <Info size={13} className="mt-0.5 shrink-0" />
@@ -137,6 +171,16 @@ export default function AiAgreementPanel({ sessionId, sessionTitle }) {
           </p>
         )}
       </div>
+      {checking && (
+        <TranscriptionCheckDialog
+          sessionId={sessionId}
+          token={token}
+          onClose={(saved) => {
+            setChecking(false)
+            if (saved) load()
+          }}
+        />
+      )}
     </div>
   )
 }
