@@ -7,18 +7,9 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 import { downloadSessionExport } from '../lib/download.js'
+import { resultRow } from '../lib/resultRows.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-
-function computeGrade(total) {
-  if (total == null) return ''
-  if (total >= 70) return 'A'
-  if (total >= 60) return 'B'
-  if (total >= 50) return 'C'
-  if (total >= 45) return 'D'
-  if (total >= 40) return 'E'
-  return 'F'
-}
 
 export default function Archive() {
   const { token } = useAuth()
@@ -28,6 +19,7 @@ export default function Archive() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
+  const [scoresMode, setScoresMode] = useState('total') // 'exam' = exam scores only
   const [caScores, setCaScores] = useState({})
   const [classList, setClassList] = useState([])
   const [classListUploads, setClassListUploads] = useState([])
@@ -139,7 +131,7 @@ export default function Archive() {
     setExporting(format)
     setError('')
     try {
-      await downloadSessionExport(sessionId, format, session?.title, token)
+      await downloadSessionExport(sessionId, format, session?.title, token, scoresMode)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -153,7 +145,7 @@ export default function Archive() {
   return (
     <div className="flex h-full flex-col">
       <Topbar
-        title={session ? `Results: ${session.title}` : 'Student Results'}
+        title="Export Results"
         right={
           <button
             onClick={() => navigate(`/sessions/${sessionId}/results`)}
@@ -196,13 +188,53 @@ export default function Archive() {
               <StatCard icon={<Clock size={16} className="text-amber-500" />} label="Pending Review" value={pending} />
             </div>
 
-            <div className="flex justify-end gap-2">
+            {scripts.some((s) => s.duplicateOf?.length) && (
+              <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+                <p className="flex gap-2">
+                  <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                  <span>
+                    {[...new Set(scripts.filter((s) => s.duplicateOf?.length).map((s) => s.regNumber))].join(', ')} appear more than once, so the sheet would list them twice.
+                  </span>
+                </p>
+                <button type="button" onClick={() => navigate(`/sessions/${sessionId}/marking`)} className="shrink-0 font-medium underline">
+                  Fix in Marking Progress
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">What goes on the sheet</p>
+                <div className="mt-2 inline-flex rounded-lg border border-slate-200 p-0.5" role="radiogroup" aria-label="What goes on the sheet">
+                  {[
+                    ['exam', 'Exam scores only'],
+                    ['total', 'CA plus exam, with grades'],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      role="radio"
+                      aria-checked={scoresMode === key}
+                      onClick={() => setScoresMode(key)}
+                      className={`rounded-md px-3 py-1.5 text-sm ${scoresMode === key ? 'bg-slate-900 font-medium text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-slate-500">
+                  {scoresMode === 'exam'
+                    ? 'No CA and no grades, for when the CA is recorded elsewhere.'
+                    : 'A grade is given only to students whose CA is entered below.'}
+                </p>
+              </div>
+              <div className="flex gap-2">
               <PrimaryButton onClick={() => handleExport('xlsx')} disabled={!!exporting}>
                 <Download size={16} /> {exporting === 'xlsx' ? 'Generating...' : 'Export to Excel'}
               </PrimaryButton>
               <PrimaryButton onClick={() => handleExport('pdf')} disabled={!!exporting} className="bg-slate-700 hover:bg-slate-600">
                 <Download size={16} /> {exporting === 'pdf' ? 'Generating...' : 'Export to PDF'}
               </PrimaryButton>
+              </div>
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white p-5">
@@ -261,47 +293,47 @@ export default function Archive() {
               )}
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+              <table className="w-full min-w-[640px] text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
                     <th className="px-5 py-3">Student Name</th>
                     <th className="px-5 py-3">Reg Number</th>
-                    <th className="px-5 py-3">CA Score</th>
+                    {scoresMode === 'total' && <th className="px-5 py-3">CA Score</th>}
                     <th className="px-5 py-3">Exam Score</th>
-                    <th className="px-5 py-3">Total</th>
-                    <th className="px-5 py-3">Grade</th>
-                    <th className="px-5 py-3">Status</th>
+                    {scoresMode === 'total' && <th className="px-5 py-3">Total</th>}
+                    {scoresMode === 'total' && <th className="px-5 py-3">Grade</th>}
+                    <th className="px-5 py-3">Note</th>
                   </tr>
                 </thead>
                 <tbody>
                   {scripts.map((s) => {
-                    const ca = caScores[s.id] === '' ? null : Number(caScores[s.id])
-                    const exam = s.totalScore ?? null
-                    const total = exam != null ? exam + (ca || 0) : null
-                    const grade = exam != null ? computeGrade(total) : ''
+                    const ca = caScores[s.id] === '' || caScores[s.id] == null ? null : Number(caScores[s.id])
+                    const row = resultRow({ ...s, caScore: ca }, scoresMode)
                     return (
                       <tr key={s.id} className="border-b border-slate-50">
                         <td className="px-5 py-3 font-medium text-slate-800">
                           {s.studentName || s.studentIdentifier || 'Unnamed'}
                         </td>
-                        <td className="px-5 py-3 text-slate-500">{s.regNumber || '—'}</td>
+                        <td className="px-5 py-3 text-slate-500">{s.regNumber}</td>
+                        {scoresMode === 'total' && (
                         <td className="px-5 py-3">
                           <input
                             type="number"
                             value={caScores[s.id] ?? ''}
                             onChange={(e) => updateCaLocal(s.id, e.target.value)}
                             onBlur={() => saveCaScore(s.id)}
-                            placeholder="—"
+                            placeholder="Enter"
                             className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-sky-400"
                           />
                         </td>
-                        <td className="px-5 py-3 text-slate-700">{exam ?? '—'}</td>
-                        <td className="px-5 py-3 font-medium text-slate-800">{total ?? '—'}</td>
-                        <td className="px-5 py-3">{grade && <Badge tone={grade === 'F' ? 'red' : 'green'}>{grade}</Badge>}</td>
-                        <td className="px-5 py-3">
-                          <Badge tone={s.status === 'REVIEWED' ? 'green' : 'amber'}>{s.status}</Badge>
-                        </td>
+                        )}
+                        <td className="px-5 py-3 text-slate-700">{row.exam ?? ''}</td>
+                        {scoresMode === 'total' && <td className="px-5 py-3 font-medium text-slate-800">{row.total ?? ''}</td>}
+                        {scoresMode === 'total' && (
+                          <td className="px-5 py-3">{row.grade && <Badge tone={row.grade === 'F' ? 'red' : 'green'}>{row.grade}</Badge>}</td>
+                        )}
+                        <td className="px-5 py-3 text-xs text-amber-700">{row.note}</td>
                       </tr>
                     )
                   })}

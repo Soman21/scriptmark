@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
-import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles } from 'lucide-react'
+import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, PanelLeftClose, PanelLeftOpen, X, Users } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import NewSessionDialog from './NewSessionDialog.jsx'
+import HelpDialog from './HelpDialog.jsx'
 
 const toolItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
   { to: '/guides', label: 'Marking Guides', icon: BookOpen, restrictedTo: ['LECTURER', 'ADMIN'] },
+  { to: '/cohorts', label: 'Cohort Analytics', icon: Users },
   { to: '/assistant', label: 'AI Assistant', icon: Sparkles },
 ]
 
@@ -21,11 +24,15 @@ function titleCase(role) {
   return role.charAt(0) + role.slice(1).toLowerCase()
 }
 
-export default function Sidebar({ user, onSignOut }) {
+// Claude style sidebar. On desktop it can collapse to an icon rail; below
+// md it becomes a drawer that slides over the page (mobileOpen), opened
+// from the mobile top bar in App.jsx.
+export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCollapse, mobileOpen = false, onCloseMobile }) {
   const { token } = useAuth()
   const navigate = useNavigate()
   const { id: activeSessionId } = useParams()
-  const [creating, setCreating] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const [sessions, setSessions] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(true)
 
@@ -47,119 +54,155 @@ export default function Sidebar({ user, onSignOut }) {
       .finally(() => setLoadingSessions(false))
   }
 
-  async function handleNewSession() {
-    setCreating(true)
-    try {
-      const session = await api.createSession({ title: `Marking Session, ${new Date().toLocaleDateString()}` }, token)
-      setSessions((prev) => [session, ...prev])
-      navigate(`/sessions/${session.id}/marking`)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setCreating(false)
-    }
-  }
 
   const canManage = user?.role === 'LECTURER' || user?.role === 'ADMIN'
   const visibleToolItems = toolItems.filter((item) => !item.restrictedTo || canManage)
 
+  // The rail only applies on desktop; the mobile drawer always shows labels.
+  const rail = collapsed && !mobileOpen
+  const itemBase = `flex items-center rounded-lg text-sm transition-colors ${rail ? 'justify-center h-10 w-10 mx-auto' : 'gap-3 px-3 py-2'}`
+  const itemIdle = 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
+  const itemActive = 'bg-white/[0.08] text-white font-medium'
+
+  function handleCreated(session) {
+    setShowNew(false)
+    setSessions((prev) => [session, ...prev])
+    onCloseMobile?.()
+    navigate(`/guides?session=${session.id}`)
+  }
+
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col bg-ink-950 text-slate-100 px-4 py-5">
-      <div className="mb-6 px-2">
-        <h1 className="text-xl font-bold tracking-tight">ScriptMark</h1>
-        <p className="text-xs text-slate-400 mt-0.5">AI Grading Assistant</p>
-      </div>
-
-      <nav className="space-y-1">
-        {visibleToolItems.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                isActive
-                  ? 'bg-white/5 text-sky-400 border-l-2 border-sky-400 -ml-0.5 pl-3.5'
-                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
-              }`
-            }
+    <>
+      <HelpDialog open={showHelp} onClose={() => setShowHelp(false)} />
+      <NewSessionDialog
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        onCreated={handleCreated}
+        onOpenExisting={(s) => {
+          setShowNew(false)
+          navigate(`/guides?session=${s.id}`)
+        }}
+      />
+      {mobileOpen && <div className="fixed inset-0 z-30 bg-slate-950/50 md:hidden" onClick={onCloseMobile} aria-hidden="true" />}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 flex-col bg-ink-950 text-slate-100 transition-transform duration-200 md:static md:z-auto md:translate-x-0 md:transition-[width] ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${rail ? 'md:w-[68px]' : 'md:w-64'}`}
+      >
+        <div className={`flex h-14 shrink-0 items-center ${rail ? 'justify-center' : 'justify-between pl-5 pr-3'}`}>
+          {!rail && (
+            <div className="min-w-0">
+              <h1 className="text-[17px] font-semibold tracking-tight leading-none">ScriptMark</h1>
+              <p className="mt-1 text-[11px] text-slate-400 leading-none">AI Grading Assistant</p>
+            </div>
+          )}
+          <button
+            onClick={onToggleCollapse}
+            className="hidden md:flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/[0.06] hover:text-white"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            <Icon size={18} />
-            {label}
-          </NavLink>
-        ))}
-      </nav>
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+          <button
+            onClick={onCloseMobile}
+            className="md:hidden flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/[0.06] hover:text-white"
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-      {canManage && (
-        <button
-          onClick={handleNewSession}
-          disabled={creating}
-          className="mt-5 mb-3 flex items-center justify-center gap-2 rounded-lg bg-sky-500 hover:bg-sky-400 transition-colors text-white font-medium text-sm py-2.5 disabled:opacity-60"
-        >
-          <Plus size={16} />
-          {creating ? 'Creating...' : 'New Marking Session'}
-        </button>
-      )}
-
-      <p className="px-2 mt-2 mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Sessions</p>
-      <div className="flex-1 space-y-0.5 overflow-y-auto">
-        {loadingSessions ? (
-          <p className="px-3 py-2 text-xs text-slate-500">Loading...</p>
-        ) : sessions.length === 0 ? (
-          <p className="px-3 py-2 text-xs text-slate-500">No sessions yet.</p>
-        ) : (
-          sessions.map((s) => (
+        <div className={`flex min-h-0 flex-1 flex-col ${rail ? 'px-2' : 'px-3'} pb-3`}>
+          {canManage && (
             <button
-              key={s.id}
-              onClick={() => navigate(`/sessions/${s.id}/marking`)}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                s.id === activeSessionId
-                  ? 'bg-white/5 text-sky-400 border-l-2 border-sky-400 -ml-0.5 pl-3.5'
-                  : 'text-slate-300 hover:bg-white/5 hover:text-white'
+              onClick={() => setShowNew(true)}
+              title="New Marking Session"
+              className={`mb-3 flex items-center rounded-lg bg-sky-500 hover:bg-sky-400 transition-colors text-white font-medium text-sm disabled:opacity-60 ${
+                rail ? 'justify-center h-10 w-10 mx-auto' : 'justify-center gap-2 py-2.5'
               }`}
             >
-              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDot(s.status)}`} />
-              <span className="truncate">{s.title}</span>
+              <Plus size={16} />
+              {!rail && 'New Marking Session'}
             </button>
-          ))
-        )}
-      </div>
+          )}
 
-      <div className="space-y-1 border-t border-white/10 pt-4 mt-3">
-        <NavLink
-          to="/settings"
-          className={({ isActive }) =>
-            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-              isActive ? 'bg-white/5 text-sky-400' : 'text-slate-300 hover:bg-white/5 hover:text-white'
-            }`
-          }
-        >
-          <Settings size={18} />
-          Settings
-        </NavLink>
-        <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors">
-          <HelpCircle size={18} />
-          Help
-        </button>
-        <button
-          onClick={onSignOut}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
-        >
-          <LogOut size={18} />
-          Sign Out
-        </button>
-        {user && (
-          <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 mt-2">
-            <div className="h-8 w-8 rounded-full bg-sky-500 flex items-center justify-center text-xs font-semibold">
-              {user.initials}
-            </div>
-            <div>
-              <p className="text-sm font-medium leading-tight">{user.name}</p>
-              <p className="text-xs text-slate-400 leading-tight">{titleCase(user.role)}</p>
-            </div>
+          <nav className="space-y-0.5">
+            {visibleToolItems.map(({ to, label, icon: Icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end
+                title={rail ? label : undefined}
+                className={({ isActive }) => `${itemBase} ${isActive ? itemActive : itemIdle}`}
+              >
+                <Icon size={18} className="shrink-0" />
+                {!rail && label}
+              </NavLink>
+            ))}
+          </nav>
+
+          {!rail && (
+            <>
+              <p className="px-3 mt-6 mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">Sessions</p>
+              <div className="flex-1 space-y-0.5 overflow-y-auto">
+                {loadingSessions ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">Loading...</p>
+                ) : sessions.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-slate-500">No sessions yet.</p>
+                ) : (
+                  sessions.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => navigate(`/sessions/${s.id}/marking`)}
+                      title={s.title}
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                        s.id === activeSessionId ? itemActive : itemIdle
+                      }`}
+                    >
+                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDot(s.status)}`} />
+                      <span className="truncate">{s.title}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+          {rail && <div className="flex-1" />}
+
+          <div className="space-y-0.5 border-t border-white/10 pt-3 mt-3">
+            <NavLink
+              to="/settings"
+              title={rail ? 'Settings' : undefined}
+              className={({ isActive }) => `${itemBase} ${isActive ? itemActive : itemIdle}`}
+            >
+              <Settings size={18} className="shrink-0" />
+              {!rail && 'Settings'}
+            </NavLink>
+            <button onClick={() => setShowHelp(true)} title={rail ? 'Help' : undefined} className={`${itemBase} ${itemIdle} ${rail ? '' : 'w-full'}`}>
+              <HelpCircle size={18} className="shrink-0" />
+              {!rail && 'Help'}
+            </button>
+            <button onClick={onSignOut} title={rail ? 'Sign Out' : undefined} className={`${itemBase} ${itemIdle} ${rail ? '' : 'w-full'}`}>
+              <LogOut size={18} className="shrink-0" />
+              {!rail && 'Sign Out'}
+            </button>
+            {user && (
+              <div className={`flex items-center mt-2 ${rail ? 'justify-center py-1' : 'gap-3 px-3 py-2'}`} title={rail ? user.name : undefined}>
+                <div className="h-8 w-8 shrink-0 rounded-full bg-sky-500 flex items-center justify-center text-xs font-semibold">
+                  {user.initials}
+                </div>
+                {!rail && (
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium leading-tight">{user.name}</p>
+                    <p className="text-xs text-slate-400 leading-tight">{titleCase(user.role)}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </aside>
+        </div>
+      </aside>
+    </>
   )
 }

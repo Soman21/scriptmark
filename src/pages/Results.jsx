@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download, Sparkles, MessageCircle } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
+import PageAssistant from '../components/PageAssistant.jsx'
+import { resultsShortcuts } from '../lib/chatShortcuts.js'
+import ReviewAssistant from '../components/ReviewAssistant.jsx'
 
 function ImageViewerModal({ pages, startIndex, onClose, onIndexChange }) {
   useEffect(() => {
@@ -69,6 +72,10 @@ export default function Results() {
   const [draftReasons, setDraftReasons] = useState({})
   const [confirming, setConfirming] = useState(false)
   const [viewerIndex, setViewerIndex] = useState(null)
+  const [pageIndex, setPageIndex] = useState(0)
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantAsk, setAssistantAsk] = useState(null)
+  const [finderOpen, setFinderOpen] = useState(false)
 
   useEffect(() => {
     loadScripts()
@@ -100,7 +107,10 @@ export default function Results() {
   }
 
   const currentScript = scripts[currentIndex]
-  const sessionTitle = session.title
+  const reviewedCount = scripts.filter((s) => s.status === 'REVIEWED').length
+
+  // Each script opens on its first page.
+  useEffect(() => setPageIndex(0), [currentIndex])
 
   function updateDraft(answerId, value) {
     setDraftScores((prev) => ({ ...prev, [answerId]: value }))
@@ -108,6 +118,31 @@ export default function Results() {
 
   function updateReason(answerId, value) {
     setDraftReasons((prev) => ({ ...prev, [answerId]: value }))
+  }
+
+  // A score the marking assistant suggested goes into the box like a typed
+  // one; if that answer was confirmed before, its reason becomes the default
+  // explanation for the change, which the lecturer can edit.
+  function applySuggestedScore(proposal) {
+    updateDraft(proposal.answerId, String(proposal.score))
+    const answer = currentScript?.answers.find((a) => a.id === proposal.answerId)
+    if (answer?.confirmedAt && Number(answer.confirmedScore) !== proposal.score) {
+      updateReason(proposal.answerId, `Marking assistant: ${proposal.reason || 'suggested on review'}`)
+    }
+  }
+
+  // Opens the script the chat helper found.
+  async function runAssistantAction(action) {
+    const index = scripts.findIndex((x) => x.id === action.scriptId)
+    if (index < 0) throw new Error(`${action.student} has not been marked yet, so there is nothing to open.`)
+    setCurrentIndex(index)
+    return `Opened ${action.student}.`
+  }
+
+  function askAbout(label) {
+    setFinderOpen(false)
+    setAssistantOpen(true)
+    setAssistantAsk({ text: `Check ${label} again against the guide. Is the score right?`, at: Date.now() })
   }
 
   // An answer needs a reason only when it was ALREADY confirmed once before,
@@ -157,9 +192,9 @@ export default function Results() {
     : []
 
   return (
-    <div className="flex h-full flex-col">
+    <div className={`flex h-full flex-col transition-[padding] ${assistantOpen || finderOpen ? 'xl:pr-[420px]' : ''}`}>
       <Topbar
-        title={sessionTitle ? `Review: ${sessionTitle}` : 'Review Suggested Scores'}
+        title="Review Suggested Scores"
         right={
           <button
             onClick={() => navigate(`/sessions/${sessionId}/export`)}
@@ -176,47 +211,80 @@ export default function Results() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <p className="text-sm text-slate-400">Loading scripts...</p>
+          <p className="p-6 text-sm text-slate-400">Loading scripts...</p>
         ) : scripts.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
+          <div className="m-4 sm:m-6 rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
             No scored scripts yet. Upload scripts and let Marking finish, they will show up here for review.
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
-            <div className="rounded-xl border border-slate-200 bg-white">
-              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-                <span className="rounded-full bg-ink-950 text-white text-xs font-medium px-3 py-1">
-                  Script {currentIndex + 1} of {scripts.length}
-                </span>
-                <div className="flex items-center gap-2">
+          <div className="flex min-h-full flex-col">
+            {/* Script navigator: who this is, where they are in the pile, and a jump list */}
+            <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-base font-semibold text-slate-900">
+                    {currentScript.studentName || currentScript.studentIdentifier || 'Unnamed script'}
+                  </p>
+                  {currentScript.regNumber && <span className="text-sm text-slate-500">{currentScript.regNumber}</span>}
+                  <Badge tone={currentScript.status === 'REVIEWED' ? 'green' : 'amber'}>
+                    {currentScript.status === 'REVIEWED' ? 'Reviewed' : 'Needs review'}
+                  </Badge>
                   {currentScript.hasLowConfidenceScore && (
-                    <span className="flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-0.5 bg-amber-50 text-amber-600">
-                      <AlertCircle size={12} /> Needs a closer look
-                    </span>
+                    <Badge tone="amber">
+                      <AlertCircle size={12} /> Low confidence
+                    </Badge>
                   )}
-                  <span
-                    className={`text-xs font-medium rounded-full px-2.5 py-0.5 ${
-                      currentScript.status === 'REVIEWED'
-                        ? 'bg-emerald-50 text-emerald-600'
-                        : 'bg-amber-50 text-amber-600'
-                    }`}
-                  >
-                    {currentScript.status}
-                  </span>
                 </div>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Script {currentIndex + 1} of {scripts.length}, {reviewedCount} reviewed
+                </p>
               </div>
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                <button
+                  onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+                  disabled={currentIndex === 0}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  aria-label="Previous script"
+                >
+                  <ArrowLeft size={16} />
+                </button>
+                <select
+                  value={currentIndex}
+                  onChange={(e) => setCurrentIndex(Number(e.target.value))}
+                  aria-label="Jump to script"
+                  className="h-9 min-w-0 flex-1 sm:max-w-[12rem] sm:flex-none rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-sky-400"
+                >
+                  {scripts.map((s, i) => (
+                    <option key={s.id} value={i}>
+                      {i + 1}. {s.studentName || s.studentIdentifier || 'Unnamed script'}
+                      {s.status === 'REVIEWED' ? ' (reviewed)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setCurrentIndex((i) => Math.min(scripts.length - 1, i + 1))}
+                  disabled={currentIndex === scripts.length - 1}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  aria-label="Next script"
+                >
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5">
-                <div>
+            <div className="grid flex-1 grid-cols-1 gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+              {/* The script itself, kept in view beside the scores while scrolling */}
+              <div className="lg:sticky lg:top-[84px] lg:self-start space-y-3">
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
                   <button
-                    onClick={() => currentPages.length > 0 && setViewerIndex(0)}
+                    onClick={() => currentPages.length > 0 && setViewerIndex(pageIndex)}
                     disabled={currentPages.length === 0}
-                    className="group relative block w-full rounded-lg bg-slate-50 border border-slate-200 aspect-[4/3] overflow-hidden"
+                    className="group relative block w-full overflow-hidden rounded-lg border border-slate-100 bg-slate-50 aspect-[3/4] lg:aspect-auto lg:h-[calc(100vh-380px)] lg:min-h-[320px]"
                   >
-                    {currentPages[0] ? (
-                      <img src={currentPages[0].imageUrl} alt="Script" className="h-full w-full object-contain" />
+                    {currentPages[pageIndex] ? (
+                      <img src={currentPages[pageIndex].imageUrl} alt={`Page ${pageIndex + 1}`} className="h-full w-full object-contain" />
                     ) : (
                       <div className="flex h-full items-center justify-center">
                         <ImageIcon className="text-slate-300" size={32} />
@@ -224,23 +292,55 @@ export default function Results() {
                     )}
                     {currentPages.length > 0 && (
                       <span className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/0 text-transparent transition group-hover:bg-black/30 group-hover:text-white">
-                        <Expand size={18} /> View {currentPages.length > 1 ? `all ${currentPages.length} pages` : 'full size'}
+                        <Expand size={18} /> View full size
                       </span>
                     )}
                   </button>
                   {currentPages.length > 1 && (
-                    <p className="mt-1.5 text-center text-xs text-slate-400">{currentPages.length} pages, click to view all</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <button
+                        onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+                        disabled={pageIndex === 0}
+                        className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                        aria-label="Previous page"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <div className="flex items-center gap-1.5">
+                        {currentPages.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setPageIndex(i)}
+                            className={`h-7 min-w-[28px] rounded-md px-1.5 text-xs font-medium ${
+                              i === pageIndex ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'
+                            }`}
+                          >
+                            {i + 1}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setPageIndex((i) => Math.min(currentPages.length - 1, i + 1))}
+                        disabled={pageIndex === currentPages.length - 1}
+                        className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                        aria-label="Next page"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
                   )}
                 </div>
-                <div className="text-sm text-slate-700">
-                  <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">Extracted Text</p>
-                  <p className="whitespace-pre-wrap max-h-[28rem] overflow-y-auto leading-relaxed">{currentScript.ocrText}</p>
-                </div>
+                <details className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Full extracted text
+                  </summary>
+                  <p className="mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap leading-relaxed">{currentScript.ocrText}</p>
+                </details>
               </div>
 
-              <div className="border-t border-slate-100 p-5 space-y-4">
+              <div className="min-w-0 space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Suggested Scores — edit if needed, then confirm
+                  Suggested scores. Edit any you disagree with, then confirm.
                 </p>
                 {currentScript.answers.map((answer) => {
                   const q = answer.question
@@ -249,56 +349,74 @@ export default function Results() {
                     answer.confidence === 'low' ? 'red' : answer.confidence === 'medium' ? 'amber' : 'green'
                   const showReasonBox = needsReason(answer)
                   return (
-                    <div key={answer.id} className="rounded-lg border border-slate-200 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-sky-600">{label}</span>
-                          {answer.confidence && <Badge tone={confidenceTone}>{answer.confidence} confidence</Badge>}
+                    <div key={answer.id} className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-semibold text-sky-600">{label}</span>
+                            {answer.confidence && (
+                              <Badge tone={confidenceTone}>
+                                {answer.confidence.charAt(0).toUpperCase() + answer.confidence.slice(1)} confidence
+                              </Badge>
+                            )}
+                            <button
+                              onClick={() => askAbout(label)}
+                              className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                            >
+                              <Sparkles size={12} /> Ask the assistant
+                            </button>
+                            {answer.confirmedAt && !showReasonBox && (
+                              <span className="flex items-center gap-1 text-xs text-emerald-600">
+                                <CheckCircle2 size={12} /> Confirmed
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1.5 text-sm font-medium text-slate-800">{q?.text}</p>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="flex shrink-0 items-center gap-1">
                           <input
                             type="number"
                             value={draftScores[answer.id] ?? ''}
                             onChange={(e) => updateDraft(answer.id, e.target.value)}
-                            className="w-16 rounded-lg border border-slate-200 px-2 py-1 text-sm text-right outline-none focus:ring-2 focus:ring-sky-400"
+                            aria-label={`Score for ${label}`}
+                            className="w-16 rounded-lg border border-slate-200 px-2 py-1.5 text-right text-sm font-semibold outline-none focus:ring-2 focus:ring-sky-400"
                           />
                           <span className="text-sm text-slate-400">/ {q?.maxMarks}</span>
                         </div>
                       </div>
-                      <p className="text-sm font-medium text-slate-800 mt-1.5">{q?.text}</p>
 
-                      <div className="mt-3 space-y-3">
-                        <div className="rounded-lg bg-slate-50 border border-slate-100 p-3.5">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Expected Answer</p>
-                          <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{q?.modelAnswer}</p>
+                      <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3.5">
+                          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Expected Answer</p>
+                          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{q?.modelAnswer}</p>
                         </div>
-                        <div className="rounded-lg bg-sky-50/50 border border-sky-100 p-3.5">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Student's Answer</p>
-                          <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{answer.extractedText}</p>
+                        <div className="rounded-lg border border-sky-100 bg-sky-50/50 p-3.5">
+                          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Student's Answer</p>
+                          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{answer.extractedText}</p>
                         </div>
-                        {answer.visionTranscript && (
-                          <div className="rounded-lg bg-violet-50/50 border border-violet-100 p-3.5">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-violet-400 mb-1.5">
-                              Recalculated From Page Image
-                            </p>
-                            <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{answer.visionTranscript}</p>
-                            <p className="mt-1.5 text-xs text-slate-400">
-                              This question was flagged calculation heavy, so this is what the AI read directly from
-                              the page image rather than the standard extracted text above.
-                            </p>
-                          </div>
-                        )}
                       </div>
+                      {answer.visionTranscript && (
+                        <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/50 p-3.5">
+                          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-violet-400">
+                            Recalculated From Page Image
+                          </p>
+                          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{answer.visionTranscript}</p>
+                          <p className="mt-1.5 text-xs text-slate-400">
+                            This question was flagged calculation heavy, so this is what the AI read directly from
+                            the page image rather than the standard extracted text.
+                          </p>
+                        </div>
+                      )}
 
                       {Array.isArray(answer.stepBreakdown) && answer.stepBreakdown.length > 0 && (
                         <div className="mt-3 rounded-lg border border-slate-200 p-3.5">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Step Breakdown</p>
-                          <div className="space-y-2">
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Step Breakdown</p>
+                          <div className="divide-y divide-slate-100">
                             {answer.stepBreakdown.map((step, si) => (
-                              <div key={si} className="flex items-start justify-between gap-3 text-sm">
+                              <div key={si} className="flex items-start justify-between gap-3 py-1.5 text-sm">
                                 <div>
                                   <p className="text-slate-700">{step.description}</p>
-                                  {step.reasoning && <p className="text-xs text-slate-400 mt-0.5">{step.reasoning}</p>}
+                                  {step.reasoning && <p className="mt-0.5 text-xs text-slate-400">{step.reasoning}</p>}
                                 </div>
                                 <span className="shrink-0 font-medium text-slate-700">
                                   {step.awarded} / {step.marks}
@@ -309,15 +427,10 @@ export default function Results() {
                         </div>
                       )}
 
-                      <p className="text-sm text-slate-600 mt-2">
-                        <span className="text-slate-400">Suggested reasoning: </span>
+                      <p className="mt-3 text-sm text-slate-600">
+                        <span className="text-slate-400">AI reasoning: </span>
                         {answer.reasoning}
                       </p>
-                      {answer.confirmedAt && !showReasonBox && (
-                        <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
-                          <CheckCircle2 size={12} /> Confirmed
-                        </p>
-                      )}
 
                       {showReasonBox && (
                         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -336,63 +449,60 @@ export default function Results() {
                   )
                 })}
               </div>
-
-              <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
-                <p className="text-sm font-semibold text-slate-800">
-                  Total: {confirmedTotal} / {maxPossible}
-                </p>
-                <PrimaryButton onClick={handleConfirmAll} disabled={confirming} className="bg-emerald-600 hover:bg-emerald-500">
-                  {confirming ? 'Confirming...' : 'Confirm All Scores'}
-                </PrimaryButton>
-              </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">All Scripts</p>
-                <ul className="space-y-2">
-                  {scripts.map((s, i) => (
-                    <li key={s.id}>
-                      <button
-                        onClick={() => setCurrentIndex(i)}
-                        className={`w-full text-left rounded-lg px-3 py-2 text-sm ${
-                          i === currentIndex ? 'bg-sky-50 text-sky-700 font-medium' : 'text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        {s.hasLowConfidenceScore && <AlertCircle size={12} className="inline mr-1 text-amber-500" />}
-                        {s.studentName || s.studentIdentifier || 'Unnamed script'}
-                        <span
-                          className={`ml-2 text-xs ${s.status === 'REVIEWED' ? 'text-emerald-500' : 'text-amber-500'}`}
-                        >
-                          {s.status}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="flex gap-2">
-                <PrimaryButton
-                  onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-                  disabled={currentIndex === 0}
-                  className="flex-1 justify-center bg-slate-600 hover:bg-slate-500"
-                >
-                  <ArrowLeft size={16} /> Prev
-                </PrimaryButton>
-                <PrimaryButton
-                  onClick={() => setCurrentIndex((i) => Math.min(scripts.length - 1, i + 1))}
-                  disabled={currentIndex === scripts.length - 1}
-                  className="flex-1 justify-center bg-sky-500 hover:bg-sky-400"
-                >
-                  Next <ArrowRight size={16} />
-                </PrimaryButton>
+            {/* Always reachable: the running total and the confirm button */}
+            <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
+              <p className="text-sm text-slate-500">
+                Total <span className="ml-1 text-lg font-semibold text-slate-900">{confirmedTotal}</span> / {maxPossible}
+              </p>
+              <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setAssistantOpen(false)
+                  setFinderOpen(true)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <MessageCircle size={15} /> <span className="hidden sm:inline">Find scripts</span>
+              </button>
+              <button
+                onClick={() => {
+                  setFinderOpen(false)
+                  setAssistantOpen(true)
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50"
+              >
+                <Sparkles size={15} /> <span className="hidden sm:inline">Marking assistant</span>
+              </button>
+              <PrimaryButton onClick={handleConfirmAll} disabled={confirming} className="bg-emerald-600 hover:bg-emerald-500">
+                <CheckCircle2 size={16} /> {confirming ? 'Confirming...' : 'Confirm All Scores'}
+              </PrimaryButton>
               </div>
             </div>
           </div>
         )}
       </div>
 
+      <ReviewAssistant
+        script={currentScript}
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        onUseScore={applySuggestedScore}
+        ask={assistantAsk}
+      />
+      <PageAssistant
+        page="results"
+        sessionId={sessionId}
+        title="Find scripts"
+        intro="Ask about the scripts here, or say whose script to open."
+        quick={resultsShortcuts(scripts)}
+        runAction={runAssistantAction}
+        open={finderOpen}
+        onOpenChange={setFinderOpen}
+        onOpen={() => setAssistantOpen(false)}
+        noLauncher
+      />
       <ImageViewerModal pages={currentPages} startIndex={viewerIndex} onClose={() => setViewerIndex(null)} onIndexChange={setViewerIndex} />
     </div>
   )

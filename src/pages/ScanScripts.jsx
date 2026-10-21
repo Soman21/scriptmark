@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UploadCloud, Camera, CheckCircle2, Loader2, AlertCircle, FilePlus2, UserPlus, X, Sparkles } from 'lucide-react'
+import { UploadCloud, Camera, CheckCircle2, Loader2, AlertCircle, AlertTriangle, FilePlus2, UserPlus, X, Sparkles, BookOpen, FileStack, Files } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import BulkUploadPanel from '../components/BulkUploadPanel.jsx'
 import MultiDocUploadPanel from '../components/MultiDocUploadPanel.jsx'
+import AttendanceUploadCard from '../components/AttendanceUploadCard.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
@@ -11,16 +12,51 @@ import { api } from '../lib/api.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
+// The three ways scripts arrive.
+export const SCAN_METHODS = [
+  {
+    id: 'single',
+    icon: BookOpen,
+    title: 'Single Script',
+    text: 'Scan page by page',
+  },
+  {
+    id: 'pdf',
+    icon: FileStack,
+    title: 'Bulk PDF Upload',
+    text: 'One PDF, many students',
+  },
+  {
+    id: 'files',
+    icon: Files,
+    title: 'Batch Upload',
+    text: 'One file per student',
+  },
+]
+
 export default function ScanScripts() {
   const { token, user } = useAuth()
   const { session, sessionId } = useSession()
   const navigate = useNavigate()
-  const sessionTitle = session.title
   const fileInputRef = useRef(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
 
+  const [method, setMethod] = useState(() => {
+    try {
+      const saved = localStorage.getItem('scriptmark_scan_method')
+      return SCAN_METHODS.some((m) => m.id === saved) ? saved : 'single'
+    } catch {
+      return 'single'
+    }
+  })
+  function chooseMethod(id) {
+    setMethod(id)
+    try {
+      localStorage.setItem('scriptmark_scan_method', id)
+    } catch {}
+  }
   const [cameraOpen, setCameraOpen] = useState(false)
   const [cameraError, setCameraError] = useState('')
 
@@ -28,6 +64,8 @@ export default function ScanScripts() {
   const [studentNameInput, setStudentNameInput] = useState('')
   const [regNumberInput, setRegNumberInput] = useState('')
   const [detectedFields, setDetectedFields] = useState({ name: false, regNumber: false })
+  // Other scripts in this session already holding the active script's reg number.
+  const [duplicates, setDuplicates] = useState([])
   const [activeScript, setActiveScript] = useState(null)
 
   const [scripts, setScripts] = useState([])
@@ -102,7 +140,7 @@ export default function ScanScripts() {
       setStudentNameInput(updatedScript.studentName || '')
       setRegNumberInput(updatedScript.regNumber || '')
       setDetectedFields({ name: !!detected?.name, regNumber: !!detected?.regNumber })
-      setScoreResult(null)
+      if (data.duplicates) setDuplicates(data.duplicates)
 
       setScripts((prev) => {
         const withoutThis = prev.filter((s) => s.id !== updatedScript.id)
@@ -185,6 +223,7 @@ export default function ScanScripts() {
       )
       setActiveScript(updated)
       setDetectedFields({ name: false, regNumber: false })
+      setDuplicates(updated.duplicates || [])
       setScripts((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
     } catch (err) {
       setError(err.message)
@@ -196,7 +235,7 @@ export default function ScanScripts() {
     setStudentNameInput('')
     setRegNumberInput('')
     setDetectedFields({ name: false, regNumber: false })
-    setScoreResult(null)
+    setDuplicates([])
   }
 
   async function handleDiscard() {
@@ -245,17 +284,7 @@ export default function ScanScripts() {
 
   return (
     <div className="flex h-full flex-col">
-      <Topbar
-        title="Scan Student Scripts"
-        right={
-          sessionTitle && (
-            <span className="hidden md:flex items-center gap-2 rounded-full bg-sky-50 text-sky-700 text-xs font-medium px-3 py-1">
-              SESSION: {sessionTitle.toUpperCase()}
-            </span>
-          )
-        }
-        search="Search sessions..."
-      />
+      <Topbar title="Scan Student Scripts" />
 
       {error && (
         <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-600">
@@ -265,6 +294,41 @@ export default function ScanScripts() {
 
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-2xl space-y-6">
+            <AttendanceUploadCard
+              sessionId={sessionId}
+              onUploaded={() => {
+                // Names on already scanned scripts may have just been matched
+                api.getSessionScripts(sessionId, token).then(setScripts).catch(() => {})
+              }}
+            />
+
+            <section aria-labelledby="scan-method-heading">
+              <h2 id="scan-method-heading" className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Upload method
+              </h2>
+              <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Upload method">
+                {SCAN_METHODS.map((m) => {
+                  const on = method === m.id
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => chooseMethod(m.id)}
+                      className={`rounded-xl border p-3 text-left transition ${on ? 'border-sky-400 bg-sky-50 ring-1 ring-sky-400' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
+                    >
+                      <m.icon size={18} className={on ? 'text-sky-600' : 'text-slate-400'} />
+                      <span className="mt-2 block text-sm font-semibold text-slate-900">{m.title}</span>
+                      <span className="block text-xs text-slate-500">{m.text}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+
+            {method === 'single' && (
+            <>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Current Student</label>
@@ -280,8 +344,18 @@ export default function ScanScripts() {
 
               {!activeScript && (
                 <p className="text-xs text-slate-400 mb-2">
-                  Leave blank to try automatic detection from the front page, or type it in now.
+                  Optional. Detected from the cover if left blank.
                 </p>
+              )}
+
+              {activeScript && duplicates.length > 0 && (
+                <div className="mb-2 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                  <p>
+                    <span className="font-medium">Already scanned.</span> {activeScript.regNumber} is also on the script for{' '}
+                    {duplicates.map((d) => d.studentName || 'another student').join(', ')}. If this is the same booklet, press Discard Scan. If the reg number was misread, correct it below.
+                  </p>
+                </div>
               )}
 
               {(detectedFields.name || detectedFields.regNumber) && (
@@ -329,13 +403,6 @@ export default function ScanScripts() {
                   )}
                 </>
               )}
-            </div>
-
-            <div className="mb-1">
-              <p className="text-sm font-semibold text-slate-900">Scan One Script</p>
-              <p className="text-xs text-slate-500">
-                Use this when you have one physical script in front of you right now. Type the student's details once below, then add each page as you go, by camera or photo.
-              </p>
             </div>
 
             <div className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-8 text-center">
@@ -424,20 +491,28 @@ export default function ScanScripts() {
                 </SecondaryButton>
               </div>
             )}
+            </>
+            )}
 
+            {method === 'pdf' && (
             <BulkUploadPanel
+              embedded
               sessionId={sessionId}
               onScriptsCreated={(newScripts) => {
                 setScripts((prev) => [...newScripts, ...prev])
               }}
             />
+            )}
 
+            {method === 'files' && (
             <MultiDocUploadPanel
+              embedded
               sessionId={sessionId}
               onScriptsCreated={(newScripts) => {
                 setScripts((prev) => [...newScripts, ...prev])
               }}
             />
+            )}
 
             <div className="rounded-xl border border-slate-200 bg-white">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">

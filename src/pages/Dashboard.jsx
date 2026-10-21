@@ -5,13 +5,14 @@ import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import NewSessionDialog from '../components/NewSessionDialog.jsx'
 
 export default function Dashboard() {
   const { user, token } = useAuth()
   const navigate = useNavigate()
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
+  const [showNew, setShowNew] = useState(false)
 
   useEffect(() => {
     api
@@ -23,34 +24,27 @@ export default function Dashboard() {
 
   const canManage = user?.role === 'LECTURER' || user?.role === 'ADMIN'
 
-  async function handleNewSession() {
-    setCreating(true)
-    try {
-      const session = await api.createSession({ title: `Marking Session, ${new Date().toLocaleDateString()}` }, token)
-      navigate(`/sessions/${session.id}/marking`)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setCreating(false)
-    }
-  }
-
   const recent = sessions.slice(0, 6)
 
   return (
     <div className="flex h-full flex-col">
+      <NewSessionDialog
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        onCreated={(session) => navigate(`/guides?session=${session.id}`)}
+        onOpenExisting={(session) => navigate(`/guides?session=${session.id}`)}
+      />
       <Topbar title={`Welcome${user ? `, ${user.name.split(' ')[0]}` : ''}`} />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {canManage && (
             <button
-              onClick={handleNewSession}
-              disabled={creating}
+              onClick={() => setShowNew(true)}
               className="rounded-xl bg-sky-500 hover:bg-sky-400 text-white p-4 flex flex-col items-center gap-2 transition-colors disabled:opacity-60"
             >
               <Plus size={20} />
-              <span className="text-sm font-medium">{creating ? 'Creating...' : 'New Marking Session'}</span>
+              <span className="text-sm font-medium">New Marking Session</span>
             </button>
           )}
           {canManage && (

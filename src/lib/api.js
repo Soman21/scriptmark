@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 async function request(path, { method = 'GET', body, token } = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -14,6 +14,9 @@ async function request(path, { method = 'GET', body, token } = {}) {
   const data = isJson ? await res.json() : null
 
   if (!res.ok) {
+    // A signed in request rejected as unauthorised means the saved sign in
+    // has expired or was revoked; AuthContext signs out and shows the login.
+    if (res.status === 401 && token) window.dispatchEvent(new Event('scriptmark:signed-out'))
     throw new Error(data?.error || `Request failed (${res.status})`)
   }
   return data
@@ -25,6 +28,8 @@ export const api = {
   verifyOtp: (payload) => request('/api/auth/verifyOtp', { method: 'POST', body: payload }),
   forgotPassword: (email) => request('/api/auth/forgotPassword', { method: 'POST', body: { email } }),
   resetPassword: (payload) => request('/api/auth/resetPassword', { method: 'POST', body: payload }),
+  updateProfile: (payload, token) => request('/api/auth/me', { method: 'PUT', body: payload, token }),
+  changePassword: (payload, token) => request('/api/auth/password', { method: 'PUT', body: payload, token }),
 
   getGuides: (token) => request('/api/guides', { token }),
   getGuide: (id, token) => request(`/api/guides/${id}`, { token }),
@@ -78,7 +83,14 @@ export const api = {
   deleteScript: (sessionId, scriptId, token) =>
     request(`/api/sessions/${sessionId}/scripts/${scriptId}`, { method: 'DELETE', token }),
   getAnalytics: (sessionId, token) => request(`/api/sessions/${sessionId}/analytics`, { token }),
+  getEvaluation: (sessionId, token) => request(`/api/sessions/${sessionId}/evaluation`, { token }),
+  getTranscriptionSample: (sessionId, n, token) => request(`/api/results/transcriptionSample?sessionId=${sessionId}&n=${n}`, { token }),
+  saveReferenceText: (answerId, text, token) => request(`/api/results/${answerId}/reference`, { method: 'PUT', body: { text }, token }),
+  getCohort: (sessionId, token) => request(`/api/sessions/${sessionId}/cohort`, { token }),
+  compareSessions: (token) => request('/api/sessions/cohort/compare', { token }),
 
+  remarkQuestions: (sessionId, questionIds, token) =>
+    request(`/api/sessions/${sessionId}/remark`, { method: 'POST', body: { questionIds }, token }),
   startMarking: (sessionId, token) =>
     request(`/api/sessions/${sessionId}/mark`, { method: 'POST', token }),
   getMarkingStatus: (sessionId, token) =>
@@ -89,6 +101,12 @@ export const api = {
   scoreScript: (scriptId, guideId, token) =>
     request(`/api/results/scripts/${scriptId}/score`, { method: 'POST', body: { guideId }, token }),
 
+  reviewWithAssistant: (scriptId, messages, token) =>
+    request('/api/assistant/review', { method: 'POST', body: { scriptId, messages }, token }),
+  askPageAssistant: (sessionId, page, messages, token) =>
+    request('/api/assistant/page', { method: 'POST', body: { sessionId, page, messages }, token }),
+  getToday: (token) => request('/api/assistant/today', { token }),
+  draftReport: (sessionId, token) => request('/api/assistant/report', { method: 'POST', body: { sessionId }, token }),
   chatWithAssistant: (messages, activeSessionId, token) =>
     request('/api/assistant/chat', { method: 'POST', body: { messages, activeSessionId }, token }),
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { safeNext, withNext } from '../lib/next.js'
 import { Lock, Mail, Eye, EyeOff, ArrowRight, ShieldCheck, KeyRound } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { PrimaryButton } from '../components/ui.jsx'
@@ -7,6 +8,7 @@ import { PrimaryButton } from '../components/ui.jsx'
 export default function Login() {
   const { login, verifyOtp } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -16,6 +18,7 @@ export default function Login() {
   const [pendingToken, setPendingToken] = useState(null)
   const [otpEmail, setOtpEmail] = useState('')
   const [code, setCode] = useState('')
+  const [resent, setResent] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -27,8 +30,26 @@ export default function Login() {
         setPendingToken(result.pendingToken)
         setOtpEmail(result.email)
       } else {
-        navigate('/')
+        navigate(safeNext(location.search))
       }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Emails a fresh code with the details already typed, for when the first
+  // one never arrived or has expired.
+  async function handleResend() {
+    setError('')
+    setSubmitting(true)
+    try {
+      const result = await login({ email, password })
+      setPendingToken(result.pendingToken)
+      setCode('')
+      setResent(true)
+      setTimeout(() => setResent(false), 30000)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -42,7 +63,7 @@ export default function Login() {
     setSubmitting(true)
     try {
       await verifyOtp({ pendingToken, code })
-      navigate('/')
+      navigate(safeNext(location.search))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -62,7 +83,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-slate-900">ScriptMark</h1>
-          <p className="text-sm text-slate-500 mt-1">Institutional AI Assessment Infrastructure</p>
+          <p className="text-sm text-slate-500 mt-1">The AI marking assistant for handwritten exams</p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-8">
@@ -123,7 +144,7 @@ export default function Login() {
 
               <p className="text-center text-sm text-slate-500 mt-6">
                 Do not have an account?{' '}
-                <Link to="/signup" className="text-sky-600 font-medium">
+                <Link to={withNext('/signup', location.search)} className="text-sky-600 font-medium">
                   Create one
                 </Link>
               </p>
@@ -161,7 +182,20 @@ export default function Login() {
                 </PrimaryButton>
               </form>
 
-              <button onClick={backToPasswordStep} className="mt-4 w-full text-center text-sm text-slate-500 hover:text-slate-700">
+              <p className="mt-4 text-center text-sm text-slate-500">
+                {resent ? (
+                  'A new code is on its way.'
+                ) : (
+                  <>
+                    No code?{' '}
+                    <button type="button" onClick={handleResend} disabled={submitting} className="font-medium text-sky-600 hover:text-sky-700 disabled:opacity-60">
+                      Send a new one
+                    </button>
+                  </>
+                )}
+              </p>
+
+              <button onClick={backToPasswordStep} className="mt-2 w-full text-center text-sm text-slate-500 hover:text-slate-700">
                 Use a different account
               </button>
             </>
@@ -170,10 +204,10 @@ export default function Login() {
 
         <div className="flex items-center justify-center gap-6 mt-6 text-xs text-slate-400">
           <span className="flex items-center gap-1.5">
-            <ShieldCheck size={14} /> FERPA Compliant
+            <ShieldCheck size={14} /> Email code at every sign in
           </span>
           <span className="flex items-center gap-1.5">
-            <Lock size={14} /> 256-bit Encryption
+            <Lock size={14} /> Encrypted connection
           </span>
         </div>
       </div>

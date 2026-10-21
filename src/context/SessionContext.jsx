@@ -17,3 +17,9 @@ export function useSession() {
   if (!ctx) throw new Error('useSession must be called within a SessionWorkspace route')
   return ctx
 }
+
+// For shared components (like Topbar) that render both inside and outside a
+// session, and only need to know which one they are in.
+export function useOptionalSession() {
+  return useContext(SessionContext)
+}

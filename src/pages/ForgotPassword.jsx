@@ -49,7 +49,7 @@ export default function ForgotPassword() {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-slate-900">ScriptMark</h1>
-          <p className="text-sm text-slate-500 mt-1">Institutional AI Assessment Infrastructure</p>
+          <p className="text-sm text-slate-500 mt-1">The AI marking assistant for handwritten exams</p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-8">

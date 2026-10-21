@@ -4,12 +4,15 @@ import { Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
+import PageAssistant, { questionsText } from '../components/PageAssistant.jsx'
+import { claimShortcuts } from '../lib/chatShortcuts.js'
 
 export default function ClaimQuestions() {
   const { token, user } = useAuth()
   const { sessionId } = useSession()
 
   const [questions, setQuestions] = useState([])
+  const [chatOpen, setChatOpen] = useState(false)
   const [markers, setMarkers] = useState([])
   const [isCoordinator, setIsCoordinator] = useState(false)
   const [canManage, setCanManage] = useState(false)
@@ -119,6 +122,18 @@ export default function ClaimQuestions() {
     }
   }
 
+  // What the chat helper asked for, done with the same call as the buttons.
+  async function runAssistantAction(action) {
+    const target = action.type === 'unclaim' ? null : action.targetUserId
+    await Promise.all(action.questionIds.map((id) => api.claimQuestion(guideId, id, token, target)))
+    await loadEverything()
+    const what = questionsText(action.labels)
+    if (action.type === 'claim') return `Claimed ${what} for you.`
+    if (action.type === 'unclaim') return `Released ${what}.`
+    const name = markers.find((m) => m.id === action.targetUserId)?.name || 'that lecturer'
+    return `Gave ${what} to ${name}.`
+  }
+
   async function handleApprove(userId) {
     setBusyUserId(userId)
     setError('')
@@ -160,6 +175,7 @@ export default function ClaimQuestions() {
   }
 
   async function handleRevoke(marker) {
+    if (!window.confirm(`Remove ${marker.name} from this session? Any questions they claimed go back to unclaimed.`)) return
     setBusyUserId(marker.id)
     setError('')
     try {
@@ -173,7 +189,7 @@ export default function ClaimQuestions() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-6">
+    <div className={`h-full overflow-y-auto p-6 pb-24 space-y-6 ${chatOpen ? 'sm:pr-[424px]' : ''}`}>
       <h1 className="text-xl font-semibold text-slate-900">Claim Questions</h1>
 
       {questionPaperUrl && (
@@ -266,7 +282,7 @@ export default function ClaimQuestions() {
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <div className="mb-2 flex items-center gap-2">
             <Users size={16} className="text-slate-400" />
-            <span className="text-xs font-medium text-slate-500">Markers on this session</span>
+            <span className="text-xs font-medium text-slate-500">Lecturers on this session</span>
           </div>
           <div className="space-y-1.5">
             {markers.map((m) => (
@@ -393,7 +409,7 @@ export default function ClaimQuestions() {
 
                           {isTaken && (
                             <div className="flex flex-col items-end gap-1.5">
-                              <Badge tone="slate">Claimed by {q.assignedMarker?.name || 'another marker'}</Badge>
+                              <Badge tone="slate">Claimed by {q.assignedMarker?.name || 'another lecturer'}</Badge>
                               {canManage && reassigningId !== q.id && (
                                 <button
                                   onClick={() => setReassigningId(q.id)}
@@ -440,6 +456,18 @@ export default function ClaimQuestions() {
           )}
         </div>
       )}
+
+      <PageAssistant
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        page="claim"
+        sessionId={sessionId}
+        title="Claim with chat"
+        intro="Tell it which questions are yours and it claims them for you."
+        quick={claimShortcuts(questions, user?.id, canManage)}
+        runAction={runAssistantAction}
+        hidden={!guideId}
+      />
     </div>
   )
 }

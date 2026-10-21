@@ -7,7 +7,7 @@ import path from 'node:path'
 // after routes moved under /sessions/:id/.
 const SRC = path.resolve(__dirname, '..')
 
-const GLOBAL_ROUTES = ['/', '/login', '/forgotPassword', '/signup', '/guides', '/assistant', '/settings']
+const GLOBAL_ROUTES = ['/', '/login', '/forgotPassword', '/signup', '/guides', '/assistant', '/settings', '/cohorts', '/contact', '/privacy']
 const SESSION_CHILDREN = ['scan', 'marking', 'claim-questions', 'my-queue', 'coordinator', 'results', 'analytics', 'export']
 
 function walk(dir) {

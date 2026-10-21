@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, RefreshCw, Pencil, Trash2, AlertCircle } from 'lucide-react'
+import { Search, RefreshCw, Pencil, Trash2, AlertCircle, AlertTriangle } from 'lucide-react'
 import { Badge, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
@@ -67,6 +67,8 @@ export default function MarkingProgress() {
   const [error, setError] = useState('')
   const [guideId, setGuideId] = useState(null)
   const redirectedRef = useRef(false)
+  const sawUnmarkedRef = useRef(false)
+  const [showDuplicates, setShowDuplicates] = useState(false)
 
   useEffect(() => {
     if (!sessionId) return
@@ -86,7 +88,10 @@ export default function MarkingProgress() {
         setMarkedCount(data.markedCount)
         setError('')
 
-        if (data.total > 0 && data.markedCount === data.total && !redirectedRef.current) {
+        // Move on to Results only when marking finishes while the lecturer
+        // watches; a session that was already marked stays here to browse.
+        if (data.markedCount < data.total) sawUnmarkedRef.current = true
+        if (sawUnmarkedRef.current && data.total > 0 && data.markedCount === data.total && !redirectedRef.current) {
           redirectedRef.current = true
           setTimeout(() => navigate(`/sessions/${sessionId}/results`), 1200)
         }
@@ -127,7 +132,9 @@ export default function MarkingProgress() {
     }
   }
 
+  const scannedTwice = scripts.filter((s) => s.duplicateOf?.length)
   const filtered = scripts.filter((s) => {
+    if (showDuplicates && !s.duplicateOf?.length) return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (s.studentName || '').toLowerCase().includes(q) || (s.regNumber || '').toLowerCase().includes(q)
@@ -160,9 +167,25 @@ export default function MarkingProgress() {
           />
         </div>
         {total > 0 && markedCount === total && (
-          <p className="mt-2 text-xs text-emerald-600">All submissions marked. Taking you to Results...</p>
+          <p className="mt-2 text-xs text-emerald-600">
+            All submissions marked.{sawUnmarkedRef.current ? ' Taking you to Results...' : ''}
+          </p>
         )}
       </div>
+
+      {scannedTwice.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex gap-2">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <span>
+              {scannedTwice.length} scripts share a reg number, so a student may have been scanned twice. Keep the copy that is already marked and delete the other, or fix a misread reg number in Results, before you export.
+            </span>
+          </p>
+          <button type="button" onClick={() => setShowDuplicates((v) => !v)} className="shrink-0 font-medium underline">
+            {showDuplicates ? 'Show all' : 'Show them'}
+          </button>
+        </div>
+      )}
 
       <div className="relative max-w-sm">
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -189,7 +212,10 @@ export default function MarkingProgress() {
             {filtered.map((s) => (
               <tr key={s.id} className="hover:bg-slate-50">
                 <td className="px-4 py-3">
-                  <div className="font-medium text-slate-800">{s.regNumber || 'Reg number pending'}</div>
+                  <div className="flex flex-wrap items-center gap-2 font-medium text-slate-800">
+                    {s.regNumber || 'Reg number pending'}
+                    {s.duplicateOf?.length > 0 && <Badge tone="amber">Scanned twice</Badge>}
+                  </div>
                   <div className="text-xs text-slate-400">{s.studentName || 'Name pending'}</div>
                 </td>
                 <td className="px-4 py-3">

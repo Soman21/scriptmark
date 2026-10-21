@@ -1,20 +1,36 @@
-import { Bell, User } from 'lucide-react'
+import { useOptionalSession } from '../context/SessionContext.jsx'
 
-export default function Topbar({ title, tabs, activeTab, onTabChange, right, search }) {
+// Page header. Outside a session it is the page's main title bar. Inside a
+// session the SessionWorkspace header already names the session and the
+// tab, so it becomes a slim toolbar: a smaller title and the page actions,
+// or nothing at all when the page has no actions.
+// tabs/activeTab/onTabChange are kept for pages with their own sub tabs.
+export default function Topbar({ title, tabs, activeTab, onTabChange, right }) {
+  const inSession = !!useOptionalSession()
+  // Inside a session the tab already names the page, so a bare title with
+  // nothing beside it would only repeat it.
+  if (inSession && !right && !tabs) return null
+
   return (
-    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
-      <div className="flex items-center gap-8">
-        <h2 className="text-lg font-semibold text-slate-900 whitespace-nowrap">{title}</h2>
+    <header
+      className={`flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 sm:px-6 ${
+        inSession ? 'py-3 bg-slate-50' : 'min-h-[60px] py-3 border-b border-slate-200 bg-white'
+      }`}
+    >
+      <div className="flex min-w-0 items-center gap-8">
+        <h2
+          className={`truncate font-semibold tracking-tight text-slate-900 ${inSession ? 'text-[15px]' : 'text-lg'}`}
+        >
+          {title}
+        </h2>
         {tabs && (
-          <nav className="flex items-center gap-6">
+          <nav className="flex items-center gap-1">
             {tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => onTabChange && onTabChange(tab)}
-                className={`text-sm pb-1 border-b-2 transition-colors ${
-                  activeTab === tab
-                    ? 'border-sky-500 text-sky-600 font-medium'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                  activeTab === tab ? 'bg-slate-900 text-white font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
                 {tab}
@@ -23,23 +39,7 @@ export default function Topbar({ title, tabs, activeTab, onTabChange, right, sea
           </nav>
         )}
       </div>
-
-      <div className="flex items-center gap-4">
-        {search && (
-          <input
-            type="text"
-            placeholder={search}
-            className="hidden sm:block w-56 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400"
-          />
-        )}
-        {right}
-        <button className="rounded-full p-2 text-slate-500 hover:bg-slate-100">
-          <Bell size={18} />
-        </button>
-        <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">
-          <User size={16} />
-        </div>
-      </div>
+      {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
     </header>
   )
 }

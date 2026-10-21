@@ -1,15 +1,29 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Mic, MicOff, Volume2, VolumeX, Sparkles, User, Download } from 'lucide-react'
+import { Send, Mic, MicOff, Volume2, VolumeX, Sparkles, User, Download, FileText } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import AssistantText from '../components/AssistantText.jsx'
 import { downloadSessionExport } from '../lib/download.js'
+import TodayList from '../components/TodayList.jsx'
+import ReportDialog from '../components/ReportDialog.jsx'
 
 const WELCOME_MESSAGE = {
   role: 'assistant',
   content:
-    "Hi! I'm the ScriptMark Assistant. Ask me about any of your sessions — progress, a student's scores, analytics, marking guides — or just how to use the app.",
+    "Hi! I'm the ScriptMark Assistant. I can see all your sessions at once. Ask for your pending tasks, find a student in any course, have me draft an examiner's report, or ask how to do something in the app.",
 }
+
+// Tapped instead of typed. "send" asks the question at once, "fill" puts a
+// start in the box for the lecturer to finish, "report" opens the report.
+const SHORTCUTS = [
+  { label: 'My tasks today', send: 'What are my pending tasks across all my sessions?' },
+  { label: 'Write an examiner\'s report', report: true },
+  { label: 'Find a student', fill: 'Find the student ' },
+  { label: 'Compare my sessions', send: 'Compare my sessions: averages, pass rates and the weakest question in each.' },
+  { label: 'Which session is furthest behind?', send: 'Which of my sessions is furthest behind on marking?' },
+  { label: 'How do I add lecturers?', send: 'How do I add other lecturers to a session?' },
+]
 
 export default function AiAssistant() {
   const { token } = useAuth()
@@ -18,9 +32,17 @@ export default function AiAssistant() {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [listening, setListening] = useState(false)
-  const [voiceReplies, setVoiceReplies] = useState(false)
+  const [voiceReplies, setVoiceReplies] = useState(() => {
+    try {
+      return localStorage.getItem('scriptmark_voice_replies') === '1' // default set in Settings
+    } catch {
+      return false
+    }
+  })
   const [speechSupported, setSpeechSupported] = useState(true)
   const [downloading, setDownloading] = useState(null)
+  const [reportOpen, setReportOpen] = useState(false)
+  const inputRef = useRef(null)
 
   const recognitionRef = useRef(null)
   const scrollRef = useRef(null)
@@ -69,8 +91,18 @@ export default function AiAssistant() {
     window.speechSynthesis.speak(utterance)
   }
 
-  async function handleSend() {
-    const trimmed = input.trim()
+  function runShortcut(s) {
+    if (s.report) return setReportOpen(true)
+    if (s.fill) {
+      setInput(s.fill)
+      inputRef.current?.focus()
+      return
+    }
+    handleSend(s.send)
+  }
+
+  async function handleSend(text) {
+    const trimmed = (typeof text === 'string' ? text : input).trim()
     if (!trimmed || sending) return
 
     const nextMessages = [...messages, { role: 'user', content: trimmed }]
@@ -80,7 +112,8 @@ export default function AiAssistant() {
     setSending(true)
 
     try {
-      const historyForApi = nextMessages.map((m) => ({ role: m.role, content: m.content }))
+      // The greeting is shown here only; the server never needs it.
+      const historyForApi = nextMessages.filter((m) => m !== WELCOME_MESSAGE).map((m) => ({ role: m.role, content: m.content }))
       const activeSessionId = localStorage.getItem('scriptmark_active_session')
       const data = await api.chatWithAssistant(historyForApi, activeSessionId, token)
       const updated = [...nextMessages, { role: 'assistant', content: data.reply, action: data.action }]
@@ -117,6 +150,13 @@ export default function AiAssistant() {
       <Topbar
         title="AI Assistant"
         right={
+          <div className="flex items-center gap-2">
+          <button
+            onClick={() => setReportOpen(true)}
+            className="flex items-center gap-1.5 rounded-full bg-ink-950 px-3 py-1.5 text-xs font-medium text-white hover:bg-ink-900"
+          >
+            <FileText size={14} /> <span className="hidden sm:inline">Examiner's report</span><span className="sm:hidden">Report</span>
+          </button>
           <button
             onClick={() => setVoiceReplies((v) => !v)}
             className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
@@ -124,14 +164,15 @@ export default function AiAssistant() {
             }`}
           >
             {voiceReplies ? <Volume2 size={14} /> : <VolumeX size={14} />}
-            {voiceReplies ? 'Voice replies on' : 'Voice replies off'}
+            <span className="hidden sm:inline">{voiceReplies ? 'Voice replies on' : 'Voice replies off'}</span>
           </button>
+          </div>
         }
       />
 
       {!speechSupported && (
         <div className="mx-6 mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
-          Voice input is not supported in this browser — try Chrome or Edge. Typing still works fine.
+          Voice input is not supported in this browser. Try Chrome or Edge, or just type.
         </div>
       )}
 
@@ -141,7 +182,10 @@ export default function AiAssistant() {
         </div>
       )}
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4 sm:px-6">
+        <div className="max-w-3xl">
+          <TodayList token={token} />
+        </div>
         {messages.map((m, i) =>
           m.role === 'user' ? (
             <div key={i} className="flex justify-end">
@@ -155,7 +199,7 @@ export default function AiAssistant() {
                 <Sparkles size={16} />
               </div>
               <div className="max-w-xl rounded-2xl border border-sky-100 bg-sky-50 px-5 py-3">
-                <p className="text-sm text-slate-800 whitespace-pre-wrap">{m.content}</p>
+                <AssistantText text={m.content} />
                 {m.action?.type === 'export' && (
                   <div className="mt-3 flex gap-2 border-t border-sky-100 pt-3">
                     {(m.action.format === 'xlsx' || m.action.format === 'both') && (
@@ -200,9 +244,22 @@ export default function AiAssistant() {
         )}
       </div>
 
-      <div className="border-t border-slate-200 px-6 py-4">
+      <div className="border-t border-slate-200 px-4 py-4 sm:px-6">
+        <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible" aria-label="Shortcuts">
+          {SHORTCUTS.map((s) => (
+            <button
+              key={s.label}
+              onClick={() => runShortcut(s)}
+              disabled={sending && !s.report}
+              className="shrink-0 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5">
           <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -219,7 +276,7 @@ export default function AiAssistant() {
             </button>
           )}
           <button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={sending || !input.trim()}
             className="rounded-full bg-ink-950 p-2 text-white hover:bg-ink-900 disabled:opacity-50"
           >
@@ -228,6 +285,7 @@ export default function AiAssistant() {
         </div>
         <p className="mt-2 text-center text-xs text-slate-400">AI can make mistakes. Check important info.</p>
       </div>
+      {reportOpen && <ReportDialog token={token} onClose={() => setReportOpen(false)} />}
     </div>
   )
 }

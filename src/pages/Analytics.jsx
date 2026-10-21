@@ -2,18 +2,22 @@ import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
 import { LayoutGrid, Trophy, Flag, FileText, AlertCircle, AlertTriangle } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
+import AiAgreementPanel from '../components/AiAgreementPanel.jsx'
+import CohortPanel from '../components/CohortPanel.jsx'
 import { StatCard } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
+import PageAssistant from '../components/PageAssistant.jsx'
+import { ANALYTICS_SHORTCUTS } from '../lib/chatShortcuts.js'
 
 export default function Analytics() {
   const { token } = useAuth()
   const { session, sessionId } = useSession()
   const [data, setData] = useState(null)
+  const [chatOpen, setChatOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const sessionTitle = session.title
 
   useEffect(() => {
     loadAnalytics()
@@ -34,7 +38,7 @@ export default function Analytics() {
 
   return (
     <div className="flex h-full flex-col">
-      <Topbar title={sessionTitle ? `Analytics: ${sessionTitle}` : 'Analytics Report'} />
+      <Topbar title="Analytics Report" />
 
       {error && (
         <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-600">
@@ -42,7 +46,7 @@ export default function Analytics() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className={`flex-1 overflow-y-auto p-6 pb-24 space-y-6 ${chatOpen ? 'sm:pr-[424px]' : ''}`}>
         {loading ? (
           <p className="text-sm text-slate-400">Loading analytics...</p>
         ) : !data || data.totalScripts === 0 ? (
@@ -62,7 +66,8 @@ export default function Analytics() {
               <StatCard
                 icon={<LayoutGrid size={16} className="text-sky-500" />}
                 label="Class Average"
-                value={data.average != null ? `${data.average}%` : '—'}
+                value={data.average != null ? `${data.average}` : '—'}
+                sub="exam marks"
               />
               <StatCard
                 icon={<Trophy size={16} className="text-amber-500" />}
@@ -136,9 +141,25 @@ export default function Analytics() {
                 </tbody>
               </table>
             </div>
+
+            <CohortPanel sessionId={sessionId} />
+
+            <AiAgreementPanel sessionId={sessionId} sessionTitle={session.title} />
           </>
         )}
       </div>
+
+      <PageAssistant
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        page="analytics"
+        sessionId={sessionId}
+        title="Ask about results"
+        intro="Questions about this session's scores, answered from its own numbers."
+        quick={ANALYTICS_SHORTCUTS}
+        runAction={async () => ''}
+        hidden={!data || data.totalScripts === 0}
+      />
     </div>
   )
 }
