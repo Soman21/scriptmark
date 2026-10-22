@@ -24,6 +24,7 @@ import Landing from './pages/Landing.jsx'
 import Contact from './pages/Contact.jsx'
 import JoinSession from './pages/JoinSession.jsx'
 import Privacy from './pages/Privacy.jsx'
+import SessionOverview from './pages/SessionOverview.jsx'
 import ServerWakeScreen from './components/ServerWakeScreen.jsx'
 import { wakeServer } from './lib/serverWake.js'
 
@@ -139,7 +140,8 @@ export default function App() {
 
         {/* A session's own workspace: tab bar + nested pages, all scoped to :id */}
         <Route path="/sessions/:id" element={<Protected><SessionWorkspace /></Protected>}>
-          <Route index element={<Navigate to="marking" replace />} />
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<SessionOverview />} />
           <Route path="scan" element={<ScanScripts />} />
           <Route path="marking" element={<MarkingProgress />} />
           <Route path="claim-questions" element={<ClaimQuestions />} />

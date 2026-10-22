@@ -168,7 +168,7 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
                   sessions.map((s) => (
                     <button
                       key={s.id}
-                      onClick={() => navigate(`/sessions/${s.id}/marking`)}
+                      onClick={() => navigate(`/sessions/${s.id}`)}
                       title={s.title}
                       className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                         s.id === activeSessionId ? itemActive : itemIdle

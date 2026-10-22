@@ -80,7 +80,7 @@ export default function Dashboard() {
               {recent.map((s) => (
                 <li key={s.id}>
                   <button
-                    onClick={() => navigate(`/sessions/${s.id}/marking`)}
+                    onClick={() => navigate(`/sessions/${s.id}`)}
                     className="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-slate-50"
                   >
                     <div>
