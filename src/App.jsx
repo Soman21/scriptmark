@@ -27,6 +27,7 @@ import Privacy from './pages/Privacy.jsx'
 import SessionOverview from './pages/SessionOverview.jsx'
 import CoursePage from './pages/CoursePage.jsx'
 import AdminPage from './pages/AdminPage.jsx'
+import { trackPage, startClickTracking } from './lib/track.js'
 import ServerWakeScreen from './components/ServerWakeScreen.jsx'
 import { wakeServer } from './lib/serverWake.js'
 import NotificationBell, { useNotifications } from './components/NotificationBell.jsx'
@@ -126,10 +127,22 @@ function ServerWake() {
   return readingOnly ? null : <ServerWakeScreen />
 }
 
+// Counts a page view on every route change and listens for clicks, for the
+// Analytics tab on the Admin page (lib/track.js).
+function PageTracker() {
+  const { pathname } = useLocation()
+  useEffect(() => startClickTracking(), [])
+  useEffect(() => {
+    trackPage(pathname)
+  }, [pathname])
+  return null
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <ServerWake />
+      <PageTracker />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/forgotPassword" element={<ForgotPassword />} />

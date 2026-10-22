@@ -76,6 +76,7 @@ export const api = {
   getScript: (scriptId, token) => request(`/api/sessions/scripts/${scriptId}`, { token }),
   getMe: (token) => request('/api/auth/me', { token }),
   getAdminOverview: (token) => request('/api/admin/overview', { token }),
+  getSiteAnalytics: (days, token) => request(`/api/admin/analytics?days=${days}`, { token }),
   getAdmins: (token) => request('/api/admin/admins', { token }),
   addAdmin: (email, token) => request('/api/admin/admins', { method: 'POST', body: { email }, token }),
   removeAdmin: (userId, token) => request(`/api/admin/admins/${userId}`, { method: 'DELETE', token }),

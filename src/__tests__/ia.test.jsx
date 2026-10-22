@@ -19,6 +19,8 @@ import SessionOverview from '../pages/SessionOverview.jsx'
 import NotificationBell, { useNotifications } from '../components/NotificationBell.jsx'
 import CoursePage from '../pages/CoursePage.jsx'
 import AdminPage from '../pages/AdminPage.jsx'
+import { pageName } from '../components/AdminAnalytics.jsx'
+import { trackPage, flush, startClickTracking } from '../lib/track.js'
 import { groupForMenu } from '../lib/courses.js'
 import App from '../App.jsx'
 
@@ -45,6 +47,7 @@ beforeEach(() => {
   seedAuth()
   routes = [
     routeFor('/api/auth/me', { user: FAKE_USER }),
+    routeFor('/api/track', null),
     routeFor('/api/sessions/s1', FAKE_SESSION),
     routeFor('/api/sessions', [FAKE_SESSION]),
     routeFor('/api/sessions/s1/scripts', []),
@@ -732,5 +735,80 @@ describe('Admin page', () => {
       </MemoryRouter>
     )
     expect(screen.getByRole('link', { name: 'Admin' })).toBeTruthy()
+  })
+})
+
+describe('Analytics', () => {
+  const stats = {
+    days: 30,
+    totals: { visitors: 42, views: 180, clicks: 95, lecturers: 6, signups: 4, viewsPerVisitor: 4.3, signupRate: 9.5 },
+    daily: [
+      { day: '2026-10-20', visitors: 10, views: 40 },
+      { day: '2026-10-21', visitors: 14, views: 60 },
+      { day: '2026-10-22', visitors: 18, views: 80 },
+    ],
+    pages: [{ path: '/sessions/:id/results', views: 50, visitors: 9 }, { path: '/', views: 30, visitors: 25 }],
+    clicks: [{ label: 'Export to Excel', path: '/sessions/:id/export', clicks: 12 }],
+    devices: [{ device: 'mobile', visitors: 30 }, { device: 'desktop', visitors: 12 }],
+    referrers: [],
+    hours: Array.from({ length: 24 }, (_, hour) => ({ hour, views: hour === 14 ? 30 : 2 })),
+  }
+
+  it('names pages in plain words', () => {
+    expect(pageName('/')).toBe('Home')
+    expect(pageName('/sessions/:id/my-queue')).toBe('Session: My Queue')
+    expect(pageName('/courses/:code')).toBe('Course')
+  })
+
+  it('shows the totals, chart, top pages and clicks, and changes range', async () => {
+    localStorage.setItem('scriptmark_user', JSON.stringify({ ...FAKE_USER, role: 'ADMIN' }))
+    routes.unshift(
+      routeFor('/api/auth/me', { user: { ...FAKE_USER, role: 'ADMIN' } }),
+      routeFor('/api/admin/overview', { totals: { users: 1, sessions: 1, activeSessions: 1, guides: 1, scripts: 1, marked: 1 }, status: { database: { ok: true, ms: 5 }, uptimeSeconds: 60, services: [] }, activity: [], lecturers: [], sessions: [] }),
+      routeFor('/api/admin/admins', { canChange: false, admins: [] }),
+      routeFor('/api/admin/analytics', stats),
+    )
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/admin" element={<AdminPage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    )
+    fireEvent.click(await screen.findByRole('tab', { name: 'Analytics' }))
+    expect(await screen.findByText('180')).toBeTruthy()
+    expect(screen.getByText('9.5% of visitors')).toBeTruthy()
+    expect(screen.getByText('14:00')).toBeTruthy()
+    expect(screen.getByText('Session: Results')).toBeTruthy()
+    expect(screen.getByText('Export to Excel')).toBeTruthy()
+    expect(screen.getByText('Phone')).toBeTruthy()
+    expect(screen.getByText('No referrals yet')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '7 days' }))
+    await waitFor(() => expect(global.fetch.mock.calls.some(([u]) => u.endsWith('/api/admin/analytics?days=7'))).toBe(true))
+  })
+
+  it('sends page views and clicks in one batch, never from the Admin page', async () => {
+    flush() // anything queued by earlier tests
+    global.fetch.mockClear()
+    const stop = startClickTracking()
+    trackPage('/guides')
+    trackPage('/admin')
+    const button = document.createElement('button')
+    button.textContent = 'Export to Excel'
+    document.body.appendChild(button)
+    button.click()
+    flush()
+    stop()
+    button.remove()
+    const call = global.fetch.mock.calls.find(([u]) => u.endsWith('/api/track'))
+    const body = JSON.parse(call[1].body)
+    expect(body.visitorId).toMatch(/^v-/)
+    expect(body.events.map((e) => [e.type, e.path, e.label])).toEqual([
+      ['PAGE_VIEW', '/guides', undefined],
+      ['CLICK', '/', 'Export to Excel'],
+    ])
+    expect(call[1].headers.Authorization).toBe('Bearer tok123')
   })
 })
