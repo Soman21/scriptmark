@@ -9,6 +9,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
+  // False until the server has confirmed the saved role, so a page that
+  // depends on the role does not act on an old copy.
+  const [roleChecked, setRoleChecked] = useState(false)
 
   useEffect(() => {
     const savedToken = localStorage.getItem('scriptmark_token')
@@ -28,6 +31,9 @@ export function AuthProvider({ children }) {
           setUser(next)
         })
         .catch(() => {})
+        .finally(() => setRoleChecked(true))
+    } else {
+      setRoleChecked(true)
     }
     setLoading(false)
   }, [])
@@ -89,7 +95,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, signup, login, verifyOtp, updateProfile, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, roleChecked, signup, login, verifyOtp, updateProfile, logout }}>
       {children}
     </AuthContext.Provider>
   )

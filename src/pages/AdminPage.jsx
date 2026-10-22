@@ -75,7 +75,7 @@ const SOURCE = { OWNER: 'Owner', EMAIL_LIST: 'Email list', GRANTED: 'Admin' }
 // Only for Admins. The server refuses everyone else (403), so the redirect
 // below is only for a tidy screen, not the protection.
 export default function AdminPage() {
-  const { user, token } = useAuth()
+  const { user, token, roleChecked } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState('Overview')
   const [data, setData] = useState(null)
@@ -102,7 +102,16 @@ export default function AdminPage() {
     loadAdmins()
   }, [token, user?.role])
 
-  if (user && user.role !== 'ADMIN') return <Navigate to="/" replace />
+  if (user && user.role !== 'ADMIN') {
+    // Wait for the server's answer: the owner may have just made this account an Admin.
+    if (!roleChecked)
+      return (
+        <div className="flex h-full items-center justify-center text-slate-400">
+          <Loader2 className="animate-spin" />
+        </div>
+      )
+    return <Navigate to="/" replace />
+  }
 
   async function addAdmin(e) {
     e.preventDefault()
