@@ -68,7 +68,8 @@ function Bars({ data, value, label, tip, axisLabels, height = 160 }) {
   const [hover, setHover] = useState(null)
   const max = Math.max(1, ...data.map(value))
   const step = max <= 4 ? 1 : Math.ceil(max / 4)
-  const top = Math.ceil(max / step) * step
+  // An even number of steps, so the middle grid line lands on a whole number.
+  const top = Math.ceil(max / (2 * step)) * 2 * step
   const ticks = [0, top / 2, top]
   return (
     <div className="relative">
@@ -211,7 +212,7 @@ export default function AdminAnalytics() {
             <Stat label="Page views" value={data.totals.views} sub={`${data.totals.viewsPerVisitor} per visitor`} />
             <Stat label="Clicks" value={data.totals.clicks} />
             <Stat label="Active lecturers" value={data.totals.lecturers} />
-            <Stat label="Sign ups" value={data.totals.signups} sub={`${data.totals.signupRate}% of visitors`} />
+            <Stat label="Sign ups" value={data.totals.signups} sub={data.totals.signupRate <= 100 ? `${data.totals.signupRate}% of visitors` : undefined} />
             <Stat label="Busiest hour" value={data.totals.views ? hourName(data.hours.reduce((a, b) => (b.views > a.views ? b : a)).hour) : 'N/A'} />
           </div>
 
