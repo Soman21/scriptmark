@@ -16,6 +16,7 @@ import Archive from '../pages/Archive.jsx'
 import ScanScripts from '../pages/ScanScripts.jsx'
 import Settings from '../pages/Settings.jsx'
 import SessionOverview from '../pages/SessionOverview.jsx'
+import NotificationBell, { useNotifications } from '../components/NotificationBell.jsx'
 import App from '../App.jsx'
 
 const FAKE_USER = { id: 'u1', name: 'Ann Coordinator', role: 'LECTURER' }
@@ -497,5 +498,55 @@ describe('Session Overview tab', () => {
     expect(await screen.findByText('72%')).toBeTruthy()
     expect(screen.queryByText('Join code')).toBeNull()
     expect(screen.getAllByRole('button', { name: /Add lecturers/ }).length).toBe(1) // header button only, from the coordinator session fixture
+  })
+})
+
+describe('Notification bell', () => {
+  function Harness() {
+    const bell = useNotifications()
+    return <NotificationBell bell={bell} />
+  }
+  const feed = {
+    items: [
+      { id: 'n1', type: 'JOIN_REQUEST', text: 'Bola Adeyemi asked to join ECE305', sessionId: 's1', actorId: 'u3', read: false, pending: true, createdAt: new Date().toISOString(), link: '/sessions/s1' },
+      { id: 'n2', type: 'REQUEST_APPROVED', text: 'Added to ECE512 by Chidi', sessionId: 's2', read: true, pending: false, createdAt: new Date().toISOString(), link: '/sessions/s2' },
+    ],
+    reminders: [{ id: 'claim:s2', type: 'REMINDER_CLAIM', sessionId: 's2', text: 'No questions claimed in ECE512', link: '/sessions/s2/claim-questions' }],
+    unread: 2,
+  }
+
+  it('shows the count, lists requests and reminders, grants access and marks read', async () => {
+    routes.unshift(
+      routeFor('/api/notifications', feed),
+      routeFor('/api/notifications/read', { ok: true }),
+      routeFor('/api/sessions/s1/markers/u3/approve', { ok: true }),
+    )
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <Harness />
+        </AuthProvider>
+      </MemoryRouter>
+    )
+    const button = await screen.findByRole('button', { name: 'Notifications, 2 new' })
+    fireEvent.click(button)
+    expect(screen.getByText('No questions claimed in ECE512')).toBeTruthy()
+    expect(screen.getByText('Added to ECE512 by Chidi')).toBeTruthy()
+    await waitFor(() => expect(global.fetch.mock.calls.some(([u, o]) => u.endsWith('/api/notifications/read') && o.method === 'POST')).toBe(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Grant access' }))
+    await waitFor(() => expect(global.fetch.mock.calls.some(([u, o]) => u.endsWith('/markers/u3/approve') && o.method === 'PUT')).toBe(true))
+  })
+
+  it('says so when there is nothing new', async () => {
+    routes.unshift(routeFor('/api/notifications', { items: [], reminders: [], unread: 0 }))
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <Harness />
+        </AuthProvider>
+      </MemoryRouter>
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Notifications' }))
+    expect(screen.getByText('No notifications')).toBeTruthy()
   })
 })
