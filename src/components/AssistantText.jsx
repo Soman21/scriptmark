@@ -9,7 +9,7 @@ export default function AssistantText({ text }) {
         if (item) {
           return (
             <p key={i} className="flex gap-2 pl-1">
-              <span className="shrink-0 text-sky-500">{/\d/.test(item[1]) ? item[1].replace(')', '.') : '•'}</span>
+              <span className="shrink-0 text-brand-500">{/\d/.test(item[1]) ? item[1].replace(')', '.') : '•'}</span>
               <span>{item[2]}</span>
             </p>
           )

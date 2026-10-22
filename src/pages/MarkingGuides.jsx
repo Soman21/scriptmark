@@ -706,7 +706,7 @@ export default function MarkingGuides() {
           await api.updateSession(currentSession.id, { guideId: guide.id }, token)
         }
       }
-      setSuccessMsg(isDraft ? 'Saved as a draft — you can finish it later.' : 'Marking guide saved and published.')
+      setSuccessMsg(isDraft ? 'Draft saved' : 'Marking guide saved and published.')
       loadGuides()
     } catch (err) {
       setError(err.message)
@@ -760,7 +760,7 @@ export default function MarkingGuides() {
                 <select
                   value={chosenSessionId}
                   onChange={(e) => setChosenSessionId(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                 >
                   <option value="">Select a session...</option>
                   {sessions.map((s) => (
@@ -772,7 +772,7 @@ export default function MarkingGuides() {
                 <PrimaryButton
                   onClick={handleContinueSession}
                   disabled={loadingSession || !chosenSessionId}
-                  className="mt-3 w-full justify-center bg-sky-500 hover:bg-sky-400"
+                  className="mt-3 w-full justify-center bg-brand-500 hover:bg-brand-600"
                 >
                   {loadingSession ? 'Loading...' : 'Continue with Session'}
                 </PrimaryButton>
@@ -794,7 +794,7 @@ export default function MarkingGuides() {
                       value={joinCodeInput}
                       onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
                       placeholder="e.g. K3M7QZ"
-                      className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm uppercase tracking-widest outline-none focus:ring-2 focus:ring-sky-400"
+                      className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm uppercase tracking-widest outline-none focus:ring-2 focus:ring-brand-400"
                     />
                     <SecondaryButton onClick={handleJoinSession} disabled={joiningSession}>
                       {joiningSession ? 'Joining...' : 'Join'}
@@ -802,7 +802,7 @@ export default function MarkingGuides() {
                   </div>
                 </div>
 
-                <button onClick={toggleBrowse} className="mt-3 text-xs font-medium text-sky-600 hover:text-sky-700">
+                <button onClick={toggleBrowse} className="mt-3 text-xs font-medium text-brand-600 hover:text-brand-700">
                   {showBrowse ? 'Hide sessions' : "Don't have a code? Browse sessions to request access"}
                 </button>
 
@@ -829,7 +829,7 @@ export default function MarkingGuides() {
                             <button
                               onClick={() => handleRequestAccess(s.id)}
                               disabled={requestingId === s.id}
-                              className="shrink-0 rounded-lg border border-sky-200 px-2.5 py-1 text-xs font-medium text-sky-600 hover:bg-sky-50 disabled:opacity-60"
+                              className="shrink-0 rounded-lg border border-brand-200 px-2.5 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50 disabled:opacity-60"
                             >
                               {requestingId === s.id ? 'Sending...' : 'Request Access'}
                             </button>
@@ -855,7 +855,7 @@ export default function MarkingGuides() {
             <SecondaryButton onClick={() => handleSave(true)} disabled={saving}>
               {saving ? 'Saving...' : 'Draft Save'}
             </SecondaryButton>
-            <PrimaryButton onClick={() => handleSave(false)} disabled={saving} className="bg-sky-500 hover:bg-sky-400">
+            <PrimaryButton onClick={() => handleSave(false)} disabled={saving} className="bg-brand-500 hover:bg-brand-600">
               {saving ? 'Saving...' : 'Save & Publish'}
             </PrimaryButton>
           </div>
@@ -898,13 +898,13 @@ export default function MarkingGuides() {
           )}
 
           {currentSession?.joinCode && (
-            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+            <div className="rounded-xl border border-brand-200 bg-brand-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <p className="text-xs font-medium text-sky-700">Session join code</p>
-                  <p className="text-lg font-bold tracking-widest text-sky-900">{currentSession.joinCode}</p>
+                  <p className="text-xs font-medium text-brand-700">Session join code</p>
+                  <p className="text-lg font-bold tracking-widest text-brand-900">{currentSession.joinCode}</p>
                 </div>
-                <p className="max-w-xs text-xs text-sky-700">
+                <p className="max-w-xs text-xs text-brand-700">
                   Share this with other markers, or invite someone directly by email below. Once they join, they
                   assign themselves questions from the Claim Questions page.
                 </p>
@@ -916,7 +916,7 @@ export default function MarkingGuides() {
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   placeholder="colleague@university.edu"
-                  className="flex-1 rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                  className="flex-1 rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                 />
                 <SecondaryButton onClick={handleInviteByEmail} disabled={invitingEmail || !inviteEmail.trim()}>
                   {invitingEmail ? 'Sending...' : 'Invite by Email'}
@@ -951,11 +951,11 @@ export default function MarkingGuides() {
               onDragLeave={() => setDragOverPaper(false)}
               onDrop={handlePaperDrop}
               className={`mt-3 rounded-xl border-2 border-dashed p-5 text-center transition ${
-                dragOverPaper ? 'border-sky-400 bg-sky-50' : 'border-slate-300 bg-white'
+                dragOverPaper ? 'border-brand-400 bg-brand-50' : 'border-slate-300 bg-white'
               }`}
             >
               {parsingPaper ? (
-                <Loader2 size={20} className="mx-auto mb-2 animate-spin text-sky-500" />
+                <Loader2 size={20} className="mx-auto mb-2 animate-spin text-brand-500" />
               ) : (
                 <FileUp size={20} className="mx-auto mb-2 text-slate-400" />
               )}
@@ -963,7 +963,7 @@ export default function MarkingGuides() {
                 {parsingPaper ? 'Reading document...' : 'Drag the question paper here'}
               </p>
               {!parsingPaper && (
-                <label className="mt-1 inline-block cursor-pointer text-xs font-medium text-sky-600 hover:text-sky-700">
+                <label className="mt-1 inline-block cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700">
                   or click to browse
                   <input
                     type="file"
@@ -981,7 +981,7 @@ export default function MarkingGuides() {
                 <div className="flex shrink-0 items-center gap-3">
                   <button
                     onClick={() => setShowQuestionPaperPreview(true)}
-                    className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                    className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
                   >
                     <Eye size={14} /> Preview
                   </button>
@@ -1051,11 +1051,11 @@ export default function MarkingGuides() {
               onDragLeave={() => setDragOverGuide(false)}
               onDrop={handleGuideDrop}
               className={`mt-3 rounded-xl border-2 border-dashed p-5 text-center transition ${
-                dragOverGuide ? 'border-sky-400 bg-sky-50' : 'border-slate-300 bg-white'
+                dragOverGuide ? 'border-brand-400 bg-brand-50' : 'border-slate-300 bg-white'
               }`}
             >
               {parsingGuideDoc ? (
-                <Loader2 size={20} className="mx-auto mb-2 animate-spin text-sky-500" />
+                <Loader2 size={20} className="mx-auto mb-2 animate-spin text-brand-500" />
               ) : (
                 <FileUp size={20} className="mx-auto mb-2 text-slate-400" />
               )}
@@ -1063,7 +1063,7 @@ export default function MarkingGuides() {
                 {parsingGuideDoc ? 'Reading document...' : 'Drag the marking guide / answers here'}
               </p>
               {!parsingGuideDoc && (
-                <label className="mt-1 inline-block cursor-pointer text-xs font-medium text-sky-600 hover:text-sky-700">
+                <label className="mt-1 inline-block cursor-pointer text-xs font-medium text-brand-600 hover:text-brand-700">
                   or click to browse
                   <input
                     type="file"
@@ -1081,7 +1081,7 @@ export default function MarkingGuides() {
                 <div className="flex shrink-0 items-center gap-3">
                   <button
                     onClick={() => setShowGuidePreview(true)}
-                    className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                    className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
                   >
                     <Eye size={14} /> Preview
                   </button>
@@ -1127,7 +1127,7 @@ export default function MarkingGuides() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Biology Midterm, Fall 2024"
-              className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+              className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
             />
           </div>
 
@@ -1143,7 +1143,7 @@ export default function MarkingGuides() {
                     <input
                       value={group.number}
                       onChange={(e) => updateGroupNumber(group.id, e.target.value)}
-                      className="w-16 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-center font-semibold outline-none focus:ring-2 focus:ring-sky-400"
+                      className="w-16 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-sm text-center font-semibold outline-none focus:ring-2 focus:ring-brand-400"
                     />
                   </div>
                   <div className="flex items-center gap-3">
@@ -1167,7 +1167,7 @@ export default function MarkingGuides() {
                     <div key={part.id} className={hasSubParts ? 'rounded-lg border border-slate-100 bg-slate-50/50 p-4' : ''}>
                       {hasSubParts && (
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold text-sky-600">
+                          <span className="text-xs font-semibold text-brand-600">
                             Part {group.number}
                             {letterLabel(i)}
                           </span>
@@ -1195,7 +1195,7 @@ export default function MarkingGuides() {
                           }
                         }}
                         placeholder="Enter the question prompt here..."
-                        className="mt-1.5 w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                        className="mt-1.5 w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                       />
 
                       <div className="mt-3 flex items-center justify-between">
@@ -1204,7 +1204,7 @@ export default function MarkingGuides() {
                           type="button"
                           onClick={() => handleGenerateAnswers(part.id)}
                           disabled={generatingAnswers}
-                          className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700 disabled:opacity-60"
+                          className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 disabled:opacity-60"
                         >
                           <Sparkles size={12} /> Generate with AI
                         </button>
@@ -1220,7 +1220,7 @@ export default function MarkingGuides() {
                           }
                         }}
                         placeholder="Paste the ideal response here... (formulas are fine as plain text, e.g. F = ma)"
-                        className="mt-1.5 w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                        className="mt-1.5 w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                       />
 
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-3">
@@ -1230,7 +1230,7 @@ export default function MarkingGuides() {
                             value={part.keywords}
                             onChange={(e) => updatePart(group.id, part.id, 'keywords', e.target.value)}
                             placeholder="e.g. Newton's second law, force, acceleration"
-                            className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                            className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                           />
                         </div>
                         <div>
@@ -1239,7 +1239,7 @@ export default function MarkingGuides() {
                             type="number"
                             value={part.marks}
                             onChange={(e) => updatePart(group.id, part.id, 'marks', e.target.value)}
-                            className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                            className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                           />
                         </div>
                       </div>
@@ -1250,7 +1250,7 @@ export default function MarkingGuides() {
                           id={`calc-${part.id}`}
                           checked={part.isCalculationHeavy}
                           onChange={(e) => updatePart(group.id, part.id, 'isCalculationHeavy', e.target.checked)}
-                          className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400"
+                          className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-400"
                         />
                         <label htmlFor={`calc-${part.id}`} className="text-sm text-slate-700">
                           Calculation heavy question
@@ -1267,7 +1267,7 @@ export default function MarkingGuides() {
                           <button
                             type="button"
                             onClick={() => addStep(group.id, part.id)}
-                            className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                            className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
                           >
                             <Plus size={12} /> Add step
                           </button>
@@ -1286,13 +1286,13 @@ export default function MarkingGuides() {
                                   value={step.description}
                                   onChange={(e) => updateStep(group.id, part.id, step.id, 'description', e.target.value)}
                                   placeholder="Describe this step, e.g. correctly sets up the equation"
-                                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                                 />
                                 <input
                                   type="number"
                                   value={step.marks}
                                   onChange={(e) => updateStep(group.id, part.id, step.id, 'marks', e.target.value)}
-                                  className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-right outline-none focus:ring-2 focus:ring-sky-400"
+                                  className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-right outline-none focus:ring-2 focus:ring-brand-400"
                                 />
                                 <button
                                   onClick={() => removeStep(group.id, part.id, step.id)}
@@ -1329,7 +1329,7 @@ export default function MarkingGuides() {
 
                 <button
                   onClick={() => addPart(group.id)}
-                  className="mt-4 flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:text-sky-700"
+                  className="mt-4 flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
                 >
                   <Plus size={14} /> Add subpart (e.g. {letterLabel(group.parts.length)})
                 </button>
@@ -1339,7 +1339,7 @@ export default function MarkingGuides() {
 
           <button
             onClick={addGroup}
-            className="w-full rounded-xl border-2 border-dashed border-slate-300 bg-white py-8 flex flex-col items-center gap-1 text-slate-500 hover:border-sky-400 hover:text-sky-600 transition-colors"
+            className="w-full rounded-xl border-2 border-dashed border-slate-300 bg-white py-8 flex flex-col items-center gap-1 text-slate-500 hover:border-brand-400 hover:text-brand-600 transition-colors"
           >
             <Plus size={20} />
             <span className="font-medium">Add Another Question</span>
@@ -1366,8 +1366,7 @@ export default function MarkingGuides() {
             </div>
             <p className="mt-3 flex items-start gap-2 rounded-lg bg-white/5 p-3 text-xs text-slate-300">
               <Sparkles size={14} className="shrink-0 mt-0.5" />
-              Formulas can be typed as plain text (e.g. "v = u + at"). Handwritten formulas in scanned scripts may not
-              OCR perfectly — this is a known limitation of standard OCR tools.
+              Type formulas as plain text, for example v = u + at. Handwritten formulas may read imperfectly.
             </p>
           </div>
 
@@ -1377,7 +1376,7 @@ export default function MarkingGuides() {
               {recentGuides.length > 5 && (
                 <button
                   onClick={() => setShowAllGuides((v) => !v)}
-                  className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                  className="text-xs font-medium text-brand-600 hover:text-brand-700"
                 >
                   {showAllGuides ? 'Show Less' : 'View All'}
                 </button>
@@ -1386,7 +1385,7 @@ export default function MarkingGuides() {
             {loadingGuides ? (
               <p className="text-sm text-slate-400">Loading guides...</p>
             ) : recentGuides.length === 0 ? (
-              <p className="text-sm text-slate-400">No marking guides yet — create your first one on the left.</p>
+              <p className="text-sm text-slate-400">No marking guides yet.</p>
             ) : (
               <ul className="space-y-1 max-h-96 overflow-y-auto">
                 {visibleGuides.map((g) => {
@@ -1396,7 +1395,7 @@ export default function MarkingGuides() {
                       <button
                         onClick={() => loadGuideForEditing(g)}
                         className={`w-full text-left rounded-lg px-2 py-2 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
-                          currentGuideId === g.id ? 'bg-sky-50' : ''
+                          currentGuideId === g.id ? 'bg-brand-50' : ''
                         }`}
                       >
                         <div className="flex items-center justify-between">

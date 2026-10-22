@@ -183,7 +183,7 @@ export default function Archive() {
             )}
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <StatCard icon={<Users size={16} className="text-sky-500" />} label="Total Scripts" value={scripts.length} />
+              <StatCard icon={<Users size={16} className="text-brand-500" />} label="Total Scripts" value={scripts.length} />
               <StatCard icon={<CheckCircle2 size={16} className="text-emerald-500" />} label="Reviewed" value={reviewed} />
               <StatCard icon={<Clock size={16} className="text-amber-500" />} label="Pending Review" value={pending} />
             </div>
@@ -324,7 +324,7 @@ export default function Archive() {
                             onChange={(e) => updateCaLocal(s.id, e.target.value)}
                             onBlur={() => saveCaScore(s.id)}
                             placeholder="Enter"
-                            className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                            className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                           />
                         </td>
                         )}
@@ -366,7 +366,7 @@ export default function Archive() {
                     setResolveName(reviewEntry.name)
                     setResolveRegNumber(reviewEntry.regNumber)
                   }}
-                  className={`rounded-lg border p-3 text-left text-sm ${resolveName === reviewEntry.name ? 'border-sky-400 bg-sky-50' : 'border-slate-200 hover:bg-slate-50'}`}
+                  className={`rounded-lg border p-3 text-left text-sm ${resolveName === reviewEntry.name ? 'border-brand-400 bg-brand-50' : 'border-slate-200 hover:bg-slate-50'}`}
                 >
                   <p className="text-xs text-slate-400 mb-1">Currently saved</p>
                   <p className="font-medium text-slate-800">{reviewEntry.name}</p>
@@ -376,7 +376,7 @@ export default function Archive() {
                     setResolveName(reviewEntry.conflict?.name || '')
                     setResolveRegNumber(reviewEntry.conflict?.regNumber || reviewEntry.regNumber)
                   }}
-                  className={`rounded-lg border p-3 text-left text-sm ${resolveName === reviewEntry.conflict?.name ? 'border-sky-400 bg-sky-50' : 'border-slate-200 hover:bg-slate-50'}`}
+                  className={`rounded-lg border p-3 text-left text-sm ${resolveName === reviewEntry.conflict?.name ? 'border-brand-400 bg-brand-50' : 'border-slate-200 hover:bg-slate-50'}`}
                 >
                   <p className="text-xs text-slate-400 mb-1">From the newer upload</p>
                   <p className="font-medium text-slate-800">{reviewEntry.conflict?.name}</p>
@@ -391,7 +391,7 @@ export default function Archive() {
                     {!showSourcePreview ? (
                       <button
                         onClick={() => setShowSourcePreview(true)}
-                        className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
                       >
                         View the source document this came from
                       </button>
@@ -421,7 +421,7 @@ export default function Archive() {
                   <input
                     value={resolveName}
                     onChange={(e) => setResolveName(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                   />
                 </div>
                 <div>
@@ -429,7 +429,7 @@ export default function Archive() {
                   <input
                     value={resolveRegNumber}
                     onChange={(e) => setResolveRegNumber(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                   />
                 </div>
               </div>

@@ -27,7 +27,7 @@ export default function Contact() {
   }
 
   const input =
-    'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100'
+    'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-400 focus:ring-4 focus:ring-brand-100'
 
   return (
     <PublicShell
@@ -39,14 +39,14 @@ export default function Contact() {
         <div className="space-y-5">
           <a
             href={`mailto:${CONTACT.email}`}
-            className="group flex items-start gap-4 rounded-3xl border border-slate-200 p-6 transition hover:border-sky-300 hover:shadow-lg hover:shadow-sky-100"
+            className="group flex items-start gap-4 rounded-3xl border border-slate-200 p-6 transition hover:border-brand-300 hover:shadow-lg hover:shadow-brand-100"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500 text-white">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white">
               <Mail size={20} />
             </span>
             <span>
               <span className="block font-display text-lg font-semibold text-slate-950">Email</span>
-              <span className="mt-1 block break-all text-[15px] text-sky-700 group-hover:text-sky-800">{CONTACT.email}</span>
+              <span className="mt-1 block break-all text-[15px] text-brand-700 group-hover:text-brand-800">{CONTACT.email}</span>
             </span>
           </a>
           <div className="flex items-start gap-4 rounded-3xl border border-slate-200 p-6">
@@ -71,7 +71,7 @@ export default function Contact() {
           <div className="rounded-3xl bg-ink-950 p-6 text-white">
             <p className="font-display text-lg font-semibold">Ready to try it yourself?</p>
             <p className="mt-1.5 text-sm text-slate-300">Create an account and mark your first booklet today.</p>
-            <Link to="/signup" className="mt-4 inline-flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold hover:bg-sky-400">
+            <Link to="/signup" className="mt-4 inline-flex items-center gap-2 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold hover:bg-brand-600">
               Start marking <ArrowRight size={15} />
             </Link>
           </div>

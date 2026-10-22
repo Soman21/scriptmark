@@ -20,7 +20,6 @@ import SignUp from './pages/SignUp.jsx'
 import Login from './pages/Login.jsx'
 import ForgotPassword from './pages/ForgotPassword.jsx'
 import Settings from './pages/Settings.jsx'
-import CohortAnalytics from './pages/CohortAnalytics.jsx'
 import Landing from './pages/Landing.jsx'
 import Contact from './pages/Contact.jsx'
 import JoinSession from './pages/JoinSession.jsx'
@@ -33,6 +32,7 @@ function AppLayout({ children }) {
   const currentUser = user
     ? {
         name: user.name,
+        email: user.email,
         role: user.role,
         initials: user.name
           .split(' ')
@@ -135,7 +135,6 @@ export default function App() {
         <Route path="/join/:code" element={<Protected><JoinSession /></Protected>} />
         <Route path="/guides" element={<Protected><MarkingGuides /></Protected>} />
         <Route path="/assistant" element={<Protected><AiAssistant /></Protected>} />
-        <Route path="/cohorts" element={<Protected><CohortAnalytics /></Protected>} />
         <Route path="/settings" element={<Protected><Settings /></Protected>} />
 
         {/* A session's own workspace: tab bar + nested pages, all scoped to :id */}

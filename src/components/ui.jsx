@@ -43,7 +43,7 @@ export function Badge({ children, tone = 'slate' }) {
     green: 'bg-emerald-100 text-emerald-700',
     amber: 'bg-amber-100 text-amber-700',
     red: 'bg-rose-100 text-rose-700',
-    blue: 'bg-sky-100 text-sky-700',
+    blue: 'bg-brand-100 text-brand-700',
   }
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${tones[tone]}`}>

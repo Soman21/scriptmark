@@ -254,7 +254,7 @@ export default function Results() {
                   value={currentIndex}
                   onChange={(e) => setCurrentIndex(Number(e.target.value))}
                   aria-label="Jump to script"
-                  className="h-9 min-w-0 flex-1 sm:max-w-[12rem] sm:flex-none rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-sky-400"
+                  className="h-9 min-w-0 flex-1 sm:max-w-[12rem] sm:flex-none rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-brand-400"
                 >
                   {scripts.map((s, i) => (
                     <option key={s.id} value={i}>
@@ -353,7 +353,7 @@ export default function Results() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-semibold text-sky-600">{label}</span>
+                            <span className="text-xs font-semibold text-brand-600">{label}</span>
                             {answer.confidence && (
                               <Badge tone={confidenceTone}>
                                 {answer.confidence.charAt(0).toUpperCase() + answer.confidence.slice(1)} confidence
@@ -361,7 +361,7 @@ export default function Results() {
                             )}
                             <button
                               onClick={() => askAbout(label)}
-                              className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                              className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
                             >
                               <Sparkles size={12} /> Ask the assistant
                             </button>
@@ -379,7 +379,7 @@ export default function Results() {
                             value={draftScores[answer.id] ?? ''}
                             onChange={(e) => updateDraft(answer.id, e.target.value)}
                             aria-label={`Score for ${label}`}
-                            className="w-16 rounded-lg border border-slate-200 px-2 py-1.5 text-right text-sm font-semibold outline-none focus:ring-2 focus:ring-sky-400"
+                            className="w-16 rounded-lg border border-slate-200 px-2 py-1.5 text-right text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-400"
                           />
                           <span className="text-sm text-slate-400">/ {q?.maxMarks}</span>
                         </div>
@@ -390,7 +390,7 @@ export default function Results() {
                           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Expected Answer</p>
                           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{q?.modelAnswer}</p>
                         </div>
-                        <div className="rounded-lg border border-sky-100 bg-sky-50/50 p-3.5">
+                        <div className="rounded-lg border border-brand-100 bg-brand-50/50 p-3.5">
                           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Student's Answer</p>
                           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{answer.extractedText}</p>
                         </div>
@@ -471,7 +471,7 @@ export default function Results() {
                   setFinderOpen(false)
                   setAssistantOpen(true)
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 px-3 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
               >
                 <Sparkles size={15} /> <span className="hidden sm:inline">Marking assistant</span>
               </button>

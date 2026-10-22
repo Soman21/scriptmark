@@ -117,7 +117,7 @@ export default function Login() {
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-slate-700">Password</label>
-                    <Link to="/forgotPassword" className="text-xs text-sky-600 font-medium">
+                    <Link to="/forgotPassword" className="text-xs text-brand-600 font-medium">
                       Forgot password?
                     </Link>
                   </div>
@@ -144,14 +144,14 @@ export default function Login() {
 
               <p className="text-center text-sm text-slate-500 mt-6">
                 Do not have an account?{' '}
-                <Link to={withNext('/signup', location.search)} className="text-sky-600 font-medium">
+                <Link to={withNext('/signup', location.search)} className="text-brand-600 font-medium">
                   Create one
                 </Link>
               </p>
             </>
           ) : (
             <>
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-sky-50 text-sky-500">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-500">
                 <KeyRound size={18} />
               </div>
               <h2 className="text-xl font-semibold text-slate-900 text-center">Enter your login code</h2>
@@ -174,7 +174,7 @@ export default function Login() {
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="000000"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-center text-lg tracking-[0.5em] outline-none focus:ring-2 focus:ring-sky-400"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-center text-lg tracking-[0.5em] outline-none focus:ring-2 focus:ring-brand-400"
                 />
 
                 <PrimaryButton type="submit" disabled={submitting || code.length !== 6} className="w-full justify-center py-2.5">
@@ -188,7 +188,7 @@ export default function Login() {
                 ) : (
                   <>
                     No code?{' '}
-                    <button type="button" onClick={handleResend} disabled={submitting} className="font-medium text-sky-600 hover:text-sky-700 disabled:opacity-60">
+                    <button type="button" onClick={handleResend} disabled={submitting} className="font-medium text-brand-600 hover:text-brand-700 disabled:opacity-60">
                       Send a new one
                     </button>
                   </>

@@ -165,7 +165,7 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, embed
                       {f.type === 'application/pdf' ? (
                         <FileText size={14} className="shrink-0 text-rose-500" />
                       ) : (
-                        <ImageIcon size={14} className="shrink-0 text-sky-500" />
+                        <ImageIcon size={14} className="shrink-0 text-brand-500" />
                       )}
                       <span className="truncate text-sm text-slate-700">{f.name}</span>
                     </div>

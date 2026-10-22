@@ -256,7 +256,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
         className={`w-full flex items-center justify-between px-4 py-3 text-left ${embedded ? 'cursor-default' : ''}`}
       >
         <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-          <FileUp size={16} className="text-sky-500" /> Bulk PDF Upload
+          <FileUp size={16} className="text-brand-500" /> Bulk PDF Upload
         </span>
         {!embedded && (expanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />)}
       </button>
@@ -276,10 +276,10 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                 {MODES.map((m) => (
                   <label
                     key={m.id}
-                    className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${mode === m.id ? 'border-sky-400 bg-sky-50 ring-1 ring-sky-400' : 'border-slate-200 hover:bg-slate-50'}`}
+                    className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${mode === m.id ? 'border-brand-400 bg-brand-50 ring-1 ring-brand-400' : 'border-slate-200 hover:bg-slate-50'}`}
                   >
                     <input type="radio" name="split-mode" className="sr-only" checked={mode === m.id} onChange={() => setMode(m.id)} aria-label={m.title} />
-                    <m.icon size={18} className={`mt-0.5 shrink-0 ${mode === m.id ? 'text-sky-600' : 'text-slate-400'}`} />
+                    <m.icon size={18} className={`mt-0.5 shrink-0 ${mode === m.id ? 'text-brand-600' : 'text-slate-400'}`} />
                     <span>
                       <span className="block text-sm font-semibold text-slate-900">
                         {m.title}
@@ -303,7 +303,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                     step={1}
                     value={pagesPerSubmission}
                     onChange={(e) => setPagesPerSubmission(Math.max(1, Math.floor(Number(e.target.value)) || 1))}
-                    className="mt-1 block w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                    className="mt-1 block w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                   />
                 </div>
               )}
@@ -315,7 +315,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                 className="block w-full text-sm text-slate-600"
               />
 
-              <PrimaryButton onClick={handleSplit} disabled={splitting || !pdfFile} className="bg-sky-500 hover:bg-sky-400">
+              <PrimaryButton onClick={handleSplit} disabled={splitting || !pdfFile} className="bg-brand-500 hover:bg-brand-600">
                 {splitting ? (
                   <>
                     <Loader2 size={16} className="animate-spin" /> Splitting...
@@ -351,7 +351,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                     onDrop={() => handleDropOnGroup(gi)}
                     className={`rounded-lg border p-3 transition ${
                       dragSource && dropTarget === gi
-                        ? 'border-sky-400 bg-sky-50 ring-2 ring-sky-300'
+                        ? 'border-brand-400 bg-brand-50 ring-2 ring-brand-300'
                         : odd.has(gi)
                         ? 'border-amber-300 bg-amber-50/40'
                         : 'border-slate-200'
@@ -367,7 +367,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                         value={g.regNumber}
                         onChange={(e) => updateGroupField(gi, 'regNumber', e.target.value)}
                         placeholder={`Group ${gi + 1}: type reg number`}
-                        className="w-full rounded-lg border border-slate-200 px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-sky-400"
+                        className="w-full rounded-lg border border-slate-200 px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-brand-400"
                       />
                     </div>
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -378,7 +378,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                         {gi < groups.length - 1 && (
                           <button
                             onClick={() => mergeWithNext(gi)}
-                            className="flex items-center gap-1 text-xs text-sky-600 hover:text-sky-700"
+                            className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700"
                             title="Merge with next submission"
                           >
                             <Merge size={12} /> Merge next
@@ -433,7 +433,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                             style={{ transform: `rotate(${p.rotation || 0}deg)` }}
                           />
                           {p.crop && (
-                            <span className="absolute bottom-1 right-1 z-10 rounded bg-sky-600 px-1 text-[9px] font-semibold text-white">
+                            <span className="absolute bottom-1 right-1 z-10 rounded bg-brand-600 px-1 text-[9px] font-semibold text-white">
                               Cropped
                             </span>
                           )}
@@ -454,7 +454,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                                 e.stopPropagation()
                                 splitAt(gi, pi)
                               }}
-                              className="absolute right-1 bottom-1 z-20 flex items-center gap-0.5 rounded-full bg-sky-600 px-1.5 py-0.5 text-[10px] font-semibold text-white transition hover:bg-sky-500 sm:opacity-0 sm:group-hover:opacity-100"
+                              className="absolute right-1 bottom-1 z-20 flex items-center gap-0.5 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white transition hover:bg-brand-500 sm:opacity-0 sm:group-hover:opacity-100"
                               title="Start a new script from this page"
                               aria-label="Split here"
                             >
@@ -476,7 +476,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                       value={g.studentName}
                       onChange={(e) => updateGroupField(gi, 'studentName', e.target.value)}
                       placeholder="Student name (optional)"
-                      className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                      className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                     />
                   </div>
                 ))}

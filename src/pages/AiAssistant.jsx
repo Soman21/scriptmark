@@ -160,7 +160,7 @@ export default function AiAssistant() {
           <button
             onClick={() => setVoiceReplies((v) => !v)}
             className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-              voiceReplies ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-500'
+              voiceReplies ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-500'
             }`}
           >
             {voiceReplies ? <Volume2 size={14} /> : <VolumeX size={14} />}
@@ -198,10 +198,10 @@ export default function AiAssistant() {
               <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink-950 text-white">
                 <Sparkles size={16} />
               </div>
-              <div className="max-w-xl rounded-2xl border border-sky-100 bg-sky-50 px-5 py-3">
+              <div className="max-w-xl rounded-2xl border border-brand-100 bg-brand-50 px-5 py-3">
                 <AssistantText text={m.content} />
                 {m.action?.type === 'export' && (
-                  <div className="mt-3 flex gap-2 border-t border-sky-100 pt-3">
+                  <div className="mt-3 flex gap-2 border-t border-brand-100 pt-3">
                     {(m.action.format === 'xlsx' || m.action.format === 'both') && (
                       <button
                         onClick={() => handleDownload(m.action, 'xlsx')}
@@ -224,7 +224,7 @@ export default function AiAssistant() {
                 )}
                 <button
                   onClick={() => speak(m.content)}
-                  className="mt-2 flex items-center gap-1 text-xs text-sky-600 hover:text-sky-700"
+                  className="mt-2 flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700"
                 >
                   <Volume2 size={12} /> Read aloud
                 </button>
@@ -237,7 +237,7 @@ export default function AiAssistant() {
             <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink-950 text-white">
               <Sparkles size={16} />
             </div>
-            <div className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-3 text-sm text-slate-400">
+            <div className="rounded-2xl border border-brand-100 bg-brand-50 px-5 py-3 text-sm text-slate-400">
               Thinking...
             </div>
           </div>
@@ -251,7 +251,7 @@ export default function AiAssistant() {
               key={s.label}
               onClick={() => runShortcut(s)}
               disabled={sending && !s.report}
-              className="shrink-0 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+              className="shrink-0 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700 hover:bg-brand-100 disabled:opacity-50"
             >
               {s.label}
             </button>

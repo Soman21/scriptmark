@@ -193,7 +193,7 @@ export default function MarkingProgress() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or reg number"
-          className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+          className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-brand-400"
         />
       </div>
 
@@ -227,8 +227,8 @@ export default function MarkingProgress() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleRemark(s.id)}
-                      className="flex items-center gap-1 text-xs text-sky-600 hover:text-sky-700"
-                      title="Re-run scoring for this submission"
+                      className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700"
+                      title="Score again"
                     >
                       <RefreshCw size={12} /> Remark
                     </button>

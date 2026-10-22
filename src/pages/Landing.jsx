@@ -69,13 +69,13 @@ function Reveal({ children, className = '', delay = 0 }) {
 
 function Eyebrow({ children, dark = false }) {
   return (
-    <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${dark ? 'text-sky-300' : 'text-sky-600'}`}>{children}</p>
+    <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${dark ? 'text-brand-300' : 'text-brand-600'}`}>{children}</p>
   )
 }
 
 // Serif italic accent inside a display headline.
 function Accent({ children, dark = false }) {
-  return <span className={`block font-serif font-normal italic tracking-normal ${dark ? 'text-sky-300' : 'text-sky-600'}`}>{children}</span>
+  return <span className={`block font-serif font-normal italic tracking-normal ${dark ? 'text-brand-300' : 'text-brand-600'}`}>{children}</span>
 }
 
 function SectionHeading({ eyebrow, title, text, dark = false, center = false }) {
@@ -102,7 +102,7 @@ function Pill({ tone = 'slate', children }) {
   const tones = {
     green: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
     amber: 'bg-amber-50 text-amber-700 ring-amber-200',
-    sky: 'bg-sky-50 text-sky-700 ring-sky-200',
+    brand: 'bg-brand-50 text-brand-700 ring-brand-200',
     slate: 'bg-slate-100 text-slate-600 ring-slate-200',
     violet: 'bg-violet-50 text-violet-700 ring-violet-200',
   }
@@ -153,10 +153,10 @@ function ScriptPage({ compact = false }) {
 
 function ScoreCard({ q, conf, tone, score, max, steps, highlight = false }) {
   return (
-    <div className={`rounded-xl border bg-white p-3.5 ${highlight ? 'border-sky-300 ring-4 ring-sky-100' : 'border-slate-200'}`}>
+    <div className={`rounded-xl border bg-white p-3.5 ${highlight ? 'border-brand-300 ring-4 ring-brand-100' : 'border-slate-200'}`}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="whitespace-nowrap text-xs font-semibold text-sky-600">{q}</span>
+          <span className="whitespace-nowrap text-xs font-semibold text-brand-600">{q}</span>
           <Pill tone={tone}>{conf}</Pill>
         </div>
         <span className="whitespace-nowrap rounded-md border border-slate-200 px-2 py-0.5 text-sm font-semibold text-slate-900">
@@ -192,9 +192,9 @@ function HeroMockup() {
               <LogoMark className="h-5 w-5" />
               <span className="text-xs font-semibold text-white">ScriptMark</span>
             </div>
-            <div className="mt-4 rounded-md bg-sky-500 py-1.5 text-center text-[10px] font-medium text-white">New session</div>
+            <div className="mt-4 rounded-md bg-brand-500 py-1.5 text-center text-[10px] font-medium text-white">New session</div>
             <div className="mt-4 space-y-1.5">
-              {['Dashboard', 'Marking Guides', 'Cohort Analytics', 'AI Assistant'].map((t) => (
+              {['Dashboard', 'Marking Guides', 'AI Assistant'].map((t) => (
                 <div key={t} className="rounded px-2 py-1 text-[10px] text-slate-400">{t}</div>
               ))}
             </div>
@@ -252,7 +252,7 @@ function HeroMockup() {
 
       <div className="absolute -left-4 top-24 hidden w-56 rounded-xl bg-white p-3 shadow-xl ring-1 ring-slate-900/10 lg:block xl:-left-14">
         <p className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-          <Contact size={13} className="text-sky-500" /> Front page read
+          <Contact size={13} className="text-brand-500" /> Front page read
         </p>
         <p className="mt-1 text-sm font-semibold text-slate-900">2017364085</p>
         <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-600">
@@ -380,7 +380,7 @@ function IdentifyMockup() {
         <p className="text-center text-[11px] font-bold tracking-wide text-slate-700">ANSWER BOOKLET</p>
         <div className="mt-3 space-y-3">
           <div>
-            <div className="rounded border-2 border-sky-400 bg-sky-50/60 px-3 py-1.5">
+            <div className="rounded border-2 border-brand-400 bg-brand-50/60 px-3 py-1.5">
               <Hand>2025366001 FN</Hand>
             </div>
             <p className="mt-0.5 text-center text-[9px] font-semibold tracking-wide text-slate-500">STUDENT'S REG. NO</p>
@@ -423,7 +423,7 @@ function AnalyticsMockup() {
       <div className="mt-5 flex h-32 items-end gap-3 border-b border-slate-200 px-2">
         {bars.map((b, i) => (
           <div key={i} className="flex h-full flex-1 items-end">
-            <div className={`w-full rounded-t-md ${i === 5 ? 'bg-rose-400' : 'bg-sky-500'}`} style={{ height: `${(b / 12) * 100}%` }} />
+            <div className={`w-full rounded-t-md ${i === 5 ? 'bg-rose-400' : 'bg-brand-500'}`} style={{ height: `${(b / 12) * 100}%` }} />
           </div>
         ))}
       </div>
@@ -462,7 +462,7 @@ function TeamMockup() {
               <span className="text-slate-500">{q}</span>
             </div>
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-sky-500" style={{ width: `${p}%` }} />
+              <div className="h-full rounded-full bg-brand-500" style={{ width: `${p}%` }} />
             </div>
           </div>
         ))}
@@ -481,7 +481,7 @@ function FeatureRow({ eyebrow, title, text, points, visual, flip = false }) {
         <ul className="mt-6 space-y-3">
           {points.map((p) => (
             <li key={p} className="flex gap-3 text-sm text-slate-700">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-600">
                 <Check size={12} strokeWidth={3} />
               </span>
               {p}
@@ -633,7 +633,7 @@ export default function Landing() {
             <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-200 hover:text-white">
               Sign in
             </Link>
-            <Link to="/signup" className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-100">
+            <Link to="/signup" className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-brand-100">
               Start marking
             </Link>
           </div>
@@ -667,18 +667,18 @@ export default function Landing() {
       {/* Hero */}
       <section id="top" className="relative -mt-16 overflow-hidden bg-ink-950 pt-16">
         <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
-        <div className="pointer-events-none absolute -top-48 left-1/2 h-[560px] w-[1100px] -translate-x-1/2 rounded-full bg-sky-500/25 blur-[120px]" />
+        <div className="pointer-events-none absolute -top-48 left-1/2 h-[560px] w-[1100px] -translate-x-1/2 rounded-full bg-brand-500/25 blur-[120px]" />
         <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-14 sm:px-6 sm:pt-24 lg:px-8 lg:pb-32">
           <div className="mx-auto max-w-5xl text-center">
             <Reveal>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-sky-200 sm:text-sm">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-brand-200 sm:text-sm">
                 <Sparkles size={14} /> The AI marking assistant for universities that examine on paper
               </span>
             </Reveal>
             <Reveal delay={80}>
               <h1 className="mt-8 font-display text-[2.6rem] font-semibold leading-[1.02] tracking-[-0.035em] text-white sm:text-6xl lg:text-[4.6rem]">
                 The new standard for marking <br className="hidden md:block" />
-                <span className="bg-gradient-to-r from-sky-300 via-sky-400 to-cyan-300 bg-clip-text pr-2 font-serif font-normal italic tracking-normal text-transparent">
+                <span className="bg-gradient-to-r from-brand-300 via-brand-400 to-cyan-300 bg-clip-text pr-2 font-serif font-normal italic tracking-normal text-transparent">
                   handwritten exams.
                 </span>
               </h1>
@@ -694,7 +694,7 @@ export default function Landing() {
               <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-sky-500 px-7 py-4 text-base font-semibold text-white shadow-xl shadow-sky-500/30 transition hover:bg-sky-400 sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-500 px-7 py-4 text-base font-semibold text-white shadow-xl shadow-brand-500/30 transition hover:bg-brand-600 sm:w-auto"
                 >
                   Start your first session <ArrowRight size={18} />
                 </Link>
@@ -711,7 +711,7 @@ export default function Landing() {
               <ul className="mt-9 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 text-sm text-slate-400">
                 {['Works with the booklets you already use', 'Every mark confirmed by a lecturer', 'Nothing to install'].map((t) => (
                   <li key={t} className="flex items-center gap-2">
-                    <CheckCircle2 size={15} className="text-sky-400" /> {t}
+                    <CheckCircle2 size={15} className="text-brand-400" /> {t}
                   </li>
                 ))}
               </ul>
@@ -775,7 +775,7 @@ export default function Landing() {
               <div className="hidden grid-cols-[1fr_1.2fr_1.2fr] border-b border-slate-200 bg-slate-50/80 text-sm font-semibold md:grid">
                 <div className="px-6 py-4 text-slate-500" />
                 <div className="px-6 py-4 text-slate-500">Marking by hand</div>
-                <div className="flex items-center gap-2 px-6 py-4 text-sky-700">
+                <div className="flex items-center gap-2 px-6 py-4 text-brand-700">
                   <LogoMark className="h-5 w-5" /> With ScriptMark
                 </div>
               </div>
@@ -785,8 +785,8 @@ export default function Landing() {
                   <div className="flex items-start gap-2.5 text-[15px] text-slate-500 md:px-6 md:py-5">
                     <XCircle size={17} className="mt-0.5 shrink-0 text-slate-300" /> {before}
                   </div>
-                  <div className="flex items-start gap-2.5 text-[15px] font-medium text-slate-800 md:bg-sky-50/40 md:px-6 md:py-5">
-                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-sky-500" /> {after}
+                  <div className="flex items-start gap-2.5 text-[15px] font-medium text-slate-800 md:bg-brand-50/40 md:px-6 md:py-5">
+                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-brand-500" /> {after}
                   </div>
                 </div>
               ))}
@@ -816,7 +816,7 @@ export default function Landing() {
             <div className="grid gap-x-10 gap-y-12 sm:grid-cols-2">
               {PILLARS.map(({ icon: Icon, title, text }, i) => (
                 <Reveal key={title} delay={i * 80}>
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-lg shadow-sky-500/25">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-lg shadow-brand-500/25">
                     <Icon size={22} />
                   </span>
                   <p className="mt-5 font-display text-xl font-semibold tracking-tight text-slate-950">{title}</p>
@@ -830,7 +830,7 @@ export default function Landing() {
 
       {/* How it works */}
       <section id="how" className="relative scroll-mt-16 overflow-hidden bg-ink-950">
-        <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[900px] -translate-x-1/2 rounded-full bg-sky-500/15 blur-[120px]" />
+        <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[900px] -translate-x-1/2 rounded-full bg-brand-500/15 blur-[120px]" />
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
           <Reveal>
             <SectionHeading
@@ -850,7 +850,7 @@ export default function Landing() {
               <Reveal key={title} delay={i * 90}>
                 <li className="h-full rounded-3xl border border-white/10 bg-white/[0.04] p-7">
                   <div className="flex items-center justify-between">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/30">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-500/15 text-brand-300 ring-1 ring-brand-400/30">
                       <Icon size={20} />
                     </span>
                     <span className="font-serif text-3xl italic text-white/25">{i + 1}</span>
@@ -951,7 +951,7 @@ export default function Landing() {
 
       {/* Accuracy and trust */}
       <section id="accuracy" className="relative scroll-mt-16 overflow-hidden bg-ink-950">
-        <div className="pointer-events-none absolute -bottom-40 right-0 h-[420px] w-[700px] rounded-full bg-sky-500/15 blur-[120px]" />
+        <div className="pointer-events-none absolute -bottom-40 right-0 h-[420px] w-[700px] rounded-full bg-brand-500/15 blur-[120px]" />
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
           <Reveal>
             <SectionHeading
@@ -974,7 +974,7 @@ export default function Landing() {
             ].map(([Icon, t, s], i) => (
               <Reveal key={t} delay={i * 80}>
                 <div className="h-full rounded-3xl border border-white/10 bg-white/[0.04] p-7">
-                  <Icon size={22} className="text-sky-400" />
+                  <Icon size={22} className="text-brand-400" />
                   <p className="mt-5 font-display text-lg font-semibold text-white">{t}</p>
                   <p className="mt-2 text-sm leading-relaxed text-slate-400">{s}</p>
                 </div>
@@ -990,7 +990,7 @@ export default function Landing() {
                   confirms them, and exports are blocked while any student's name is still in doubt.
                 </p>
               </div>
-              <Link to="/signup" className="shrink-0 rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-slate-950 hover:bg-sky-100">
+              <Link to="/signup" className="shrink-0 rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-slate-950 hover:bg-brand-100">
                 Try it on one course
               </Link>
             </div>
@@ -1025,7 +1025,7 @@ export default function Landing() {
             ].map(([Icon, t, s], i) => (
               <Reveal key={t} delay={i * 80}>
                 <div className="h-full rounded-3xl border border-slate-200 p-7">
-                  <Icon size={22} className="text-sky-600" />
+                  <Icon size={22} className="text-brand-600" />
                   <p className="mt-5 font-display text-lg font-semibold text-slate-950">{t}</p>
                   <p className="mt-2 text-[15px] leading-relaxed text-slate-600">{s}</p>
                 </div>
@@ -1061,7 +1061,7 @@ export default function Landing() {
           <Reveal>
             <div className="relative overflow-hidden rounded-[2rem] bg-ink-950 px-6 py-20 text-center sm:px-16 sm:py-24">
               <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:22px_22px]" />
-              <div className="pointer-events-none absolute -top-32 left-1/2 h-72 w-[700px] -translate-x-1/2 rounded-full bg-sky-500/30 blur-[100px]" />
+              <div className="pointer-events-none absolute -top-32 left-1/2 h-72 w-[700px] -translate-x-1/2 rounded-full bg-brand-500/30 blur-[100px]" />
               <div className="relative">
                 <h2 className="mx-auto max-w-3xl font-display text-[2.2rem] font-semibold leading-[1.05] tracking-[-0.03em] text-white sm:text-6xl">
                   Your next exam could be <Accent dark>the last one you mark alone.</Accent>
@@ -1071,7 +1071,7 @@ export default function Landing() {
                   with ScriptMark.
                 </p>
                 <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-                  <Link to="/signup" className="inline-flex items-center justify-center gap-2 rounded-full bg-sky-500 px-7 py-4 text-base font-semibold text-white shadow-xl shadow-sky-500/30 hover:bg-sky-400">
+                  <Link to="/signup" className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-500 px-7 py-4 text-base font-semibold text-white shadow-xl shadow-brand-500/30 hover:bg-brand-600">
                     Create your account <ArrowRight size={18} />
                   </Link>
                   <Link to="/login" className="rounded-full border border-white/15 px-7 py-4 text-base font-semibold text-white hover:bg-white/5">

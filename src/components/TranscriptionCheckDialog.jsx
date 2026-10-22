@@ -128,7 +128,7 @@ export default function TranscriptionCheckDialog({ sessionId, token, onClose }) 
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   rows={14}
-                  className="mt-1 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm leading-relaxed outline-none focus:ring-2 focus:ring-sky-400"
+                  className="mt-1 w-full flex-1 rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm leading-relaxed outline-none focus:ring-2 focus:ring-brand-400"
                 />
               </div>
             </div>
