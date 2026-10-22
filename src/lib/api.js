@@ -74,6 +74,9 @@ export const api = {
   updateSession: (id, payload, token) => request(`/api/sessions/${id}`, { method: 'PUT', body: payload, token }),
   getSessionScripts: (sessionId, token) => request(`/api/sessions/${sessionId}/scripts`, { token }),
   getScript: (scriptId, token) => request(`/api/sessions/scripts/${scriptId}`, { token }),
+  getCourses: (token) => request('/api/courses', { token }),
+  getCourseResults: (query, token) => request(`/api/courses/results?${query}`, { token }),
+  saveCourseWeights: (body, token) => request('/api/courses/weights', { method: 'PUT', body, token }),
   updateCaScore: (scriptId, caScore, token) =>
     request(`/api/sessions/scripts/${scriptId}/caScore`, { method: 'PUT', body: { caScore }, token }),
   updateStudentInfo: (scriptId, payload, token) =>
