@@ -16,6 +16,18 @@ export function AuthProvider({ children }) {
     if (savedToken && savedUser) {
       setToken(savedToken)
       setUser(JSON.parse(savedUser))
+      // The server decides the role. If the owner made this account an
+      // Admin (or removed it) since sign in, pick that up now.
+      api
+        .getMe(savedToken)
+        .then(({ user: fresh }) => {
+          const saved = JSON.parse(localStorage.getItem('scriptmark_user') || 'null')
+          if (!saved || saved.id !== fresh.id || saved.role === fresh.role) return
+          const next = { ...saved, role: fresh.role }
+          localStorage.setItem('scriptmark_user', JSON.stringify(next))
+          setUser(next)
+        })
+        .catch(() => {})
     }
     setLoading(false)
   }, [])

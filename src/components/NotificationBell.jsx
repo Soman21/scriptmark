@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, X, Hand, UserPlus, CheckCircle2, XCircle, ListChecks } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import { timeAgo } from '../lib/time.js'
 
 const POLL_MS = 60000
 
@@ -33,16 +34,6 @@ export function useNotifications() {
   }, [token])
 
   return { ...data, refresh, markRead }
-}
-
-function timeAgo(iso) {
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000)
-  if (mins < 1) return 'Just now'
-  if (mins < 60) return `${mins} min ago`
-  const hours = Math.round(mins / 60)
-  if (hours < 24) return `${hours} h ago`
-  const days = Math.round(hours / 24)
-  return days === 1 ? 'Yesterday' : `${days} days ago`
 }
 
 const ICONS = {

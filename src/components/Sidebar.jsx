@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, PanelLeftClose, PanelLeftOpen, X, ChevronUp, ChevronRight } from 'lucide-react'
+import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, PanelLeftClose, PanelLeftOpen, X, ChevronUp, ChevronRight, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import NewSessionDialog from './NewSessionDialog.jsx'
@@ -12,6 +12,7 @@ const toolItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
   { to: '/guides', label: 'Marking Guides', icon: BookOpen, restrictedTo: ['LECTURER', 'ADMIN'] },
   { to: '/assistant', label: 'AI Assistant', icon: Sparkles },
+  { to: '/admin', label: 'Admin', icon: ShieldCheck, restrictedTo: ['ADMIN'] },
 ]
 
 function statusDot(status) {
@@ -79,7 +80,7 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
 
 
   const canManage = user?.role === 'LECTURER' || user?.role === 'ADMIN'
-  const visibleToolItems = toolItems.filter((item) => !item.restrictedTo || canManage)
+  const visibleToolItems = toolItems.filter((item) => !item.restrictedTo || item.restrictedTo.includes(user?.role))
 
   // The rail only applies on desktop; the mobile drawer always shows labels.
   const rail = collapsed && !mobileOpen

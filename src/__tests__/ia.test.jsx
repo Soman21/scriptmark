@@ -18,6 +18,7 @@ import Settings from '../pages/Settings.jsx'
 import SessionOverview from '../pages/SessionOverview.jsx'
 import NotificationBell, { useNotifications } from '../components/NotificationBell.jsx'
 import CoursePage from '../pages/CoursePage.jsx'
+import AdminPage from '../pages/AdminPage.jsx'
 import { groupForMenu } from '../lib/courses.js'
 import App from '../App.jsx'
 
@@ -43,6 +44,7 @@ beforeEach(() => {
   localStorage.clear()
   seedAuth()
   routes = [
+    routeFor('/api/auth/me', { user: FAKE_USER }),
     routeFor('/api/sessions/s1', FAKE_SESSION),
     routeFor('/api/sessions', [FAKE_SESSION]),
     routeFor('/api/sessions/s1/scripts', []),
@@ -646,5 +648,89 @@ describe('Courses', () => {
       const put = global.fetch.mock.calls.find(([u, o]) => u.endsWith('/scripts/sx1/caScore') && o.method === 'PUT')
       expect(JSON.parse(put[1].body)).toEqual({ caScore: '25' })
     })
+  })
+})
+
+describe('Admin page', () => {
+  const overview = {
+    totals: { users: 12, sessions: 7, activeSessions: 5, guides: 6, scripts: 340, marked: 2100 },
+    status: { database: { ok: true, ms: 14 }, uptimeSeconds: 7200, services: [{ name: 'AI scoring', ok: true }, { name: 'Email', ok: false }] },
+    activity: [{ id: 'a1', type: 'SESSION_CREATED', text: 'Ann created ECE305 Midterm', createdAt: new Date().toISOString() }],
+    lecturers: [{ id: 'u2', name: 'Bola Adeyemi', email: 'bola@unizik.edu.ng', createdAt: '2026-10-01T00:00:00Z', sessionsCreated: 2, sessionsJoined: 1 }],
+    sessions: [{ id: 's1', title: 'ECE305 Midterm', coordinator: 'Ann', scripts: 40, lecturers: 2, status: 'ACTIVE', createdAt: '2026-10-02T00:00:00Z' }],
+  }
+  const admins = {
+    canChange: true,
+    admins: [
+      { id: 'o', name: 'Soma', email: 'somancreatives@gmail.com', source: 'OWNER', removable: false },
+      { id: 'u2', name: 'Bola Adeyemi', email: 'bola@unizik.edu.ng', source: 'GRANTED', removable: true },
+    ],
+  }
+
+  function renderAdmin(role) {
+    localStorage.setItem('scriptmark_user', JSON.stringify({ ...FAKE_USER, role }))
+    routes.unshift(routeFor('/api/auth/me', { user: { ...FAKE_USER, role } }), routeFor('/api/admin/overview', overview), routeFor('/api/admin/admins', admins))
+    return render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/" element={<p>Home</p>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    )
+  }
+
+  it('shows totals, status and activity to an Admin', async () => {
+    renderAdmin('ADMIN')
+    expect(await screen.findByText('340')).toBeTruthy()
+    expect(screen.getByText('5 active')).toBeTruthy()
+    expect(screen.getByText('14 ms')).toBeTruthy()
+    expect(screen.getByText('Not set')).toBeTruthy()
+    expect(screen.getByText('Ann created ECE305 Midterm')).toBeTruthy()
+    fireEvent.click(screen.getByRole('tab', { name: 'Lecturers' }))
+    expect(screen.getByText('bola@unizik.edu.ng')).toBeTruthy()
+  })
+
+  it('lets the owner make and remove admins', async () => {
+    routes.unshift(routeFor('/api/admin/admins/u2', { ok: true }))
+    renderAdmin('ADMIN')
+    await screen.findByText('340')
+    fireEvent.click(screen.getByRole('tab', { name: 'Admins' }))
+    expect(screen.getByText('Owner')).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: 'Remove' })).toHaveLength(1)
+    fireEvent.change(screen.getByLabelText('Admin email'), { target: { value: 'kemi@unizik.edu.ng' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Make admin' }))
+    await waitFor(() => {
+      const post = global.fetch.mock.calls.find(([u, o]) => u.endsWith('/api/admin/admins') && o.method === 'POST')
+      expect(JSON.parse(post[1].body)).toEqual({ email: 'kemi@unizik.edu.ng' })
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect(global.fetch.mock.calls.some(([u, o]) => u.endsWith('/api/admin/admins/u2') && o.method === 'DELETE')).toBe(true))
+  })
+
+  it('sends a lecturer home and hides the menu item', async () => {
+    renderAdmin('LECTURER')
+    expect(await screen.findByText('Home')).toBeTruthy()
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <Sidebar user={{ name: 'Ann', role: 'LECTURER', initials: 'AC' }} onSignOut={() => {}} />
+        </AuthProvider>
+      </MemoryRouter>
+    )
+    expect(screen.queryByRole('link', { name: 'Admin' })).toBeNull()
+  })
+
+  it('shows the Admin menu item to an Admin', () => {
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <Sidebar user={{ name: 'Ann', role: 'ADMIN', initials: 'AC' }} onSignOut={() => {}} />
+        </AuthProvider>
+      </MemoryRouter>
+    )
+    expect(screen.getByRole('link', { name: 'Admin' })).toBeTruthy()
   })
 })
