@@ -3,6 +3,8 @@ import { CheckCircle2 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
+import DepartmentPicker from '../components/DepartmentPicker.jsx'
+import { useStructure } from '../lib/structure.js'
 import { api } from '../lib/api.js'
 
 // Same scale as the backend's grading.js and the result sheet.
@@ -87,6 +89,12 @@ export default function Settings() {
   const [passwordMsg, setPasswordMsg] = useState('')
   const [passwordError, setPasswordError] = useState('')
 
+  const { structure } = useStructure()
+  const [departmentId, setDepartmentId] = useState(user?.department?.id || '')
+  const [savingDept, setSavingDept] = useState(false)
+  const [deptMsg, setDeptMsg] = useState('')
+  const [deptError, setDeptError] = useState('')
+
   const [voiceReplies, setVoiceReplies] = useState(() => readPref('scriptmark_voice_replies'))
 
   // The signed in user can arrive a moment after first render.
@@ -107,6 +115,26 @@ export default function Settings() {
       setNameError(err.message)
     } finally {
       setSavingName(false)
+    }
+  }
+
+  useEffect(() => {
+    if (user?.department?.id) setDepartmentId(user.department.id)
+  }, [user?.department?.id])
+
+  async function handleSaveDepartment(e) {
+    e.preventDefault()
+    setDeptMsg('')
+    setDeptError('')
+    if (!departmentId) return setDeptError('Select your faculty and department.')
+    setSavingDept(true)
+    try {
+      await updateProfile({ departmentId })
+      setDeptMsg('Department updated.')
+    } catch (err) {
+      setDeptError(err.message)
+    } finally {
+      setSavingDept(false)
     }
   }
 
@@ -151,6 +179,9 @@ export default function Settings() {
               <Field label="Email">
                 <input value={user?.email || ''} disabled className={inputClass} />
               </Field>
+              <Field label="ScriptMark ID">
+                <input value={user?.lecturerId || ''} disabled className={inputClass} />
+              </Field>
               <Field label="Role">
                 <input value={user?.role ? user.role.charAt(0) + user.role.slice(1).toLowerCase() : ''} disabled className={inputClass} />
               </Field>
@@ -160,6 +191,19 @@ export default function Settings() {
                 </PrimaryButton>
                 {success(nameMsg)}
                 {failure(nameError)}
+              </div>
+            </form>
+          </Section>
+
+          <Section title="Department" description={user?.institution || ''}>
+            <form onSubmit={handleSaveDepartment} className="space-y-3">
+              <DepartmentPicker structure={structure} value={departmentId} onChange={setDepartmentId} />
+              <div className="flex items-center gap-3">
+                <PrimaryButton type="submit" disabled={savingDept || !departmentId || departmentId === user?.department?.id}>
+                  {savingDept ? 'Saving...' : 'Save department'}
+                </PrimaryButton>
+                {success(deptMsg)}
+                {failure(deptError)}
               </div>
             </form>
           </Section>

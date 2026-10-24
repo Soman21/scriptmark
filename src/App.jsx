@@ -27,6 +27,8 @@ import Privacy from './pages/Privacy.jsx'
 import SessionOverview from './pages/SessionOverview.jsx'
 import CoursePage from './pages/CoursePage.jsx'
 import AdminPage from './pages/AdminPage.jsx'
+import AdminLecturerPage from './pages/AdminLecturerPage.jsx'
+import ProfilePrompt from './components/ProfilePrompt.jsx'
 import { trackPage, startClickTracking } from './lib/track.js'
 import ServerWakeScreen from './components/ServerWakeScreen.jsx'
 import { wakeServer } from './lib/serverWake.js'
@@ -95,6 +97,7 @@ function AppLayout({ children }) {
         </div>
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </div>
+      <ProfilePrompt />
     </div>
   )
 }
@@ -158,6 +161,7 @@ export default function App() {
         <Route path="/settings" element={<Protected><Settings /></Protected>} />
         <Route path="/courses/:code" element={<Protected><CoursePage /></Protected>} />
         <Route path="/admin" element={<Protected><AdminPage /></Protected>} />
+        <Route path="/admin/lecturers/:id" element={<Protected><AdminLecturerPage /></Protected>} />
 
         {/* A session's own workspace: tab bar + nested pages, all scoped to :id */}
         <Route path="/sessions/:id" element={<Protected><SessionWorkspace /></Protected>}>

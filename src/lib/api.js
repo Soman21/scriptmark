@@ -17,6 +17,14 @@ async function request(path, { method = 'GET', body, token } = {}) {
     // A signed in request rejected as unauthorised means the saved sign in
     // has expired or was revoked; AuthContext signs out and shows the login.
     if (res.status === 401 && token) window.dispatchEvent(new Event('scriptmark:signed-out'))
+    // A suspended account is signed out at once, with the reason shown on
+    // the sign in page.
+    if (res.status === 403 && data?.code === 'SUSPENDED' && token) {
+      try {
+        sessionStorage.setItem('scriptmark_suspended', '1')
+      } catch {}
+      window.dispatchEvent(new Event('scriptmark:signed-out'))
+    }
     throw new Error(data?.error || `Request failed (${res.status})`)
   }
   return data
@@ -76,6 +84,10 @@ export const api = {
   getScript: (scriptId, token) => request(`/api/sessions/scripts/${scriptId}`, { token }),
   getMe: (token) => request('/api/auth/me', { token }),
   getAdminOverview: (token) => request('/api/admin/overview', { token }),
+  getStructure: () => request('/api/auth/structure'),
+  getLecturer: (id, token) => request(`/api/admin/lecturers/${id}`, { token }),
+  suspendLecturer: (id, reason, token) => request(`/api/admin/lecturers/${id}/suspend`, { method: 'POST', body: { reason }, token }),
+  restoreLecturer: (id, token) => request(`/api/admin/lecturers/${id}/restore`, { method: 'POST', token }),
   getSiteAnalytics: (days, token) => request(`/api/admin/analytics?days=${days}`, { token }),
   getAdmins: (token) => request('/api/admin/admins', { token }),
   addAdmin: (email, token) => request('/api/admin/admins', { method: 'POST', body: { email }, token }),

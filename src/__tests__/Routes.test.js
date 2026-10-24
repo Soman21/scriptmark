@@ -21,6 +21,7 @@ function walk(dir) {
 function isValid(target) {
   const t = target.split('?')[0].split('#')[0]
   if (GLOBAL_ROUTES.includes(t)) return true
+  if (/^\/admin\/lecturers\/(?:\$\{[^}]+\}|[^/]+)$/.test(t)) return true
   const m = t.match(/^\/sessions\/(?:\$\{[^}]+\}|[^/]+)(?:\/([^/]+))?$/)
   if (!m) return false
   return !m[1] || SESSION_CHILDREN.includes(m[1])
