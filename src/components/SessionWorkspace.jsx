@@ -12,6 +12,7 @@ import {
   BarChart3,
   ChevronRight,
   UserPlus,
+  Info,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -88,6 +89,7 @@ export default function SessionWorkspace() {
   const isMarker = true // any approved member of a session can review claimed questions
 
   const tabs = [
+    { to: 'overview', label: 'Overview', icon: Info },
     isCoordinator && { to: 'scan', label: 'Scan Scripts', icon: ScanLine },
     { to: 'marking', label: 'Marking Progress', icon: Activity },
     isMarker && { to: 'claim-questions', label: 'Claim Questions', icon: Hand },
@@ -98,7 +100,7 @@ export default function SessionWorkspace() {
   ].filter(Boolean)
 
   return (
-    <SessionProvider value={{ session, sessionId: session.id, isCoordinator }}>
+    <SessionProvider value={{ session, sessionId: session.id, isCoordinator, openAddLecturers: () => setShowAdd(true) }}>
       <div className="flex h-full flex-col">
         <header className="shrink-0 border-b border-slate-200 bg-white">
           <div className="px-4 sm:px-6 pt-4">
@@ -113,7 +115,7 @@ export default function SessionWorkspace() {
                 {session.courseCode && <Badge tone="slate">{session.courseCode}</Badge>}
                 <Badge tone={session.status === 'ACTIVE' ? 'green' : 'slate'}>{session.status}</Badge>
               </div>
-              {isCoordinator && session.joinCode && (
+              {isCoordinator && (
                 <button
                   type="button"
                   onClick={() => setShowAdd(true)}

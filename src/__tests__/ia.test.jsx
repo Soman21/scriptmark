@@ -15,6 +15,7 @@ import CoordinatorDashboard from '../pages/CoordinatorDashboard.jsx'
 import Archive from '../pages/Archive.jsx'
 import ScanScripts from '../pages/ScanScripts.jsx'
 import Settings from '../pages/Settings.jsx'
+import SessionOverview from '../pages/SessionOverview.jsx'
 import App from '../App.jsx'
 
 const FAKE_USER = { id: 'u1', name: 'Ann Coordinator', role: 'LECTURER' }
@@ -71,6 +72,7 @@ function renderAt(initialPath, element) {
         <Routes>
           <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
           <Route path="/sessions/:id" element={<RequireAuth><SessionWorkspace /></RequireAuth>}>
+            <Route path="overview" element={<SessionOverview />} />
             <Route path="scan" element={<ScanScripts />} />
             <Route path="marking" element={<MarkingProgress />} />
             <Route path="claim-questions" element={<ClaimQuestions />} />
@@ -460,5 +462,40 @@ describe('Sidebar profile menu', () => {
     fireEvent.click(screen.getByRole('button', { name: /Ann Coordinator/ }))
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByRole('menuitem', { name: /Settings/ })).toBeNull()
+  })
+})
+
+describe('Session Overview tab', () => {
+  const overview = (extra = {}) => ({
+    id: 's1', title: 'ECE305 Midterm', examinationType: 'Examination', academicSession: '2025/2026', semester: 'Second',
+    department: 'Electronic and Computer Engineering', faculty: 'Engineering', createdAt: '2026-10-14T10:00:00Z',
+    createdBy: { id: 'u1', name: 'Ann Coordinator' }, guide: { id: 'g1', title: 'Guide', published: true, questionCount: 3 },
+    joinCode: 'KXL963', canManage: true,
+    counts: { lecturers: 2, students: 60, scriptsScanned: 58, answers: 100, marked: 72, markedPercent: 72, unclaimedQuestions: 1 },
+    lecturers: [
+      { id: 'u1', name: 'Ann Coordinator', accessLevel: 'FULL', isCoordinator: true, questions: ['Q1', 'Q2'] },
+      { id: 'u2', name: 'Chidi Okafor', accessLevel: 'LIMITED', isCoordinator: false, questions: [] },
+    ],
+    pending: [{ id: 'u3', name: 'Bola Adeyemi', email: 'bola@x' }],
+    ...extra,
+  })
+
+  it('shows the code, counts, lecturers and lets the coordinator grant a request', async () => {
+    routes.unshift(routeFor('/api/sessions/s1/overview', overview()), routeFor('/api/sessions/s1/markers/u3/approve', { ok: true }))
+    renderAt('/sessions/s1/overview', null)
+    expect(await screen.findByText('KXL963')).toBeTruthy()
+    expect(screen.getByText('72%')).toBeTruthy()
+    expect(screen.getByText(/Coordinator · Q1, Q2/)).toBeTruthy()
+    expect(screen.getByText(/No questions claimed/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Grant access' }))
+    await waitFor(() => expect(global.fetch.mock.calls.some(([u, o]) => u.endsWith('/markers/u3/approve') && o.method === 'PUT')).toBe(true))
+  })
+
+  it('hides the code and Add lecturers from a lecturer who cannot manage', async () => {
+    routes.unshift(routeFor('/api/sessions/s1/overview', overview({ joinCode: null, canManage: false, pending: [] })))
+    renderAt('/sessions/s1/overview', null)
+    expect(await screen.findByText('72%')).toBeTruthy()
+    expect(screen.queryByText('Join code')).toBeNull()
+    expect(screen.getAllByRole('button', { name: /Add lecturers/ }).length).toBe(1) // header button only, from the coordinator session fixture
   })
 })

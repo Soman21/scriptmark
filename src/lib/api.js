@@ -68,6 +68,7 @@ export const api = {
     }),
   getMyQueue: (sessionId, token) => request(`/api/results/myQueue?sessionId=${sessionId}`, { token }),
   getCoordinatorOverview: (sessionId, token) => request(`/api/sessions/${sessionId}/coordinatorOverview`, { token }),
+  getSessionOverview: (sessionId, token) => request(`/api/sessions/${sessionId}/overview`, { token }),
   updateSession: (id, payload, token) => request(`/api/sessions/${id}`, { method: 'PUT', body: payload, token }),
   getSessionScripts: (sessionId, token) => request(`/api/sessions/${sessionId}/scripts`, { token }),
   getScript: (scriptId, token) => request(`/api/sessions/scripts/${scriptId}`, { token }),
