@@ -97,7 +97,7 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
           setOpen(true)
           onOpen?.()
         }}
-        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-sky-500 px-4 py-3 text-sm font-medium text-white shadow-lg hover:bg-sky-400"
+        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-lg hover:bg-brand-600"
       >
         <MessageCircle size={18} /> {title}
       </button>
@@ -112,7 +112,7 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
       <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
-            <MessageCircle size={15} className="text-sky-500" /> {title}
+            <MessageCircle size={15} className="text-brand-500" /> {title}
           </p>
           <p className="text-xs text-slate-500">{intro}</p>
         </div>
@@ -129,7 +129,7 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
         )}
         {messages.map((m, i) =>
           m.role === 'user' ? (
-            <div key={i} className="ml-8 rounded-2xl rounded-br-sm bg-sky-500 px-3.5 py-2 text-sm text-white">
+            <div key={i} className="ml-8 rounded-2xl rounded-br-sm bg-brand-500 px-3.5 py-2 text-sm text-white">
               {m.content}
             </div>
           ) : (
@@ -141,11 +141,11 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
                 const run = m[`run${j}`]
                 if (action.type === 'confirm') {
                   return (
-                    <div key={j} className="rounded-xl border border-sky-200 bg-sky-50 p-3">
-                      <p className="text-sm font-medium text-sky-900">
+                    <div key={j} className="rounded-xl border border-brand-200 bg-brand-50 p-3">
+                      <p className="text-sm font-medium text-brand-900">
                         Confirm {action.items.length} score{action.items.length === 1 ? '' : 's'}?
                       </p>
-                      <ul className="mt-1.5 space-y-0.5 text-xs text-sky-900">
+                      <ul className="mt-1.5 space-y-0.5 text-xs text-brand-900">
                         {action.items.map((it) => (
                           <li key={it.answerId}>
                             {it.student}, question {it.label}: {it.score} / {it.maxMarks}
@@ -187,7 +187,7 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
                 type="button"
                 onClick={() => send(q)}
                 disabled={sending}
-                className="shrink-0 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
+                className="shrink-0 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100 disabled:opacity-50"
               >
                 {q}
               </button>
@@ -209,10 +209,10 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a request or tap the mic"
           aria-label={`Message the ${title}`}
-          className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+          className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
         />
         <VoiceButton onText={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))} disabled={sending} />
-        <button type="submit" disabled={sending || !input.trim()} aria-label="Send" className="rounded-lg bg-sky-500 px-3 text-white hover:bg-sky-400 disabled:opacity-50">
+        <button type="submit" disabled={sending || !input.trim()} aria-label="Send" className="rounded-lg bg-brand-500 px-3 text-white hover:bg-brand-600 disabled:opacity-50">
           <Send size={16} />
         </button>
       </form>

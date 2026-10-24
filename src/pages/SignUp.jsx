@@ -47,7 +47,7 @@ export default function SignUp() {
 
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
           <div className="h-1 bg-slate-100">
-            <div className="h-1 w-1/3 bg-sky-500" />
+            <div className="h-1 w-1/3 bg-brand-500" />
           </div>
 
           <div className="p-8">
@@ -114,7 +114,7 @@ export default function SignUp() {
               <label className="flex items-start gap-2 text-sm text-slate-600">
                 <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5" />
                 I agree to the{' '}
-                <Link to="/privacy" target="_blank" className="text-sky-600 underline">
+                <Link to="/privacy" target="_blank" className="text-brand-600 underline">
                   Privacy Policy
                 </Link>
                 .
@@ -127,7 +127,7 @@ export default function SignUp() {
 
             <p className="text-center text-sm text-slate-500 mt-6">
               Already have an academic account?{' '}
-              <Link to={withNext('/login', location.search)} className="text-sky-600 font-medium">
+              <Link to={withNext('/login', location.search)} className="text-brand-600 font-medium">
                 Sign In
               </Link>
             </p>

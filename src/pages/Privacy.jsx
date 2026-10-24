@@ -139,7 +139,7 @@ function Section({ s }) {
         <ul className="mt-4 space-y-2.5">
           {s.list.map((l) => (
             <li key={l} className="flex gap-3 text-[15px] leading-relaxed text-slate-600">
-              <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-500" />
+              <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
               {l}
             </li>
           ))}
@@ -169,7 +169,7 @@ export default function Privacy() {
             <ul className="mt-4 space-y-2 border-l border-slate-200">
               {[...SECTIONS, { id: 'contact', title: 'Contact us' }].map((s) => (
                 <li key={s.id}>
-                  <a href={`#${s.id}`} onClick={(e) => jump(e, s.id)} className="-ml-px block border-l border-transparent pl-4 text-sm text-slate-500 hover:border-sky-500 hover:text-slate-900">
+                  <a href={`#${s.id}`} onClick={(e) => jump(e, s.id)} className="-ml-px block border-l border-transparent pl-4 text-sm text-slate-500 hover:border-brand-500 hover:text-slate-900">
                     {s.title}
                   </a>
                 </li>
@@ -185,11 +185,11 @@ export default function Privacy() {
             <h2 className="font-display text-2xl font-semibold tracking-tight text-slate-950">Contact us</h2>
             <p className="mt-4 text-[15px] leading-relaxed text-slate-600">
               For any question or request about your information, write to {CONTACT.name} at{' '}
-              <a href={`mailto:${CONTACT.email}`} className="font-medium text-sky-700 hover:text-sky-800">
+              <a href={`mailto:${CONTACT.email}`} className="font-medium text-brand-700 hover:text-brand-800">
                 {CONTACT.email}
               </a>
               , {CONTACT.department}, {CONTACT.institution}, {CONTACT.location}. You can also use the{' '}
-              <Link to="/contact" className="font-medium text-sky-700 hover:text-sky-800">
+              <Link to="/contact" className="font-medium text-brand-700 hover:text-brand-800">
                 contact page
               </Link>
               .

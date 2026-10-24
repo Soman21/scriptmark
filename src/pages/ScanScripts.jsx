@@ -316,9 +316,9 @@ export default function ScanScripts() {
                       role="radio"
                       aria-checked={on}
                       onClick={() => chooseMethod(m.id)}
-                      className={`rounded-xl border p-3 text-left transition ${on ? 'border-sky-400 bg-sky-50 ring-1 ring-sky-400' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
+                      className={`rounded-xl border p-3 text-left transition ${on ? 'border-brand-400 bg-brand-50 ring-1 ring-brand-400' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
                     >
-                      <m.icon size={18} className={on ? 'text-sky-600' : 'text-slate-400'} />
+                      <m.icon size={18} className={on ? 'text-brand-600' : 'text-slate-400'} />
                       <span className="mt-2 block text-sm font-semibold text-slate-900">{m.title}</span>
                       <span className="block text-xs text-slate-500">{m.text}</span>
                     </button>
@@ -335,7 +335,7 @@ export default function ScanScripts() {
                 {activeScript && (
                   <button
                     onClick={handleNewStudent}
-                    className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700"
+                    className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
                   >
                     <UserPlus size={12} /> New Student
                   </button>
@@ -378,14 +378,14 @@ export default function ScanScripts() {
                 onChange={(e) => setStudentNameInput(e.target.value)}
                 onBlur={saveStudentInfo}
                 placeholder="Student full name"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-400"
               />
               <input
                 value={regNumberInput}
                 onChange={(e) => setRegNumberInput(e.target.value)}
                 onBlur={saveStudentInfo}
                 placeholder="Registration number"
-                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-400"
               />
               {activeScript && (
                 <>
@@ -406,7 +406,7 @@ export default function ScanScripts() {
             </div>
 
             <div className="rounded-xl border-2 border-dashed border-slate-300 bg-white p-8 text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 text-sky-500">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-500">
                 <UploadCloud size={22} />
               </div>
               <p className="font-semibold text-slate-900">
@@ -427,7 +427,7 @@ export default function ScanScripts() {
               <PrimaryButton
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading || !sessionId}
-                className="mt-4 mx-auto bg-sky-500 hover:bg-sky-400"
+                className="mt-4 mx-auto bg-brand-500 hover:bg-brand-600"
               >
                 {uploading ? (
                   <>

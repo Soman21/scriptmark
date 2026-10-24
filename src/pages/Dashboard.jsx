@@ -41,7 +41,7 @@ export default function Dashboard() {
           {canManage && (
             <button
               onClick={() => setShowNew(true)}
-              className="rounded-xl bg-sky-500 hover:bg-sky-400 text-white p-4 flex flex-col items-center gap-2 transition-colors disabled:opacity-60"
+              className="rounded-xl bg-brand-500 hover:bg-brand-600 text-white p-4 flex flex-col items-center gap-2 transition-colors disabled:opacity-60"
             >
               <Plus size={20} />
               <span className="text-sm font-medium">New Marking Session</span>
@@ -73,7 +73,7 @@ export default function Dashboard() {
             <p className="px-5 py-6 text-sm text-slate-400 text-center">Loading...</p>
           ) : sessions.length === 0 ? (
             <p className="px-5 py-6 text-sm text-slate-400 text-center">
-              No sessions yet — start one above, or from Marking Guides.
+              No sessions yet.
             </p>
           ) : (
             <ul className="divide-y divide-slate-100">

@@ -64,15 +64,15 @@ export default function Analytics() {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatCard
-                icon={<LayoutGrid size={16} className="text-sky-500" />}
+                icon={<LayoutGrid size={16} className="text-brand-500" />}
                 label="Class Average"
-                value={data.average != null ? `${data.average}` : '—'}
+                value={data.average != null ? `${data.average}` : 'N/A'}
                 sub="exam marks"
               />
               <StatCard
                 icon={<Trophy size={16} className="text-amber-500" />}
                 label="Highest Score"
-                value={data.highest != null ? `${data.highest}` : '—'}
+                value={data.highest != null ? `${data.highest}` : 'N/A'}
               />
               <StatCard icon={<Flag size={16} className="text-rose-500" />} label="Flagged Scripts" value={data.flaggedCount} />
               <StatCard icon={<FileText size={16} className="text-slate-500" />} label="Total Scripts" value={data.totalScripts} />
@@ -82,7 +82,7 @@ export default function Analytics() {
               <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
                 <AlertTriangle size={16} />
                 {data.lowConfidenceCount} script{data.lowConfidenceCount !== 1 ? 's have' : ' has'} at least one
-                low-confidence AI score — worth a closer look in Results.
+                low confidence AI score. Check them in Results.
               </div>
             )}
 
@@ -94,14 +94,14 @@ export default function Analytics() {
                   <XAxis dataKey="range" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" fill="#1F5FAD" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white">
               <div className="px-5 py-3 border-b border-slate-100">
-                <p className="font-semibold text-sm text-slate-900">Per-Question Performance</p>
+                <p className="font-semibold text-sm text-slate-900">Question Performance</p>
                 <p className="text-xs text-slate-500">Average score as a percentage of that question's max marks</p>
               </div>
               <table className="w-full text-sm">
@@ -116,7 +116,7 @@ export default function Analytics() {
                   {data.perQuestion.map((q) => (
                     <tr key={`${q.number}${q.subLabel || ''}`} className="border-b border-slate-50">
                       <td className="px-5 py-3">
-                        <span className="text-xs font-semibold text-sky-600">
+                        <span className="text-xs font-semibold text-brand-600">
                           Q{q.number}
                           {q.subLabel || ''}
                         </span>
@@ -133,7 +133,7 @@ export default function Analytics() {
                             {q.averagePercent}%
                           </span>
                         ) : (
-                          '—'
+                          'N/A'
                         )}
                       </td>
                     </tr>

@@ -35,7 +35,7 @@ function Table({ head = [], rows }) {
   )
 }
 
-const box = 'w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-sky-400'
+const box = 'w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-brand-400'
 
 // Each session's last report and the lecturer's edits stay in this browser,
 // so closing the dialog does not lose what they typed.
@@ -162,7 +162,7 @@ export default function ReportDialog({ token, onClose }) {
             <select
               value={sessionId}
               onChange={(e) => setSessionId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
             >
               {sessions.length === 0 && <option value="">No sessions yet</option>}
               {sessions.map((s) => (
@@ -263,7 +263,7 @@ export default function ReportDialog({ token, onClose }) {
                 ) : final.notes?.trim() ? (
                   <p className="whitespace-pre-line leading-relaxed">{final.notes}</p>
                 ) : (
-                  <button onClick={() => setEditing(true)} className="text-sm font-medium text-sky-600 hover:text-sky-700">
+                  <button onClick={() => setEditing(true)} className="text-sm font-medium text-brand-600 hover:text-brand-700">
                     Add your own notes
                   </button>
                 )}
@@ -274,7 +274,7 @@ export default function ReportDialog({ token, onClose }) {
 
         {report && (
           <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-3 sm:px-6">
-            <SecondaryButton onClick={() => setEditing((v) => !v)} className={editing ? 'border-sky-300 bg-sky-50 text-sky-700' : ''}>
+            <SecondaryButton onClick={() => setEditing((v) => !v)} className={editing ? 'border-brand-300 bg-brand-50 text-brand-700' : ''}>
               {editing ? <Check size={15} /> : <Pencil size={15} />} {editing ? 'Done editing' : 'Edit text'}
             </SecondaryButton>
             <SecondaryButton onClick={copy}>

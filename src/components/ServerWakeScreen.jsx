@@ -75,7 +75,7 @@ export default function ServerWakeScreen() {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-50 px-4" role="status" aria-live="polite">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2.5">
-          <span className={`h-6 w-6 rounded-full border-[3px] border-sky-100 ${down ? '' : 'border-t-sky-500 animate-spin'}`} />
+          <span className={`h-6 w-6 rounded-full border-[3px] border-brand-100 ${down ? '' : 'border-t-brand-500 animate-spin'}`} />
           <h2 className="text-lg font-semibold text-slate-900">
             {down ? 'Still getting ScriptMark ready' : 'Getting ScriptMark ready'}
           </h2>
@@ -83,7 +83,7 @@ export default function ServerWakeScreen() {
 
         {!down && (
           <div className="mx-auto mt-4 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full rounded-full bg-sky-500 transition-all duration-200 ease-linear" style={{ width: `${percent}%` }} />
+            <div className="h-full rounded-full bg-brand-500 transition-all duration-200 ease-linear" style={{ width: `${percent}%` }} />
           </div>
         )}
 
@@ -100,14 +100,14 @@ export default function ServerWakeScreen() {
         {!skipped && (
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-sky-600">Get started in {STEPS.length} easy steps</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-brand-600">Get started in {STEPS.length} easy steps</p>
               <button type="button" onClick={() => setSkipped(true)} className="text-xs font-medium text-slate-400 hover:text-slate-600">
                 Skip intro
               </button>
             </div>
 
             <div className="mt-4 flex gap-4">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-500 text-sm font-semibold text-white">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white">
                 {step + 1}
               </span>
               <div className="min-h-[5.5rem] min-w-0">
@@ -124,7 +124,7 @@ export default function ServerWakeScreen() {
                     type="button"
                     onClick={() => go(i)}
                     aria-label={`Step ${i + 1}`}
-                    className={`h-1.5 rounded-full transition-all ${i === step ? 'w-5 bg-sky-500' : 'w-1.5 bg-slate-200 hover:bg-slate-300'}`}
+                    className={`h-1.5 rounded-full transition-all ${i === step ? 'w-5 bg-brand-500' : 'w-1.5 bg-slate-200 hover:bg-slate-300'}`}
                   />
                 ))}
               </div>
@@ -138,7 +138,7 @@ export default function ServerWakeScreen() {
                   <button
                     type="button"
                     onClick={() => go(step + 1)}
-                    className="flex items-center gap-1.5 rounded-lg bg-sky-500 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-400"
+                    className="flex items-center gap-1.5 rounded-lg bg-brand-500 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-600"
                   >
                     Next <ArrowRight size={15} />
                   </button>

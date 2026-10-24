@@ -95,9 +95,9 @@ export default function AddLecturersDialog({ session, open, onClose }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="colleague@unizik.edu.ng"
-              className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+              className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
             />
-            <PrimaryButton type="submit" disabled={sending || !email.trim()} className="shrink-0 bg-sky-500 hover:bg-sky-400">
+            <PrimaryButton type="submit" disabled={sending || !email.trim()} className="shrink-0 bg-brand-500 hover:bg-brand-600">
               <Send size={15} /> {sending ? 'Sending...' : 'Send'}
             </PrimaryButton>
           </div>
@@ -123,7 +123,7 @@ export default function AddLecturersDialog({ session, open, onClose }) {
 
         <p className="mt-4 text-xs text-slate-400">
           New markers start with limited access to their claimed questions. Change access or remove someone in{' '}
-          <Link to="claim-questions" onClick={onClose} className="font-medium text-sky-600 hover:text-sky-700">
+          <Link to="claim-questions" onClick={onClose} className="font-medium text-brand-600 hover:text-brand-700">
             Claim Questions
           </Link>
           .

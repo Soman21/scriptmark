@@ -14,7 +14,6 @@ import MyQueue from '../pages/MyQueue.jsx'
 import CoordinatorDashboard from '../pages/CoordinatorDashboard.jsx'
 import Archive from '../pages/Archive.jsx'
 import ScanScripts from '../pages/ScanScripts.jsx'
-import CohortAnalytics from '../pages/CohortAnalytics.jsx'
 import Settings from '../pages/Settings.jsx'
 import App from '../App.jsx'
 
@@ -297,7 +296,7 @@ describe('Results review screen', () => {
   })
 })
 
-describe('Cohort analytics', () => {
+describe('Session analytics', () => {
   beforeEach(() => {
     global.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} }
   })
@@ -320,26 +319,6 @@ describe('Cohort analytics', () => {
     await waitFor(() => expect(screen.getByText('87.5%')).toBeTruthy())
     expect(screen.getByText('Postgraduate')).toBeTruthy()
     expect(screen.getByText('Review question')).toBeTruthy()
-  })
-
-  it('compares sessions and filters by academic session', async () => {
-    routes.unshift(routeFor('/api/sessions/cohort/compare', [
-      { id: 's1', title: 'ECE512 DSP', courseCode: 'ECE512', academicSession: '2025/2026', semester: 'First', scoredScripts: 40, mean: 55, sd: 12, passRate: 0.8 },
-      { id: 's2', title: 'ECE305 Control', courseCode: 'ECE305', academicSession: '2024/2025', semester: 'Second', scoredScripts: 30, mean: 48, sd: 14, passRate: 0.6 },
-    ]))
-    render(
-      <MemoryRouter initialEntries={['/cohorts']}>
-        <AuthProvider>
-          <Routes>
-            <Route path="/cohorts" element={<CohortAnalytics />} />
-          </Routes>
-        </AuthProvider>
-      </MemoryRouter>
-    )
-    await waitFor(() => expect(screen.getByText('ECE305 Control')).toBeTruthy())
-    fireEvent.change(screen.getByLabelText('Academic session'), { target: { value: '2025/2026' } })
-    expect(screen.queryByText('ECE305 Control')).toBeNull()
-    expect(screen.getByText('ECE512 DSP')).toBeTruthy()
   })
 })
 
@@ -449,5 +428,37 @@ describe('Public pages', () => {
     expect(screen.getAllByText('Google Cloud Vision').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Nigeria Data Protection Act 2023/).length).toBeGreaterThan(0)
     expect(screen.getByRole('link', { name: 'contact page' }).getAttribute('href')).toBe('/contact')
+  })
+})
+
+describe('Sidebar profile menu', () => {
+  function renderSidebar(onSignOut = () => {}) {
+    return render(
+      <MemoryRouter initialEntries={['/']}>
+        <AuthProvider>
+          <Sidebar user={{ name: 'Ann Coordinator', email: 'ann@unizik.edu.ng', role: 'LECTURER', initials: 'AC' }} onSignOut={onSignOut} />
+        </AuthProvider>
+      </MemoryRouter>
+    )
+  }
+
+  it('keeps Settings, Help and Sign Out folded under the profile', async () => {
+    const onSignOut = vi.fn()
+    renderSidebar(onSignOut)
+    expect(screen.queryByRole('menuitem', { name: /Settings/ })).toBeNull()
+    expect(screen.queryByText('Cohort Analytics')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Ann Coordinator/ }))
+    expect(screen.getByText('ann@unizik.edu.ng')).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: /Settings/ })).toBeTruthy()
+    expect(screen.getByRole('menuitem', { name: /Help/ })).toBeTruthy()
+    fireEvent.click(screen.getByRole('menuitem', { name: /Sign Out/ }))
+    expect(onSignOut).toHaveBeenCalled()
+  })
+
+  it('closes the profile menu on Escape', () => {
+    renderSidebar()
+    fireEvent.click(screen.getByRole('button', { name: /Ann Coordinator/ }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('menuitem', { name: /Settings/ })).toBeNull()
   })
 })

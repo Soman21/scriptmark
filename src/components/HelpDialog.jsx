@@ -36,7 +36,7 @@ export default function HelpDialog({ open, onClose }) {
         <ol className="mt-5 space-y-3">
           {STEPS.map(([title, text], i) => (
             <li key={title} className="flex gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-50 text-xs font-semibold text-sky-700">{i + 1}</span>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">{i + 1}</span>
               <div>
                 <p className="text-sm font-medium text-slate-900">{title}</p>
                 <p className="text-sm text-slate-500">{text}</p>
@@ -46,11 +46,11 @@ export default function HelpDialog({ open, onClose }) {
         </ol>
         <p className="mt-5 rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
           Stuck on something else? Ask the{' '}
-          <Link to="/assistant" onClick={onClose} className="font-medium text-sky-600 hover:text-sky-700">
+          <Link to="/assistant" onClick={onClose} className="font-medium text-brand-600 hover:text-brand-700">
             AI Assistant
           </Link>{' '}
           or email{' '}
-          <a href={`mailto:${CONTACT.email}`} className="font-medium text-sky-600 hover:text-sky-700">
+          <a href={`mailto:${CONTACT.email}`} className="font-medium text-brand-600 hover:text-brand-700">
             {CONTACT.email}
           </a>
           .

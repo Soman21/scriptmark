@@ -82,7 +82,7 @@ export default function CohortPanel({ sessionId }) {
                 <XAxis dataKey="grade" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="count" name="Students" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" name="Students" fill="#1F5FAD" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -113,7 +113,7 @@ export default function CohortPanel({ sessionId }) {
                 {data.items.map((q) => (
                   <tr key={q.question} className="border-t border-slate-100">
                     <td className="py-2">
-                      <span className="text-xs font-semibold text-sky-600">{q.question}</span>
+                      <span className="text-xs font-semibold text-brand-600">{q.question}</span>
                       <p className="max-w-md truncate text-slate-700">{q.text}</p>
                     </td>
                     <td className="py-2 text-slate-500">{q.responses}</td>

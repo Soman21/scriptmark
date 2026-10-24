@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { NavLink, useNavigate, useParams } from 'react-router-dom'
-import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, PanelLeftClose, PanelLeftOpen, X, Users } from 'lucide-react'
+import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, PanelLeftClose, PanelLeftOpen, X, ChevronUp } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import NewSessionDialog from './NewSessionDialog.jsx'
@@ -9,7 +9,6 @@ import HelpDialog from './HelpDialog.jsx'
 const toolItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
   { to: '/guides', label: 'Marking Guides', icon: BookOpen, restrictedTo: ['LECTURER', 'ADMIN'] },
-  { to: '/cohorts', label: 'Cohort Analytics', icon: Users },
   { to: '/assistant', label: 'AI Assistant', icon: Sparkles },
 ]
 
@@ -33,6 +32,8 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
   const { id: activeSessionId } = useParams()
   const [showNew, setShowNew] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
+  const profileRef = useRef(null)
   const [sessions, setSessions] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(true)
 
@@ -45,6 +46,24 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
   useEffect(() => {
     if (activeSessionId) loadSessions()
   }, [activeSessionId])
+
+  // The profile menu closes on a click anywhere else or on Escape, like
+  // any other dropdown.
+  useEffect(() => {
+    if (!showProfile) return
+    function onDown(e) {
+      if (profileRef.current && !profileRef.current.contains(e.target)) setShowProfile(false)
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') setShowProfile(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [showProfile])
 
   function loadSessions() {
     api
@@ -90,12 +109,7 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
         } ${rail ? 'md:w-[68px]' : 'md:w-64'}`}
       >
         <div className={`flex h-14 shrink-0 items-center ${rail ? 'justify-center' : 'justify-between pl-5 pr-3'}`}>
-          {!rail && (
-            <div className="min-w-0">
-              <h1 className="text-[17px] font-semibold tracking-tight leading-none">ScriptMark</h1>
-              <p className="mt-1 text-[11px] text-slate-400 leading-none">AI Grading Assistant</p>
-            </div>
-          )}
+          {!rail && <h1 className="text-[17px] font-semibold tracking-tight">ScriptMark</h1>}
           <button
             onClick={onToggleCollapse}
             className="hidden md:flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/[0.06] hover:text-white"
@@ -118,7 +132,7 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
             <button
               onClick={() => setShowNew(true)}
               title="New Marking Session"
-              className={`mb-3 flex items-center rounded-lg bg-sky-500 hover:bg-sky-400 transition-colors text-white font-medium text-sm disabled:opacity-60 ${
+              className={`mb-3 flex items-center rounded-lg bg-brand-500 hover:bg-brand-600 transition-colors text-white font-medium text-sm disabled:opacity-60 ${
                 rail ? 'justify-center h-10 w-10 mx-auto' : 'justify-center gap-2 py-2.5'
               }`}
             >
@@ -170,37 +184,69 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
           )}
           {rail && <div className="flex-1" />}
 
-          <div className="space-y-0.5 border-t border-white/10 pt-3 mt-3">
-            <NavLink
-              to="/settings"
-              title={rail ? 'Settings' : undefined}
-              className={({ isActive }) => `${itemBase} ${isActive ? itemActive : itemIdle}`}
-            >
-              <Settings size={18} className="shrink-0" />
-              {!rail && 'Settings'}
-            </NavLink>
-            <button onClick={() => setShowHelp(true)} title={rail ? 'Help' : undefined} className={`${itemBase} ${itemIdle} ${rail ? '' : 'w-full'}`}>
-              <HelpCircle size={18} className="shrink-0" />
-              {!rail && 'Help'}
-            </button>
-            <button onClick={onSignOut} title={rail ? 'Sign Out' : undefined} className={`${itemBase} ${itemIdle} ${rail ? '' : 'w-full'}`}>
-              <LogOut size={18} className="shrink-0" />
-              {!rail && 'Sign Out'}
-            </button>
-            {user && (
-              <div className={`flex items-center mt-2 ${rail ? 'justify-center py-1' : 'gap-3 px-3 py-2'}`} title={rail ? user.name : undefined}>
-                <div className="h-8 w-8 shrink-0 rounded-full bg-sky-500 flex items-center justify-center text-xs font-semibold">
-                  {user.initials}
+          {/* Settings, Help and Sign Out live in a menu under the profile,
+              the way Claude's own sidebar does it, so the sidebar itself
+              only holds places to go. */}
+          {user && (
+            <div ref={profileRef} className="relative mt-3 border-t border-white/10 pt-3">
+              {showProfile && (
+                <div
+                  role="menu"
+                  className={`absolute z-50 w-60 rounded-xl bg-white p-1.5 text-slate-800 shadow-xl ring-1 ring-slate-900/10 ${
+                    rail ? 'bottom-0 left-full ml-2' : 'bottom-full left-0 right-0 mb-2 w-auto'
+                  }`}
+                >
+                  {user.email && <p className="truncate px-3 pb-1.5 pt-2 text-xs text-slate-500">{user.email}</p>}
+                  <NavLink
+                    to="/settings"
+                    role="menuitem"
+                    onClick={() => setShowProfile(false)}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-slate-100"
+                  >
+                    <Settings size={17} className="shrink-0 text-slate-500" /> Settings
+                  </NavLink>
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setShowProfile(false)
+                      setShowHelp(true)
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-slate-100"
+                  >
+                    <HelpCircle size={17} className="shrink-0 text-slate-500" /> Help
+                  </button>
+                  <div className="mx-2 my-1 h-px bg-slate-200" />
+                  <button
+                    role="menuitem"
+                    onClick={onSignOut}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-slate-100"
+                  >
+                    <LogOut size={17} className="shrink-0 text-slate-500" /> Sign Out
+                  </button>
                 </div>
+              )}
+              <button
+                onClick={() => setShowProfile((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={showProfile}
+                title={rail ? user.name : undefined}
+                className={`flex w-full items-center rounded-lg transition-colors hover:bg-white/[0.06] ${rail ? 'justify-center py-1.5' : 'gap-3 px-2 py-2 text-left'}`}
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-500 text-xs font-semibold text-ink-950">
+                  {user.initials}
+                </span>
                 {!rail && (
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium leading-tight">{user.name}</p>
-                    <p className="text-xs text-slate-400 leading-tight">{titleCase(user.role)}</p>
-                  </div>
+                  <>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium leading-tight">{user.name}</span>
+                      <span className="block text-xs leading-tight text-slate-400">{titleCase(user.role)}</span>
+                    </span>
+                    <ChevronUp size={16} className={`shrink-0 text-slate-400 transition-transform ${showProfile ? '' : 'rotate-180'}`} />
+                  </>
                 )}
-              </div>
-            )}
-          </div>
+              </button>
+            </div>
+          )}
         </div>
       </aside>
     </>

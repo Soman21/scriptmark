@@ -34,7 +34,7 @@ export default function JoinSession() {
         <>
           <AlertCircle size={20} className="text-rose-400" />
           <p className="max-w-sm">{error}</p>
-          <Link to="/" className="font-medium text-sky-600 hover:text-sky-700">
+          <Link to="/" className="font-medium text-brand-600 hover:text-brand-700">
             Go to your dashboard
           </Link>
         </>

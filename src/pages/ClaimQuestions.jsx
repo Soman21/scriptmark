@@ -193,16 +193,16 @@ export default function ClaimQuestions() {
       <h1 className="text-xl font-semibold text-slate-900">Claim Questions</h1>
 
       {questionPaperUrl && (
-        <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50 p-4">
+        <div className="flex items-center justify-between rounded-xl border border-brand-200 bg-brand-50 p-4">
           <div>
-            <p className="text-sm font-medium text-sky-900">Question paper, as it was printed</p>
-            <p className="text-xs text-sky-700">
+            <p className="text-sm font-medium text-brand-900">Question paper, as it was printed</p>
+            <p className="text-xs text-brand-700">
               Worth a look before claiming, the layout here is often easier to recognize than the extracted text below.
             </p>
           </div>
           <button
             onClick={() => setShowPaperPreview(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-500"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white hover:bg-brand-500"
           >
             <FileText size={14} /> Preview
           </button>
@@ -229,7 +229,7 @@ export default function ClaimQuestions() {
                   href={questionPaperUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500"
                 >
                   Open the Question Paper
                 </a>
@@ -299,7 +299,7 @@ export default function ClaimQuestions() {
                     <button
                       onClick={() => handleToggleAccessLevel(m)}
                       disabled={busyUserId === m.id}
-                      className="flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700 disabled:opacity-60"
+                      className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 disabled:opacity-60"
                     >
                       <ShieldCheck size={12} />
                       {m.accessLevel === 'FULL' ? 'Make Limited' : 'Make Full Access'}
@@ -357,7 +357,7 @@ export default function ClaimQuestions() {
                   <button
                     onClick={() => handleBulkClaim(unclaimedInGroup.map((q) => q.id), (v) => setBusyGroupNumber(v ? number : null))}
                     disabled={busyGroupNumber === number}
-                    className="flex items-center gap-1.5 text-xs font-medium text-sky-600 hover:text-sky-700 disabled:opacity-60"
+                    className="flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 disabled:opacity-60"
                   >
                     {busyGroupNumber === number ? <Loader2 size={12} className="animate-spin" /> : <Layers size={12} />}
                     Claim all of Question {number} ({unclaimedInGroup.length})
@@ -413,7 +413,7 @@ export default function ClaimQuestions() {
                               {canManage && reassigningId !== q.id && (
                                 <button
                                   onClick={() => setReassigningId(q.id)}
-                                  className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                                  className="text-xs font-medium text-brand-600 hover:text-brand-700"
                                 >
                                   Reassign
                                 </button>
@@ -423,7 +423,7 @@ export default function ClaimQuestions() {
                                   <select
                                     onChange={(e) => handleReassign(q, e.target.value)}
                                     defaultValue=""
-                                    className="rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-sky-400"
+                                    className="rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-brand-400"
                                   >
                                     <option value="" disabled>
                                       Choose a marker

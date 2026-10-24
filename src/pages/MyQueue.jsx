@@ -111,7 +111,7 @@ export default function MyQueue() {
       {!loading && answers.length > 0 && (
         <div
           className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
-            toConfirm ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+            toConfirm ? 'border-brand-200 bg-brand-50 text-brand-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'
           }`}
         >
           <CheckCircle2 size={16} className="shrink-0" />
@@ -148,7 +148,7 @@ export default function MyQueue() {
                   Question {question.number}
                   {question.subLabel || ''} ({question.maxMarks} marks)
                 </p>
-                <span className={`text-xs font-medium ${todo.length ? 'text-sky-700' : 'text-emerald-700'}`}>
+                <span className={`text-xs font-medium ${todo.length ? 'text-brand-700' : 'text-emerald-700'}`}>
                   {todo.length ? `${todo.length} to confirm, ${done.length} done` : `All ${done.length} done`}
                 </span>
               </div>
@@ -209,7 +209,7 @@ export default function MyQueue() {
                           max={question.maxMarks}
                           value={displayScore ?? ''}
                           onChange={(e) => updateDraft(a.id, 'score', e.target.value)}
-                          className="mt-1 w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                          className="mt-1 w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                         />
                       </div>
 
@@ -222,7 +222,7 @@ export default function MyQueue() {
                             value={draft.reason || ''}
                             onChange={(e) => updateDraft(a.id, 'reason', e.target.value)}
                             placeholder="Required to change this score again"
-                            className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                            className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
                           />
                         </div>
                       )}
@@ -243,7 +243,7 @@ export default function MyQueue() {
                 <button
                   type="button"
                   onClick={() => setShowDone((prev) => ({ ...prev, [question.id]: !prev[question.id] }))}
-                  className="text-xs font-medium text-sky-600 hover:text-sky-700"
+                  className="text-xs font-medium text-brand-600 hover:text-brand-700"
                 >
                   {open ? 'Hide confirmed answers' : `Show ${done.length} confirmed answer${done.length === 1 ? '' : 's'}`}
                 </button>

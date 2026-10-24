@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { X, ChevronDown } from 'lucide-react'
+import { X } from 'lucide-react'
 import { PrimaryButton, SecondaryButton } from './ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -17,12 +17,12 @@ import {
 } from '../lib/sessionForm.js'
 
 const inputClass =
-  'mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-sky-400'
+  'mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400'
 const labelClass = 'block text-xs font-medium text-slate-500'
 
 // One short form for a new marking session. Semester and year are picked, not
-// typed, and department, faculty and the year are carried over from the
-// lecturer's last session, so most sessions need only a course code.
+// typed, and carried over from the lecturer's last session. Department and
+// faculty are plain fields the lecturer types each time.
 export default function NewSessionDialog({ open, onClose, onCreated, onOpenExisting }) {
   const { token, user } = useAuth()
   const [sessions, setSessions] = useState([])
@@ -34,7 +34,6 @@ export default function NewSessionDialog({ open, onClose, onCreated, onOpenExist
   const [department, setDepartment] = useState('')
   const [faculty, setFaculty] = useState('')
   const [autoAccept, setAutoAccept] = useState(true)
-  const [showMore, setShowMore] = useState(false)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const codeRef = useRef(null)
@@ -44,6 +43,8 @@ export default function NewSessionDialog({ open, onClose, onCreated, onOpenExist
     setCourseCode('')
     setCourseTitle('')
     setExaminationType('Examination')
+    setDepartment('')
+    setFaculty('')
     setError('')
     setCreating(false)
     setTimeout(() => codeRef.current?.focus(), 0)
@@ -53,15 +54,12 @@ export default function NewSessionDialog({ open, onClose, onCreated, onOpenExist
         setSessions(list)
         const last = lastOwnSession(list, user?.id)
         if (last) {
-          setDepartment(last.department || '')
-          setFaculty(last.faculty || '')
           if (last.semester) setSemester(last.semester)
           if (twoDigitsFrom(last.academicSession)) setYearDigits(twoDigitsFrom(last.academicSession))
           setAutoAccept(last.autoAcceptHighConfidence !== false)
         }
-        setShowMore(!last || (!last.department && !last.faculty))
       })
-      .catch(() => setShowMore(true))
+      .catch(() => {})
   }, [open])
 
   useEffect(() => {
@@ -181,7 +179,7 @@ export default function NewSessionDialog({ open, onClose, onCreated, onOpenExist
             <label htmlFor="ns-year" className={labelClass}>
               Academic session
             </label>
-            <div className="mt-1 flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm focus-within:ring-2 focus-within:ring-sky-400">
+            <div className="mt-1 flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm focus-within:ring-2 focus-within:ring-brand-400">
               <span className="text-slate-500">20</span>
               <input
                 id="ns-year"
@@ -190,7 +188,7 @@ export default function NewSessionDialog({ open, onClose, onCreated, onOpenExist
                 inputMode="numeric"
                 maxLength={2}
                 aria-label="Last two digits of the starting year"
-                className="mx-1 my-1.5 w-10 rounded-md border border-slate-300 bg-white py-1 text-center font-medium text-slate-900 outline-none focus:border-sky-400"
+                className="mx-1 my-1.5 w-10 rounded-md border border-slate-300 bg-white py-1 text-center font-medium text-slate-900 outline-none focus:border-brand-400"
               />
               <span className="text-slate-500">/ 20{endYear || '..'}</span>
             </div>
@@ -209,7 +207,7 @@ export default function NewSessionDialog({ open, onClose, onCreated, onOpenExist
                 onClick={() => setExaminationType(t)}
                 className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
                   examinationType === t
-                    ? 'border-sky-500 bg-sky-50 font-medium text-sky-700'
+                    ? 'border-brand-500 bg-brand-50 font-medium text-brand-700'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
@@ -219,42 +217,24 @@ export default function NewSessionDialog({ open, onClose, onCreated, onOpenExist
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowMore((v) => !v)}
-          aria-expanded={showMore}
-          className="mt-4 flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50"
-        >
-          <span className="min-w-0 truncate text-slate-600">
-            {department || faculty ? [department, faculty].filter(Boolean).join(', ') : 'Department and faculty'}
-          </span>
-          <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-sky-600">
-            {showMore ? 'Hide' : 'Change'} <ChevronDown size={14} className={showMore ? 'rotate-180' : ''} />
-          </span>
-        </button>
-
-        {showMore && (
-          <div className="mt-3 space-y-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label htmlFor="ns-dept" className={labelClass}>
-                  Department
-                </label>
-                <input id="ns-dept" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="Electronic and Computer Engineering" className={inputClass} />
-              </div>
-              <div>
-                <label htmlFor="ns-faculty" className={labelClass}>
-                  Faculty
-                </label>
-                <input id="ns-faculty" value={faculty} onChange={(e) => setFaculty(e.target.value)} placeholder="Engineering" className={inputClass} />
-              </div>
-            </div>
-            <label className="flex items-start gap-2 text-sm text-slate-700">
-              <input type="checkbox" className="mt-0.5" checked={autoAccept} onChange={(e) => setAutoAccept(e.target.checked)} />
-              Accept high confidence AI scores automatically, so you only review flagged or uncertain answers
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor="ns-dept" className={labelClass}>
+              Department
             </label>
+            <input id="ns-dept" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="Electronic and Computer Engineering" className={inputClass} />
           </div>
-        )}
+          <div>
+            <label htmlFor="ns-faculty" className={labelClass}>
+              Faculty
+            </label>
+            <input id="ns-faculty" value={faculty} onChange={(e) => setFaculty(e.target.value)} placeholder="Engineering" className={inputClass} />
+          </div>
+        </div>
+        <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
+          <input type="checkbox" checked={autoAccept} onChange={(e) => setAutoAccept(e.target.checked)} />
+          Auto accept high confidence scores
+        </label>
 
         {courseCode.trim() && (
           <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
@@ -281,7 +261,7 @@ export default function NewSessionDialog({ open, onClose, onCreated, onOpenExist
           <SecondaryButton type="button" onClick={onClose} className="justify-center">
             Cancel
           </SecondaryButton>
-          <PrimaryButton type="submit" disabled={creating} className="justify-center bg-sky-500 hover:bg-sky-400">
+          <PrimaryButton type="submit" disabled={creating} className="justify-center bg-brand-500 hover:bg-brand-600">
             {creating ? 'Creating...' : 'Create and set up guide'}
           </PrimaryButton>
         </div>

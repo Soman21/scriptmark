@@ -191,7 +191,7 @@ export default function PageViewerModal({ pages, startIndex, onClose, onIndexCha
 
           {showCropOverlay && (
             <div
-              className="pointer-events-none absolute border-2 border-sky-400"
+              className="pointer-events-none absolute border-2 border-brand-400"
               style={{
                 left: `${draftCrop.x * 100}%`,
                 top: `${draftCrop.y * 100}%`,
