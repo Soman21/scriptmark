@@ -27,6 +27,7 @@ import Privacy from './pages/Privacy.jsx'
 import SessionOverview from './pages/SessionOverview.jsx'
 import ServerWakeScreen from './components/ServerWakeScreen.jsx'
 import { wakeServer } from './lib/serverWake.js'
+import NotificationBell, { useNotifications } from './components/NotificationBell.jsx'
 
 function AppLayout({ children }) {
   const { user, logout } = useAuth()
@@ -44,6 +45,7 @@ function AppLayout({ children }) {
     : null
 
   const location = useLocation()
+  const bell = useNotifications()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -74,6 +76,7 @@ function AppLayout({ children }) {
         onToggleCollapse={toggleCollapsed}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
+        bell={bell}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex h-12 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-3 md:hidden">
@@ -84,7 +87,8 @@ function AppLayout({ children }) {
           >
             <Menu size={20} />
           </button>
-          <span className="text-[15px] font-semibold tracking-tight text-slate-900">ScriptMark</span>
+          <span className="flex-1 text-[15px] font-semibold tracking-tight text-slate-900">ScriptMark</span>
+          <NotificationBell bell={bell} />
         </div>
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </div>

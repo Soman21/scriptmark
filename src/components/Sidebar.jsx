@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import NewSessionDialog from './NewSessionDialog.jsx'
 import HelpDialog from './HelpDialog.jsx'
+import NotificationBell from './NotificationBell.jsx'
 
 const toolItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
@@ -26,7 +27,7 @@ function titleCase(role) {
 // Claude style sidebar. On desktop it can collapse to an icon rail; below
 // md it becomes a drawer that slides over the page (mobileOpen), opened
 // from the mobile top bar in App.jsx.
-export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCollapse, mobileOpen = false, onCloseMobile }) {
+export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCollapse, mobileOpen = false, onCloseMobile, bell }) {
   const { token } = useAuth()
   const navigate = useNavigate()
   const { id: activeSessionId } = useParams()
@@ -109,7 +110,13 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
         } ${rail ? 'md:w-[68px]' : 'md:w-64'}`}
       >
         <div className={`flex h-14 shrink-0 items-center ${rail ? 'justify-center' : 'justify-between pl-5 pr-3'}`}>
-          {!rail && <h1 className="text-[17px] font-semibold tracking-tight">ScriptMark</h1>}
+          {!rail && <h1 className="flex-1 text-[17px] font-semibold tracking-tight">ScriptMark</h1>}
+          {/* On phones the bell sits in the top bar instead (App.jsx). */}
+          {bell && !rail && (
+            <div className="mr-1 hidden md:block">
+              <NotificationBell bell={bell} tone="dark" />
+            </div>
+          )}
           <button
             onClick={onToggleCollapse}
             className="hidden md:flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white/[0.06] hover:text-white"
@@ -128,6 +135,11 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
         </div>
 
         <div className={`flex min-h-0 flex-1 flex-col ${rail ? 'px-2' : 'px-3'} pb-3`}>
+          {bell && rail && (
+            <div className="mb-2 hidden justify-center md:flex">
+              <NotificationBell bell={bell} tone="dark" />
+            </div>
+          )}
           {canManage && (
             <button
               onClick={() => setShowNew(true)}
