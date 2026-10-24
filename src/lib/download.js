@@ -42,3 +42,20 @@ export async function downloadEvaluationCsv(sessionId, sessionTitle, token) {
   a.remove()
   window.URL.revokeObjectURL(url)
 }
+
+// Downloads a course's combined result sheet (Test, Assignment and Exam).
+export async function downloadCourseExport(query, courseCode, token) {
+  const res = await fetch(`${API_BASE}/api/courses/export?${query}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Could not generate the export.')
+  const blob = await res.blob()
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${(courseCode || 'course').replace(/[^a-z0-9]/gi, '_')}_result_sheet.xlsx`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.URL.revokeObjectURL(url)
+}

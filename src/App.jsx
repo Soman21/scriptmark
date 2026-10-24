@@ -25,6 +25,7 @@ import Contact from './pages/Contact.jsx'
 import JoinSession from './pages/JoinSession.jsx'
 import Privacy from './pages/Privacy.jsx'
 import SessionOverview from './pages/SessionOverview.jsx'
+import CoursePage from './pages/CoursePage.jsx'
 import ServerWakeScreen from './components/ServerWakeScreen.jsx'
 import { wakeServer } from './lib/serverWake.js'
 import NotificationBell, { useNotifications } from './components/NotificationBell.jsx'
@@ -141,6 +142,7 @@ export default function App() {
         <Route path="/guides" element={<Protected><MarkingGuides /></Protected>} />
         <Route path="/assistant" element={<Protected><AiAssistant /></Protected>} />
         <Route path="/settings" element={<Protected><Settings /></Protected>} />
+        <Route path="/courses/:code" element={<Protected><CoursePage /></Protected>} />
 
         {/* A session's own workspace: tab bar + nested pages, all scoped to :id */}
         <Route path="/sessions/:id" element={<Protected><SessionWorkspace /></Protected>}>

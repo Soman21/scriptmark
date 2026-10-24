@@ -17,6 +17,8 @@ import ScanScripts from '../pages/ScanScripts.jsx'
 import Settings from '../pages/Settings.jsx'
 import SessionOverview from '../pages/SessionOverview.jsx'
 import NotificationBell, { useNotifications } from '../components/NotificationBell.jsx'
+import CoursePage from '../pages/CoursePage.jsx'
+import { groupForMenu } from '../lib/courses.js'
 import App from '../App.jsx'
 
 const FAKE_USER = { id: 'u1', name: 'Ann Coordinator', role: 'LECTURER' }
@@ -167,7 +169,7 @@ describe('Sidebar', () => {
     expect(screen.getByText('Marking Guides')).toBeTruthy()
     expect(screen.getByText('AI Assistant')).toBeTruthy()
     expect(screen.getByText('New Marking Session')).toBeTruthy()
-    await waitFor(() => expect(screen.getAllByText('ECE305 Midterm').length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getByText('ECE305')).toBeTruthy())
     // none of the old flat session-scoped items should exist in the permanent sidebar
     expect(screen.queryByText('Marking Progress')).toBeNull()
     expect(screen.queryByText('Claim Questions')).toBeNull()
@@ -548,5 +550,101 @@ describe('Notification bell', () => {
     )
     fireEvent.click(await screen.findByRole('button', { name: 'Notifications' }))
     expect(screen.getByText('No notifications')).toBeTruthy()
+  })
+})
+
+describe('Courses', () => {
+  const sessions = [
+    { id: 'x', title: 'ECE432 Exam', courseCode: 'ECE 432', academicSession: '2025/2026', semester: 'First', examinationType: 'Examination', status: 'ACTIVE' },
+    { id: 't', title: 'ECE432 Test', courseCode: 'ece432', academicSession: '2025/2026', semester: 'First', examinationType: 'Test', status: 'ACTIVE' },
+    { id: 'o', title: 'Old session', courseCode: null, status: 'DRAFT' },
+  ]
+
+  it('groups sessions by course with the Test before the Exam', () => {
+    const menu = groupForMenu(sessions)
+    expect(menu.courses).toHaveLength(1)
+    expect(menu.courses[0].courseCode).toBe('ECE 432')
+    expect(menu.courses[0].sessions.map((s) => s.id)).toEqual(['t', 'x'])
+    expect(menu.loose.map((s) => s.id)).toEqual(['o'])
+  })
+
+  it('nests the sessions under the course in the sidebar', async () => {
+    routes.unshift(routeFor('/api/sessions', sessions))
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AuthProvider>
+          <Sidebar user={{ name: 'Ann', role: 'LECTURER', initials: 'AC' }} onSignOut={() => {}} />
+        </AuthProvider>
+      </MemoryRouter>
+    )
+    expect(await screen.findByText('Courses')).toBeTruthy()
+    expect(screen.getByText('Old session')).toBeTruthy()
+    expect(screen.queryByText('Test')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Show ECE 432 sessions' }))
+    expect(screen.getByText('Test')).toBeTruthy()
+    expect(screen.getByText('Examination')).toBeTruthy()
+  })
+
+  const sheet = (over = {}) => ({
+    course: { courseCode: 'ECE432', academicSession: '2025/2026', semester: 'First' },
+    canEdit: true,
+    typedCaMax: null,
+    assessments: [
+      { sessionId: 't', title: 'ECE432 Test', type: 'Test', kind: 'CA', weight: 30 },
+      { sessionId: 'x', title: 'ECE432 Exam', type: 'Examination', kind: 'EXAM', weight: 70 },
+    ],
+    rows: [
+      { name: 'Ada Obi', regNumber: '2017364085', cells: { t: { status: 'OK', score: 24 }, x: { status: 'OK', score: 42 } }, ca: 24, caTyped: false, caScriptId: 'sx1', exam: 42, total: 66, grade: 'B', note: '' },
+      { name: 'Bola Ade', regNumber: '2017364090', cells: { t: { status: 'ABSENT', score: null }, x: { status: 'OK', score: 50 } }, ca: 0, caTyped: false, caScriptId: 'sx2', exam: 50, total: 50, grade: 'C', note: 'Absent: Test' },
+    ],
+    ...over,
+  })
+
+  function renderCourse() {
+    return render(
+      <MemoryRouter initialEntries={['/courses/ECE432?session=2025%2F2026&semester=First']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/courses/:code" element={<CoursePage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    )
+  }
+
+  it('shows the combined sheet with Absent and saves new weights', async () => {
+    routes.unshift(routeFor('/api/courses/results', sheet()), routeFor('/api/courses/weights', sheet()))
+    renderCourse()
+    expect(await screen.findByText('Ada Obi')).toBeTruthy()
+    expect(screen.getByText('Absent')).toBeTruthy()
+    expect(screen.getByText('Absent: Test')).toBeTruthy()
+    expect(screen.getByText('Test (30)')).toBeTruthy()
+    expect(global.fetch.mock.calls[0][0]).toContain('code=ECE432&session=2025%2F2026&semester=First')
+
+    fireEvent.change(screen.getByLabelText('Weight for Test'), { target: { value: '20' } })
+    fireEvent.change(screen.getByLabelText('Weight for Examination'), { target: { value: '80' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save weights' }))
+    await waitFor(() => {
+      const put = global.fetch.mock.calls.find(([u, o]) => u.endsWith('/api/courses/weights') && o.method === 'PUT')
+      expect(JSON.parse(put[1].body).weights).toEqual({ t: '20', x: '80' })
+    })
+  })
+
+  it('lets the coordinator type CA when the course has only an exam', async () => {
+    const examOnly = sheet({
+      typedCaMax: 30,
+      assessments: [{ sessionId: 'x', title: 'ECE432 Exam', type: 'Examination', kind: 'EXAM', weight: 70 }],
+      rows: [{ name: 'Ada Obi', regNumber: '2017364085', cells: { x: { status: 'OK', score: 42 } }, ca: null, caTyped: false, caScriptId: 'sx1', exam: 42, total: null, grade: '', note: 'CA not entered' }],
+    })
+    routes.unshift(routeFor('/api/courses/results', examOnly), routeFor('/api/sessions/scripts/sx1/caScore', { ok: true }))
+    renderCourse()
+    expect(await screen.findByText('Entered by hand')).toBeTruthy()
+    const input = screen.getByLabelText('CA for Ada Obi')
+    fireEvent.change(input, { target: { value: '25' } })
+    fireEvent.blur(input)
+    await waitFor(() => {
+      const put = global.fetch.mock.calls.find(([u, o]) => u.endsWith('/scripts/sx1/caScore') && o.method === 'PUT')
+      expect(JSON.parse(put[1].body)).toEqual({ caScore: '25' })
+    })
   })
 })

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { NavLink, useNavigate, useParams } from 'react-router-dom'
-import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, PanelLeftClose, PanelLeftOpen, X, ChevronUp } from 'lucide-react'
+import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { LayoutGrid, BookOpen, Settings, Plus, HelpCircle, LogOut, Sparkles, PanelLeftClose, PanelLeftOpen, X, ChevronUp, ChevronRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import NewSessionDialog from './NewSessionDialog.jsx'
 import HelpDialog from './HelpDialog.jsx'
 import NotificationBell from './NotificationBell.jsx'
+import { groupForMenu, courseLink } from '../lib/courses.js'
 
 const toolItems = [
   { to: '/', label: 'Dashboard', icon: LayoutGrid },
@@ -31,6 +32,8 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
   const { token } = useAuth()
   const navigate = useNavigate()
   const { id: activeSessionId } = useParams()
+  const { pathname, search } = useLocation()
+  const [expanded, setExpanded] = useState({})
   const [showNew, setShowNew] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
@@ -83,6 +86,28 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
   const itemBase = `flex items-center rounded-lg text-sm transition-colors ${rail ? 'justify-center h-10 w-10 mx-auto' : 'gap-3 px-3 py-2'}`
   const itemIdle = 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
   const itemActive = 'bg-white/[0.08] text-white font-medium'
+
+  const menu = groupForMenu(sessions)
+  const sectionLabel = 'px-3 mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-500'
+
+  function sessionButton(s, label) {
+    return (
+      <button
+        key={s.id}
+        onClick={() => {
+          navigate(`/sessions/${s.id}`)
+          onCloseMobile?.()
+        }}
+        title={s.title}
+        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+          s.id === activeSessionId ? itemActive : itemIdle
+        }`}
+      >
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDot(s.status)}`} />
+        <span className="truncate">{label}</span>
+      </button>
+    )
+  }
 
   function handleCreated(session) {
     setShowNew(false)
@@ -170,26 +195,65 @@ export default function Sidebar({ user, onSignOut, collapsed = false, onToggleCo
 
           {!rail && (
             <>
-              <p className="px-3 mt-6 mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">Sessions</p>
-              <div className="flex-1 space-y-0.5 overflow-y-auto">
+              <div className="mt-6 flex-1 overflow-y-auto">
                 {loadingSessions ? (
                   <p className="px-3 py-2 text-xs text-slate-500">Loading...</p>
                 ) : sessions.length === 0 ? (
                   <p className="px-3 py-2 text-xs text-slate-500">No sessions yet.</p>
                 ) : (
-                  sessions.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => navigate(`/sessions/${s.id}`)}
-                      title={s.title}
-                      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                        s.id === activeSessionId ? itemActive : itemIdle
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDot(s.status)}`} />
-                      <span className="truncate">{s.title}</span>
-                    </button>
-                  ))
+                  <>
+                    {menu.courses.length > 0 && (
+                      <>
+                        <p className={sectionLabel}>Courses</p>
+                        <div className="space-y-0.5">
+                          {menu.courses.map((c) => {
+                            const link = courseLink(c)
+                            const here = `${pathname}${search}` === link
+                            const inside = c.sessions.some((s) => s.id === activeSessionId)
+                            const isOpen = expanded[c.key] ?? (here || inside)
+                            return (
+                              <div key={c.key}>
+                                <div className={`flex items-center rounded-lg ${here ? itemActive : itemIdle}`}>
+                                  <button
+                                    type="button"
+                                    aria-label={isOpen ? `Hide ${c.courseCode} sessions` : `Show ${c.courseCode} sessions`}
+                                    aria-expanded={isOpen}
+                                    onClick={() => setExpanded((e) => ({ ...e, [c.key]: !isOpen }))}
+                                    className="flex h-9 w-8 shrink-0 items-center justify-center text-slate-500 hover:text-white"
+                                  >
+                                    <ChevronRight size={14} className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setExpanded((e) => ({ ...e, [c.key]: true }))
+                                      navigate(link)
+                                      onCloseMobile?.()
+                                    }}
+                                    className="flex min-w-0 flex-1 items-baseline gap-2 py-2 pr-3 text-left text-sm"
+                                  >
+                                    <span className="truncate">{c.courseCode}</span>
+                                    {c.semester && <span className="shrink-0 text-xs text-slate-500">{c.semester}</span>}
+                                  </button>
+                                </div>
+                                {isOpen && (
+                                  <div className="ml-6 space-y-0.5 border-l border-white/10 pl-2">
+                                    {c.sessions.map((s) => sessionButton(s, s.examinationType || 'Examination'))}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
+                    {menu.loose.length > 0 && (
+                      <>
+                        <p className={`${sectionLabel} ${menu.courses.length ? 'mt-5' : ''}`}>Sessions</p>
+                        <div className="space-y-0.5">{menu.loose.map((s) => sessionButton(s, s.title))}</div>
+                      </>
+                    )}
+                  </>
                 )}
               </div>
             </>
