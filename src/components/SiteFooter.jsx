@@ -36,6 +36,9 @@ export default function SiteFooter({ onSection }) {
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">
             The AI marking assistant for handwritten exams. The AI suggests, the lecturer decides.
           </p>
+          <a href={`mailto:${CONTACT.email}`} className="mt-4 inline-block text-sm font-medium text-brand-700 hover:text-brand-800">
+            {CONTACT.email}
+          </a>
         </div>
         <div>
           <p className="text-sm font-semibold text-slate-900">Product</p>
