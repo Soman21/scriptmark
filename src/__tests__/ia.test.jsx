@@ -419,7 +419,7 @@ describe('Public pages', () => {
   it('shows contact details and opens an email with the message filled in', async () => {
     renderAt('/contact')
     expect(await screen.findByText(/Let's talk about marking/)).toBeTruthy()
-    expect(screen.getAllByRole('link', { name: /somancreatives@gmail.com/ })[0].getAttribute('href')).toBe('mailto:somancreatives@gmail.com')
+    expect(screen.getAllByRole('link', { name: /maryannmmesoma@gmail.com/ })[0].getAttribute('href')).toBe('mailto:maryannmmesoma@gmail.com')
     const original = window.location
     delete window.location
     window.location = { href: '' }
@@ -427,7 +427,7 @@ describe('Public pages', () => {
     fireEvent.change(screen.getByLabelText('Your email'), { target: { value: 'obi@unizik.edu.ng' } })
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'We want a pilot.' } })
     fireEvent.click(screen.getByRole('button', { name: /Send message/ }))
-    expect(window.location.href).toMatch(/^mailto:somancreatives@gmail\.com\?subject=ScriptMark/)
+    expect(window.location.href).toMatch(/^mailto:maryannmmesoma@gmail\.com\?subject=ScriptMark/)
     expect(decodeURIComponent(window.location.href)).toContain('We want a pilot.')
     window.location = original
   })

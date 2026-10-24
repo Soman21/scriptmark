@@ -3,7 +3,7 @@
 export const CONTACT = {
   name: 'Nwachukwu Mmesoma Maryann',
   role: 'Developer of ScriptMark',
-  email: 'somancreatives@gmail.com',
+  email: 'maryannmmesoma@gmail.com',
   department: 'Department of Electronic and Computer Engineering',
   institution: 'Nnamdi Azikiwe University',
   location: 'Awka, Anambra State, Nigeria',
