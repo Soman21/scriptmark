@@ -6,8 +6,9 @@ import { api } from '../lib/api.js'
 import { timeAgo } from '../lib/time.js'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, Badge } from '../components/ui.jsx'
+import AdminAnalytics from '../components/AdminAnalytics.jsx'
 
-const TABS = ['Overview', 'Lecturers', 'Sessions', 'Admins']
+const TABS = ['Overview', 'Analytics', 'Lecturers', 'Sessions', 'Admins']
 
 const date = (iso) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
@@ -215,6 +216,8 @@ export default function AdminPage() {
             </div>
           </>
         )}
+
+        {tab === 'Analytics' && <AdminAnalytics />}
 
         {data && (tab === 'Lecturers' || tab === 'Sessions') && (
           <input
