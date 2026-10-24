@@ -71,6 +71,9 @@ function Table({ head, children }) {
   )
 }
 
+const filterClass =
+  'rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500'
+
 const SOURCE = { OWNER: 'Owner', EMAIL_LIST: 'Email list', GRANTED: 'Admin' }
 
 // Only for Admins. The server refuses everyone else (403), so the redirect
@@ -86,6 +89,9 @@ export default function AdminPage() {
   const [adminError, setAdminError] = useState('')
   const [busy, setBusy] = useState(false)
   const [query, setQuery] = useState('')
+  const [faculty, setFaculty] = useState('')
+  const [department, setDepartment] = useState('')
+  const [status, setStatus] = useState('')
 
   function loadAdmins() {
     api
@@ -143,6 +149,21 @@ export default function AdminPage() {
 
   const q = query.trim().toLowerCase()
   const match = (...fields) => !q || fields.some((f) => (f || '').toLowerCase().includes(q))
+
+  // Filter choices come from the lecturers themselves, so only faculties and
+  // departments that have someone in them are offered.
+  const lecturers = data?.lecturers || []
+  const faculties = [...new Set(lecturers.map((l) => l.faculty).filter(Boolean))].sort()
+  const departments = [
+    ...new Set(lecturers.filter((l) => !faculty || l.faculty === faculty).map((l) => l.department).filter(Boolean)),
+  ].sort()
+  const shownLecturers = lecturers.filter(
+    (l) =>
+      match(l.name, l.email, l.lecturerId) &&
+      (!faculty || l.faculty === faculty) &&
+      (!department || l.department === department) &&
+      (!status || (status === 'suspended') === l.suspended)
+  )
 
   return (
     <div className="flex h-full flex-col">
@@ -231,20 +252,48 @@ export default function AdminPage() {
         )}
 
         {data && tab === 'Lecturers' && (
-          <Card title="Lecturers" right={<span className="text-sm text-slate-500">{data.lecturers.length}</span>}>
-            <Table head={['Name', 'Email', 'Joined', 'Created', 'Joined sessions']}>
-              {data.lecturers
-                .filter((l) => match(l.name, l.email))
-                .map((l) => (
-                  <tr key={l.id}>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-slate-800">{l.name}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{l.email}</td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{date(l.createdAt)}</td>
-                    <td className="px-4 py-2.5 text-slate-700">{l.sessionsCreated}</td>
-                    <td className="px-4 py-2.5 text-slate-700">{l.sessionsJoined}</td>
-                  </tr>
-                ))}
+          <div className="flex flex-wrap gap-2">
+            <select aria-label="Faculty" value={faculty} onChange={(e) => { setFaculty(e.target.value); setDepartment('') }} className={filterClass}>
+              <option value="">All faculties</option>
+              {faculties.map((f) => (
+                <option key={f}>{f}</option>
+              ))}
+            </select>
+            <select aria-label="Department" value={department} onChange={(e) => setDepartment(e.target.value)} className={filterClass}>
+              <option value="">All departments</option>
+              {departments.map((d) => (
+                <option key={d}>{d}</option>
+              ))}
+            </select>
+            <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className={filterClass}>
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+        )}
+
+        {data && tab === 'Lecturers' && (
+          <Card title="Lecturers" right={<span className="text-sm text-slate-500">{shownLecturers.length}</span>}>
+            <Table head={['ID', 'Name', 'Faculty', 'Department', 'Status', 'Last active', 'Sessions']}>
+              {shownLecturers.map((l) => (
+                <tr key={l.id} onClick={() => navigate(`/admin/lecturers/${l.id}`)} className="cursor-pointer hover:bg-slate-50">
+                  <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-slate-600">{l.lecturerId || ''}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5">
+                    <p className="text-slate-800">{l.name}</p>
+                    <p className="text-xs text-slate-500">{l.email}</p>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{l.faculty || <span className="text-slate-400">Not set</span>}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{l.department || <span className="text-slate-400">Not set</span>}</td>
+                  <td className="px-4 py-2.5">
+                    <Badge tone={l.suspended ? 'red' : 'green'}>{l.suspended ? 'Suspended' : 'Active'}</Badge>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-slate-600">{l.lastActiveAt ? timeAgo(l.lastActiveAt) : 'Never'}</td>
+                  <td className="px-4 py-2.5 text-slate-700">{l.sessionsCreated + l.sessionsJoined}</td>
+                </tr>
+              ))}
             </Table>
+            {shownLecturers.length === 0 && <p className="px-5 py-8 text-center text-sm text-slate-400">No lecturers match</p>}
           </Card>
         )}
 

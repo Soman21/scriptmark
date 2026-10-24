@@ -12,7 +12,16 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
+  // Set by lib/api.js when the server reports the account as suspended.
+  const [error, setError] = useState(() => {
+    try {
+      if (sessionStorage.getItem('scriptmark_suspended')) {
+        sessionStorage.removeItem('scriptmark_suspended')
+        return 'This account has been suspended. Contact the ScriptMark admin.'
+      }
+    } catch {}
+    return ''
+  })
   const [submitting, setSubmitting] = useState(false)
 
   const [pendingToken, setPendingToken] = useState(null)

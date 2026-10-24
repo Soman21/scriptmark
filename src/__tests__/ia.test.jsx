@@ -346,9 +346,10 @@ describe('Settings page', () => {
   }
 
   it('saves a new name and keeps the fresh token', async () => {
-    routes.unshift(routeFor('/api/auth/me', { token: 'tok_new', user: { ...FAKE_USER, name: 'Ann Nwachukwu' } }))
     renderSettings()
     const input = await screen.findByDisplayValue('Ann Coordinator')
+    // The save answers with the new name; the profile check on open has already run.
+    routes.unshift(routeFor('/api/auth/me', { token: 'tok_new', user: { ...FAKE_USER, name: 'Ann Nwachukwu' } }))
     fireEvent.change(input, { target: { value: 'Ann Nwachukwu' } })
     fireEvent.click(screen.getByText('Save name'))
     await waitFor(() => expect(screen.getByText('Name updated.')).toBeTruthy())

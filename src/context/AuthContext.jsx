@@ -24,9 +24,10 @@ export function AuthProvider({ children }) {
       api
         .getMe(savedToken)
         .then(({ user: fresh }) => {
+          // Also brings in the lecturer profile (ID, faculty, department).
           const saved = JSON.parse(localStorage.getItem('scriptmark_user') || 'null')
-          if (!saved || saved.id !== fresh.id || saved.role === fresh.role) return
-          const next = { ...saved, role: fresh.role }
+          if (!saved || saved.id !== fresh.id) return
+          const next = { ...saved, ...fresh }
           localStorage.setItem('scriptmark_user', JSON.stringify(next))
           setUser(next)
         })
@@ -58,8 +59,8 @@ export function AuthProvider({ children }) {
     setUser(nextUser)
   }
 
-  async function signup({ name, email, password, role }) {
-    const data = await api.signup({ name, email, password, role })
+  async function signup({ name, email, password, departmentId }) {
+    const data = await api.signup({ name, email, password, departmentId })
     persist(data.token, data.user)
     return data.user
   }
@@ -79,9 +80,9 @@ export function AuthProvider({ children }) {
     return data.user
   }
 
-  // Settings: a name change comes back with a fresh token carrying it.
-  async function updateProfile({ name }) {
-    const data = await api.updateProfile({ name }, token)
+  // Settings: a name or department change comes back with a fresh token.
+  async function updateProfile(changes) {
+    const data = await api.updateProfile(changes, token)
     persist(data.token, data.user)
     return data.user
   }

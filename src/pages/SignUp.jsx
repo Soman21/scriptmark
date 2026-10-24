@@ -4,6 +4,8 @@ import { safeNext, withNext } from '../lib/next.js'
 import { User, GraduationCap, ShieldCheck, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { PrimaryButton } from '../components/ui.jsx'
+import DepartmentPicker from '../components/DepartmentPicker.jsx'
+import { useStructure } from '../lib/structure.js'
 
 export default function SignUp() {
   const { signup } = useAuth()
@@ -13,6 +15,8 @@ export default function SignUp() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [departmentId, setDepartmentId] = useState('')
+  const { structure } = useStructure()
   const [agreed, setAgreed] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -26,9 +30,14 @@ export default function SignUp() {
       return
     }
 
+    if (structure?.faculties.length && !departmentId) {
+      setError('Select your faculty and department.')
+      return
+    }
+
     setSubmitting(true)
     try {
-      await signup({ name, email, password })
+      await signup({ name, email, password, departmentId: departmentId || undefined })
       navigate(safeNext(location.search))
     } catch (err) {
       setError(err.message)
@@ -91,6 +100,10 @@ export default function SignUp() {
                   />
                 </div>
               </div>
+
+              {structure?.faculties.length > 0 && (
+                <DepartmentPicker structure={structure} value={departmentId} onChange={setDepartmentId} required />
+              )}
 
               <div>
                 <label className="text-sm font-medium text-slate-700">Password</label>
