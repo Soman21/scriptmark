@@ -106,6 +106,28 @@ export default function Results() {
     }
   }
 
+  // After a confirm, only that script is fetched again, not the whole
+  // session: with 150 scripts of 16 pages a full reload is about 8 MB on
+  // every confirm. Order, the duplicate flags and other scripts' unsaved
+  // drafts stay as they are.
+  async function refreshScript(scriptId) {
+    const fresh = await api.getScript(scriptId, token)
+    setScripts((prev) => prev.map((s) => (s.id === scriptId ? { ...s, ...fresh } : s)))
+    const ids = fresh.answers.map((a) => a.id)
+    setDraftScores((prev) => {
+      const next = { ...prev }
+      fresh.answers.forEach((a) => {
+        next[a.id] = a.confirmedScore ?? a.suggestedScore ?? 0
+      })
+      return next
+    })
+    setDraftReasons((prev) => {
+      const next = { ...prev }
+      ids.forEach((id) => delete next[id])
+      return next
+    })
+  }
+
   const currentScript = scripts[currentIndex]
   const reviewedCount = scripts.filter((s) => s.status === 'REVIEWED').length
 
@@ -170,7 +192,7 @@ export default function Results() {
         if (needsReason(answer)) payload.reason = draftReasons[answer.id].trim()
         await api.confirmScore(answer.id, payload, token)
       }
-      await loadScripts()
+      await refreshScript(currentScript.id)
     } catch (err) {
       setError(err.message)
     } finally {

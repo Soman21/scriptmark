@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, RefreshCw, Pencil, Trash2, AlertCircle, AlertTriangle } from 'lucide-react'
+import { Search, RefreshCw, Pencil, Trash2, AlertCircle, AlertTriangle, PauseCircle } from 'lucide-react'
 import { Badge, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
@@ -69,6 +69,10 @@ export default function MarkingProgress() {
   const redirectedRef = useRef(false)
   const sawUnmarkedRef = useRef(false)
   const [showDuplicates, setShowDuplicates] = useState(false)
+  // Set by the server when marking stopped because the AI's daily allowance
+  // ran out; the remaining scripts wait, unflagged, until marking resumes.
+  const [paused, setPaused] = useState(null)
+  const [resuming, setResuming] = useState(false)
 
   useEffect(() => {
     if (!sessionId) return
@@ -86,6 +90,7 @@ export default function MarkingProgress() {
         setScripts(data.scripts)
         setTotal(data.total)
         setMarkedCount(data.markedCount)
+        setPaused(data.paused || null)
         setError('')
 
         // Move on to Results only when marking finishes while the lecturer
@@ -118,6 +123,18 @@ export default function MarkingProgress() {
       setMarkedCount(data.markedCount)
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  async function handleResume() {
+    setResuming(true)
+    try {
+      await api.startMarking(sessionId, token)
+      setPaused(null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setResuming(false)
     }
   }
 
@@ -172,6 +189,18 @@ export default function MarkingProgress() {
           </p>
         )}
       </div>
+
+      {paused?.reason === 'AI_DAILY_LIMIT' && markedCount < total && (
+        <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex gap-2">
+            <PauseCircle size={16} className="mt-0.5 shrink-0" />
+            <span>Marking paused. Daily AI limit reached.</span>
+          </p>
+          <button type="button" onClick={handleResume} disabled={resuming} className="shrink-0 font-medium underline disabled:opacity-50">
+            {resuming ? 'Resuming...' : 'Resume'}
+          </button>
+        </div>
+      )}
 
       {scannedTwice.length > 0 && (
         <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
