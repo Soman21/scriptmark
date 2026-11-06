@@ -11,10 +11,11 @@ export function warningText(w) {
   return `${label}: ${w.kind === 'POINTS' ? 'points' : 'parts'} ${w.actual} of ${w.expected}`
 }
 
-export const RESULT_LABEL = { full: 'Full', partial: 'Partial', none: 'None' }
+export const RESULT_LABEL = { full: 'Full', partial: 'Partial', attempt: 'Attempt', none: 'None' }
 export const RESULT_STYLE = {
   full: 'bg-emerald-50 text-emerald-700',
   partial: 'bg-amber-50 text-amber-700',
+  attempt: 'bg-slate-100 text-slate-600',
   none: 'bg-rose-50 text-rose-700',
 }
 
