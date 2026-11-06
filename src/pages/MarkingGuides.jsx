@@ -4,6 +4,7 @@ import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import { sumMarks, warningText } from '../lib/points.js'
 import NewSessionDialog from '../components/NewSessionDialog.jsx'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
@@ -19,6 +20,34 @@ function letterLabel(index) {
   return label
 }
 
+function romanLabel(index) {
+  const numerals = [[10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']]
+  let n = index + 1
+  let out = ''
+  for (const [v, r] of numerals) while (n >= v) { out += r; n -= v }
+  return out
+}
+
+// A part keeps the label it was read with (3 i, 3 ii). New parts follow
+// the style already in use: roman numerals if the guide uses them, else letters.
+function partLabel(group, index) {
+  const own = group.parts[index]?.subLabel
+  if (own) return own
+  // "ii" or later is roman; "i" alone could be either, so it needs company.
+  const roman = group.parts.some((p) => /^(ii|iii|iv|vi|vii|viii|ix|x)$/.test(p.subLabel || ''))
+  return roman ? romanLabel(index) : letterLabel(index)
+}
+
+function pointsFrom(steps) {
+  return Array.isArray(steps)
+    ? steps.map((s) => ({ id: Date.now() + Math.random(), description: s.description || '', marks: s.marks || 0, note: s.note || '', diagram: s.diagram || '' }))
+    : []
+}
+
+const WORD_SHAPES_MSG = 'Diagrams drawn with Word shapes were not read. Upload the guide as PDF to include them.'
+const figuresNote = (n) => (n ? ` ${n} diagram${n !== 1 ? 's' : ''} read.` : '')
+
+
 const blankPart = () => ({
   id: Date.now() + Math.random(),
   questionId: null,
@@ -28,14 +57,16 @@ const blankPart = () => ({
   marks: 0,
   assignedMarkerId: '',
   isCalculationHeavy: false,
+  subLabel: null,
   steps: [],
 })
 
-const blankStep = () => ({ id: Date.now() + Math.random(), description: '', marks: 0 })
+const blankStep = () => ({ id: Date.now() + Math.random(), description: '', marks: 0, note: '', diagram: '' })
 
 const blankGroup = (number) => ({
   id: Date.now() + Math.random(),
   number: String(number),
+  total: '',
   parts: [blankPart()],
 })
 
@@ -49,6 +80,7 @@ function groupsFromQuestions(questions) {
   return numbers.map((number) => ({
     id: Date.now() + Math.random(),
     number,
+    total: byNumber[number].find((q) => q.questionTotal)?.questionTotal ?? '',
     parts: byNumber[number]
       .sort((a, b) => a.order - b.order)
       .map((q) => ({
@@ -60,9 +92,8 @@ function groupsFromQuestions(questions) {
         marks: q.maxMarks,
         assignedMarkerId: q.assignedMarkerId || '',
         isCalculationHeavy: q.isCalculationHeavy || false,
-        steps: Array.isArray(q.steps)
-          ? q.steps.map((s) => ({ id: Date.now() + Math.random(), description: s.description || '', marks: s.marks || 0 }))
-          : [],
+        subLabel: q.subLabel || null,
+        steps: pointsFrom(q.steps),
       })),
   }))
 }
@@ -104,6 +135,8 @@ export default function MarkingGuides() {
   const lastSavedRef = useRef(null)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  // Guide arithmetic problems from the server: points vs part, parts vs total.
+  const [totalWarnings, setTotalWarnings] = useState([])
   const [remarkOffer, setRemarkOffer] = useState(null) // questions changed after scripts were marked
   const [remarking, setRemarking] = useState(false)
   const [autoGenerateOnParse, setAutoGenerateOnParse] = useState(false)
@@ -293,6 +326,10 @@ export default function MarkingGuides() {
     setGroups((gs) => gs.filter((g) => g.id !== groupId))
   }
 
+  function updateGroupTotal(groupId, value) {
+    setGroups((gs) => gs.map((g) => (g.id === groupId ? { ...g, total: value } : g)))
+  }
+
   function updateGroupNumber(groupId, value) {
     setGroups((gs) => gs.map((g) => (g.id === groupId ? { ...g, number: value } : g)))
   }
@@ -392,8 +429,11 @@ export default function MarkingGuides() {
             keywords: match.keywords?.trim() ? match.keywords : p.keywords,
             marks: p.marks || match.maxMarks || 0,
             isCalculationHeavy: p.isCalculationHeavy || match.isCalculationHeavy || false,
+            subLabel: p.subLabel || match.subLabel || null,
+            steps: p.steps.length ? p.steps : pointsFrom(match.steps),
           }
         })
+        if (!g.total) g.total = incoming.find((q) => q.questionTotal)?.questionTotal ?? ''
 
         // The answer scheme had more subparts than the question paper did
         // for this number, append the extras rather than dropping them.
@@ -407,7 +447,8 @@ export default function MarkingGuides() {
             marks: incoming[i].maxMarks || 0,
             assignedMarkerId: '',
             isCalculationHeavy: incoming[i].isCalculationHeavy || false,
-            steps: [],
+            subLabel: incoming[i].subLabel || null,
+            steps: pointsFrom(incoming[i].steps),
           })
         }
       })
@@ -419,6 +460,7 @@ export default function MarkingGuides() {
         .map((num) => ({
           id: Date.now() + Math.random(),
           number: num,
+          total: incomingByNumber[num].find((q) => q.questionTotal)?.questionTotal ?? '',
           parts: incomingByNumber[num].map((q) => ({
             id: Date.now() + Math.random(),
             questionId: null,
@@ -428,7 +470,8 @@ export default function MarkingGuides() {
             marks: q.maxMarks || 0,
             assignedMarkerId: '',
             isCalculationHeavy: q.isCalculationHeavy || false,
-            steps: [],
+            subLabel: q.subLabel || null,
+            steps: pointsFrom(q.steps),
           })),
         }))
 
@@ -465,6 +508,7 @@ export default function MarkingGuides() {
       // Question Paper always sets the structure fresh, this is the source
       // of truth for question text and marks, never merged with anything.
       setGroups(groupsFromQuestions(orderedQuestions))
+      setTotalWarnings(data.warnings || [])
       setQuestionPaperPreviewText(data.previewText || '')
       setQuestionPaperDocUrl(data.documentUrl || null)
       setQuestionPaperDocMimeType(data.documentMimeType || null)
@@ -477,9 +521,10 @@ export default function MarkingGuides() {
         setSuccessMsg(
           blankCount > 0
             ? `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''}. ${blankCount} have no answer yet, upload a marking guide below or use Generate Answers with AI.`
-            : `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document. Check everything below before saving.`
+            : `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document.${figuresNote(data.figures)} Check everything below before saving.`
         )
       }
+      if (data.wordShapes) setError(WORD_SHAPES_MSG)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -535,8 +580,9 @@ export default function MarkingGuides() {
       mergeQuestionsIntoGroups(orderedQuestions)
       setGuidePreviewText(data.previewText || '')
       setSuccessMsg(
-        `Merged ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} of answers into what you already had. Check everything below before saving.`
+        `Merged ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} of answers into what you already had.${figuresNote(data.figures)} Check everything below before saving.`
       )
+      if (data.wordShapes) setError(WORD_SHAPES_MSG)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -597,7 +643,7 @@ export default function MarkingGuides() {
             groupId: g.id,
             partId: p.id,
             number: g.number,
-            subLabel: g.parts.length > 1 ? letterLabel(pi) : null,
+            subLabel: g.parts.length > 1 ? partLabel(g, pi) : null,
             text: p.text,
             maxMarks: p.marks,
           })
@@ -619,7 +665,7 @@ export default function MarkingGuides() {
         setError('Type the question first, then generate its answer.')
         return
       }
-      blanks = [{ groupId: group.id, partId: part.id, number: group.number, subLabel: group.parts.length > 1 ? letterLabel(pi) : null, text: part.text, maxMarks: part.marks }]
+      blanks = [{ groupId: group.id, partId: part.id, number: group.number, subLabel: group.parts.length > 1 ? partLabel(group, pi) : null, text: part.text, maxMarks: part.marks }]
     }
     if (blanks.length === 0) return
 
@@ -682,10 +728,12 @@ export default function MarkingGuides() {
 
     const flatQuestions = groups.flatMap((g) =>
       g.parts
-        .filter((p) => isDraft || p.text.trim())
-        .map((p, i) => ({
+        .map((p, i) => ({ p, label: g.parts.length > 1 ? partLabel(g, i) : null }))
+        .filter(({ p }) => isDraft || p.text.trim())
+        .map(({ p, label }) => ({
           number: g.number,
-          subLabel: g.parts.length > 1 ? letterLabel(i) : null,
+          subLabel: label,
+          questionTotal: g.total === '' ? null : Number(g.total) || null,
           text: p.text,
           modelAnswer: p.modelAnswer,
           keywords: p.keywords,
@@ -693,7 +741,7 @@ export default function MarkingGuides() {
           isCalculationHeavy: p.isCalculationHeavy,
           steps: p.steps
             .filter((s) => s.description.trim())
-            .map((s) => ({ description: s.description, marks: Number(s.marks) || 0 })),
+            .map((s) => ({ description: s.description, marks: Number(s.marks) || 0, note: s.note || null, diagram: s.diagram?.trim() || null })),
         }))
     )
 
@@ -718,6 +766,7 @@ export default function MarkingGuides() {
           await api.updateSession(currentSession.id, { guideId: guide.id }, token)
         }
       }
+      setTotalWarnings(guide.warnings || [])
       setSuccessMsg(isDraft ? 'Draft saved' : 'Marking guide saved and published.')
       setDraftSaved(isDraft)
       lastSavedRef.current = { title, groups }
@@ -892,6 +941,17 @@ export default function MarkingGuides() {
               }`}
             >
               {error || successMsg}
+            </div>
+          )}
+
+          {totalWarnings.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <p className="font-semibold">Check totals</p>
+              <ul className="mt-1 space-y-0.5">
+                {totalWarnings.map((w) => (
+                  <li key={w.label + w.kind}>{warningText(w)}</li>
+                ))}
+              </ul>
             </div>
           )}
 
@@ -1154,7 +1214,8 @@ export default function MarkingGuides() {
           </div>
 
           {groups.map((group) => {
-            const groupTotal = group.parts.reduce((sum, p) => sum + Number(p.marks || 0), 0)
+            const groupTotal = sumMarks(group.parts)
+            const totalOff = group.total !== '' && group.total != null && Number(group.total) !== groupTotal
             const hasSubParts = group.parts.length > 1
 
             return (
@@ -1169,8 +1230,18 @@ export default function MarkingGuides() {
                     />
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-slate-500">
-                      Question total: <span className="font-semibold text-slate-700">{groupTotal} marks</span>
+                    <span className={`flex items-center gap-1.5 text-xs ${totalOff ? 'text-amber-600' : 'text-slate-500'}`}>
+                      Parts <span className="font-semibold">{groupTotal}</span> of
+                      <input
+                        type="number"
+                        step="0.25"
+                        min="0"
+                        value={group.total ?? ''}
+                        onChange={(e) => updateGroupTotal(group.id, e.target.value)}
+                        aria-label={`Total for question ${group.number}`}
+                        className="w-16 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-right text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-brand-400"
+                      />
+                      marks
                     </span>
                     {groups.length > 1 && (
                       <button
@@ -1190,8 +1261,7 @@ export default function MarkingGuides() {
                       {hasSubParts && (
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-semibold text-brand-600">
-                            Part {group.number}
-                            {letterLabel(i)}
+                            Part {group.number} {partLabel(group, i)}
                           </span>
                           {group.parts.length > 1 && (
                             <button
@@ -1259,6 +1329,8 @@ export default function MarkingGuides() {
                           <label className="text-sm font-medium text-slate-700">Marks</label>
                           <input
                             type="number"
+                            step="0.25"
+                            min="0"
                             value={part.marks}
                             onChange={(e) => updatePart(group.id, part.id, 'marks', e.target.value)}
                             className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
@@ -1283,57 +1355,84 @@ export default function MarkingGuides() {
                         </span>
                       </div>
 
-                      <div className="mt-3">
+                      <div className="mt-4">
                         <div className="flex items-center justify-between">
-                          <label className="text-sm font-medium text-slate-700">Step Rubric (optional)</label>
+                          <label className="text-sm font-medium text-slate-700">Marking Points</label>
                           <button
                             type="button"
                             onClick={() => addStep(group.id, part.id)}
                             className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
                           >
-                            <Plus size={12} /> Add step
+                            <Plus size={12} /> Add point
                           </button>
                         </div>
                         {part.steps.length === 0 ? (
-                          <p className="mt-1 text-xs text-slate-400">
-                            Leave empty for a flat score. Add steps to award partial credit for correct working even
-                            when the final answer is wrong.
-                          </p>
+                          <p className="mt-1 text-xs text-slate-400">None. Marked as a whole.</p>
                         ) : (
                           <div className="mt-2 space-y-2">
+                            <div className="hidden gap-2 px-1 text-xs text-slate-400 sm:grid sm:grid-cols-[20px_1fr_150px_80px_20px]">
+                              <span />
+                              <span>Point</span>
+                              <span>Answer form</span>
+                              <span className="text-right">Marks</span>
+                              <span />
+                            </div>
                             {part.steps.map((step, si) => (
-                              <div key={step.id} className="flex items-start gap-2">
-                                <span className="mt-2.5 text-xs text-slate-400">{si + 1}.</span>
-                                <input
-                                  value={step.description}
-                                  onChange={(e) => updateStep(group.id, part.id, step.id, 'description', e.target.value)}
-                                  placeholder="Describe this step, e.g. correctly sets up the equation"
-                                  className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-400"
-                                />
-                                <input
-                                  type="number"
-                                  value={step.marks}
-                                  onChange={(e) => updateStep(group.id, part.id, step.id, 'marks', e.target.value)}
-                                  className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-right outline-none focus:ring-2 focus:ring-brand-400"
-                                />
-                                <button
-                                  onClick={() => removeStep(group.id, part.id, step.id)}
-                                  className="mt-2 text-slate-400 hover:text-rose-500"
-                                  title="Remove this step"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
+                              <div key={step.id}>
+                                <div className="grid grid-cols-[20px_1fr_20px] items-center gap-2 sm:grid-cols-[20px_1fr_150px_80px_20px]">
+                                  <span className="text-xs text-slate-400">{si + 1}.</span>
+                                  <input
+                                    value={step.description}
+                                    onChange={(e) => updateStep(group.id, part.id, step.id, 'description', e.target.value)}
+                                    placeholder="e.g. Analog signals"
+                                    aria-label={`Point ${si + 1}`}
+                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-400"
+                                  />
+                                  <button
+                                    onClick={() => removeStep(group.id, part.id, step.id)}
+                                    className="text-slate-400 hover:text-rose-500 sm:order-last"
+                                    title="Remove point"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                  <select
+                                    value={step.note || ''}
+                                    onChange={(e) => updateStep(group.id, part.id, step.id, 'note', e.target.value)}
+                                    aria-label={`Answer form for point ${si + 1}`}
+                                    className={`col-start-2 rounded-lg border px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-400 sm:col-start-auto ${
+                                      step.note ? 'border-brand-200 bg-brand-50 text-brand-700' : 'border-slate-200 bg-white'
+                                    }`}
+                                  >
+                                    <option value="">Text</option>
+                                    <option value="DIAGRAM">Labelled diagram</option>
+                                    <option value="LABELS_OPTIONAL">Diagram</option>
+                                  </select>
+                                  <input
+                                    type="number"
+                                    step="0.25"
+                                    min="0"
+                                    value={step.marks}
+                                    onChange={(e) => updateStep(group.id, part.id, step.id, 'marks', e.target.value)}
+                                    aria-label={`Marks for point ${si + 1}`}
+                                    className="col-start-2 rounded-lg border border-slate-200 bg-white px-2 py-2 text-right text-sm outline-none focus:ring-2 focus:ring-brand-400 sm:col-start-auto"
+                                  />
+                                </div>
+                                {(step.note || step.diagram) && (
+                                  <div className="ml-7 mt-2 rounded-lg border border-brand-100 bg-white p-3">
+                                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">Guide Diagram</label>
+                                    <textarea
+                                      rows={2}
+                                      value={step.diagram || ''}
+                                      onChange={(e) => updateStep(group.id, part.id, step.id, 'diagram', e.target.value)}
+                                      placeholder="e.g. Five boxes left to right: Source, Transmitter, Channel, Receiver, Destination"
+                                      className="mt-1 w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-400"
+                                    />
+                                  </div>
+                                )}
                               </div>
                             ))}
-                            <p
-                              className={`text-xs ${
-                                part.steps.reduce((sum, s) => sum + Number(s.marks || 0), 0) === Number(part.marks)
-                                  ? 'text-slate-400'
-                                  : 'text-amber-600'
-                              }`}
-                            >
-                              Steps total {part.steps.reduce((sum, s) => sum + Number(s.marks || 0), 0)} of{' '}
-                              {part.marks} marks
+                            <p className={`text-xs ${sumMarks(part.steps) === Number(part.marks) ? 'text-slate-400' : 'text-amber-600'}`}>
+                              Points {sumMarks(part.steps)} of {part.marks}
                             </p>
                           </div>
                         )}
@@ -1353,7 +1452,7 @@ export default function MarkingGuides() {
                   onClick={() => addPart(group.id)}
                   className="mt-4 flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
                 >
-                  <Plus size={14} /> Add subpart (e.g. {letterLabel(group.parts.length)})
+                  <Plus size={14} /> Add subpart
                 </button>
               </div>
             )

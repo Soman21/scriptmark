@@ -5,6 +5,7 @@ import { Badge, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
+import { warningText } from '../lib/points.js'
 
 const POLL_INTERVAL_MS = 3000
 
@@ -73,10 +74,18 @@ export default function MarkingProgress() {
   // ran out; the remaining scripts wait, unflagged, until marking resumes.
   const [paused, setPaused] = useState(null)
   const [resuming, setResuming] = useState(false)
+  // Guide arithmetic problems (points vs part, parts vs question total).
+  const [guideWarnings, setGuideWarnings] = useState([])
 
   useEffect(() => {
     if (!sessionId) return
-    api.getSession(sessionId, token).then((s) => setGuideId(s.guideId)).catch(() => {})
+    api
+      .getSession(sessionId, token)
+      .then(async (s) => {
+        setGuideId(s.guideId)
+        if (s.guideId) setGuideWarnings((await api.getGuide(s.guideId, token)).warnings || [])
+      })
+      .catch(() => {})
   }, [sessionId, token])
 
   useEffect(() => {
@@ -189,6 +198,24 @@ export default function MarkingProgress() {
           </p>
         )}
       </div>
+
+      {guideWarnings.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex gap-2">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <span>
+              <span className="font-semibold">Guide totals do not match.</span> {guideWarnings.map(warningText).join('. ')}.
+            </span>
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(`/guides?session=${sessionId}`)}
+            className="shrink-0 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium hover:bg-amber-100"
+          >
+            Edit guide
+          </button>
+        </div>
+      )}
 
       {paused?.reason === 'AI_DAILY_LIMIT' && markedCount < total && (
         <div className="flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between">
