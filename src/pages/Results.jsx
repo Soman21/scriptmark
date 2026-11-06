@@ -9,6 +9,8 @@ import { api } from '../lib/api.js'
 import PageAssistant from '../components/PageAssistant.jsx'
 import { resultsShortcuts } from '../lib/chatShortcuts.js'
 import ReviewAssistant from '../components/ReviewAssistant.jsx'
+import PointRows, { DrawingNote } from '../components/PointRows.jsx'
+import { startingPointScores, sumMarks } from '../lib/points.js'
 
 function ImageViewerModal({ pages, startIndex, onClose, onIndexChange }) {
   useEffect(() => {
@@ -70,6 +72,12 @@ export default function Results() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [draftScores, setDraftScores] = useState({})
   const [draftReasons, setDraftReasons] = useState({})
+  // Lecturer marks per marking point, by answer id. touchedPoints holds the
+  // answers whose points the lecturer actually changed: only those are sent
+  // point by point, so agreeing to the AI with Confirm All does not count
+  // as a point by point check in the evaluation.
+  const [draftPoints, setDraftPoints] = useState({})
+  const [touchedPoints, setTouchedPoints] = useState({})
   const [confirming, setConfirming] = useState(false)
   const [viewerIndex, setViewerIndex] = useState(null)
   const [pageIndex, setPageIndex] = useState(0)
@@ -92,12 +100,16 @@ export default function Results() {
       setScripts(scored)
 
       const drafts = {}
+      const points = {}
       scored.forEach((s) => {
         s.answers.forEach((a) => {
           drafts[a.id] = a.confirmedScore ?? a.suggestedScore ?? 0
+          points[a.id] = startingPointScores(a)
         })
       })
       setDraftScores(drafts)
+      setDraftPoints(points)
+      setTouchedPoints({})
       setDraftReasons({})
     } catch (err) {
       setError(err.message)
@@ -121,6 +133,18 @@ export default function Results() {
       })
       return next
     })
+    setDraftPoints((prev) => {
+      const next = { ...prev }
+      fresh.answers.forEach((a) => {
+        next[a.id] = startingPointScores(a)
+      })
+      return next
+    })
+    setTouchedPoints((prev) => {
+      const next = { ...prev }
+      ids.forEach((id) => delete next[id])
+      return next
+    })
     setDraftReasons((prev) => {
       const next = { ...prev }
       ids.forEach((id) => delete next[id])
@@ -134,8 +158,20 @@ export default function Results() {
   // Each script opens on its first page.
   useEffect(() => setPageIndex(0), [currentIndex])
 
+  // Typing a total by hand on an answer with points stops it being sent
+  // point by point, since the points no longer add up to it.
   function updateDraft(answerId, value) {
     setDraftScores((prev) => ({ ...prev, [answerId]: value }))
+    setTouchedPoints((prev) => ({ ...prev, [answerId]: false }))
+  }
+
+  // A point mark changes the answer's total to the sum of its points.
+  function updatePoint(answerId, index, value) {
+    const values = [...(draftPoints[answerId] || [])]
+    values[index] = value
+    setDraftPoints((prev) => ({ ...prev, [answerId]: values }))
+    setDraftScores((prev) => ({ ...prev, [answerId]: sumMarks(values.map((v) => ({ marks: v }))) }))
+    setTouchedPoints((prev) => ({ ...prev, [answerId]: true }))
   }
 
   function updateReason(answerId, value) {
@@ -189,6 +225,7 @@ export default function Results() {
     try {
       for (const answer of currentScript.answers) {
         const payload = { confirmedScore: Number(draftScores[answer.id] ?? answer.suggestedScore ?? 0) }
+        if (touchedPoints[answer.id]) payload.pointScores = draftPoints[answer.id].map(Number)
         if (needsReason(answer)) payload.reason = draftReasons[answer.id].trim()
         await api.confirmScore(answer.id, payload, token)
       }
@@ -381,6 +418,7 @@ export default function Results() {
                                 {answer.confidence.charAt(0).toUpperCase() + answer.confidence.slice(1)} confidence
                               </Badge>
                             )}
+                            {answer.diagramDescription && <Badge tone="amber">Diagram</Badge>}
                             <button
                               onClick={() => askAbout(label)}
                               className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
@@ -430,24 +468,14 @@ export default function Results() {
                         </div>
                       )}
 
-                      {Array.isArray(answer.stepBreakdown) && answer.stepBreakdown.length > 0 && (
-                        <div className="mt-3 rounded-lg border border-slate-200 p-3.5">
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Step Breakdown</p>
-                          <div className="divide-y divide-slate-100">
-                            {answer.stepBreakdown.map((step, si) => (
-                              <div key={si} className="flex items-start justify-between gap-3 py-1.5 text-sm">
-                                <div>
-                                  <p className="text-slate-700">{step.description}</p>
-                                  {step.reasoning && <p className="mt-0.5 text-xs text-slate-400">{step.reasoning}</p>}
-                                </div>
-                                <span className="shrink-0 font-medium text-slate-700">
-                                  {step.awarded} / {step.marks}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <DrawingNote description={answer.diagramDescription} onViewPages={currentPages.length ? () => setViewerIndex(0) : null} />
+
+                      <PointRows
+                        answer={answer}
+                        label={label}
+                        values={draftPoints[answer.id] || []}
+                        onChange={(i, v) => updatePoint(answer.id, i, v)}
+                      />
 
                       <p className="mt-3 text-sm text-slate-600">
                         <span className="text-slate-400">AI reasoning: </span>

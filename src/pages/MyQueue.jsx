@@ -6,6 +6,8 @@ import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 import PageAssistant from '../components/PageAssistant.jsx'
 import { queueShortcuts } from '../lib/chatShortcuts.js'
+import PointRows, { DrawingNote } from '../components/PointRows.jsx'
+import { startingPointScores, sumMarks } from '../lib/points.js'
 
 function confidenceTone(confidence) {
   if (confidence === 'high') return 'green'
@@ -44,8 +46,23 @@ export default function MyQueue() {
     }
   }
 
+  // Typing the total by hand drops any point marks typed for this answer.
   function updateDraft(answerId, field, value) {
-    setDrafts((prev) => ({ ...prev, [answerId]: { ...prev[answerId], [field]: value } }))
+    setDrafts((prev) => ({
+      ...prev,
+      [answerId]: { ...prev[answerId], [field]: value, ...(field === 'score' ? { points: undefined } : {}) },
+    }))
+  }
+
+  // A point mark sets the total to the sum of the points.
+  function updatePoint(answer, index, value) {
+    const current = drafts[answer.id]?.points || startingPointScores(answer)
+    const points = [...current]
+    points[index] = value
+    setDrafts((prev) => ({
+      ...prev,
+      [answer.id]: { ...prev[answer.id], points, score: sumMarks(points.map((v) => ({ marks: v }))) },
+    }))
   }
 
   async function handleConfirm(answer) {
@@ -63,7 +80,12 @@ export default function MyQueue() {
     try {
       await api.confirmScore(
         answer.id,
-        { confirmedScore: Number(score), extractedText: answer.extractedText, reason: draft.reason },
+        {
+          confirmedScore: Number(score),
+          extractedText: answer.extractedText,
+          reason: draft.reason,
+          ...(draft.points ? { pointScores: draft.points.map(Number) } : {}),
+        },
         token
       )
       await loadQueue()
@@ -177,6 +199,7 @@ export default function MyQueue() {
                           </Badge>
                         )}
                         <Badge tone={confidenceTone(a.confidence)}>{a.confidence || 'unscored'} confidence</Badge>
+                        {a.diagramDescription && <Badge tone="amber">Diagram</Badge>}
                         {a.confirmedAt && !a.autoAccepted && <Badge tone="green">Reviewed</Badge>}
                       </div>
                     </div>
@@ -185,6 +208,15 @@ export default function MyQueue() {
                     <p className="mt-1 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
                       {a.extractedText || 'No text extracted yet.'}
                     </p>
+
+                    <DrawingNote description={a.diagramDescription} />
+
+                    <PointRows
+                      answer={a}
+                      label={a.script.studentName || 'Student'}
+                      values={draft.points || startingPointScores(a)}
+                      onChange={(i, v) => updatePoint(a, i, v)}
+                    />
 
                     {a.reasoning && (
                       <>
@@ -206,6 +238,7 @@ export default function MyQueue() {
                         </label>
                         <input
                           type="number"
+                          step="0.25"
                           max={question.maxMarks}
                           value={displayScore ?? ''}
                           onChange={(e) => updateDraft(a.id, 'score', e.target.value)}
