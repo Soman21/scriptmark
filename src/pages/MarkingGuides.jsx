@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Sparkles, Plus, Trash2, ArrowLeft, FileUp, Loader2, Eye, X } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
@@ -95,7 +95,13 @@ export default function MarkingGuides() {
   const [recentGuides, setRecentGuides] = useState([])
   const [loadingGuides, setLoadingGuides] = useState(true)
   const [showAllGuides, setShowAllGuides] = useState(false)
+  // false, or 'draft' / 'publish' while that button's save is running, so
+  // only the clicked button shows progress.
   const [saving, setSaving] = useState(false)
+  // True right after a draft save; cleared by the next edit so the button
+  // goes back to Save Draft once there is something new to save.
+  const [draftSaved, setDraftSaved] = useState(false)
+  const lastSavedRef = useRef(null)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [remarkOffer, setRemarkOffer] = useState(null) // questions changed after scripts were marked
@@ -439,7 +445,7 @@ export default function MarkingGuides() {
     setQuestionPaperFile(file)
     setQuestionPaperPreviewText('')
     if (questionPaperPreviewUrl) URL.revokeObjectURL(questionPaperPreviewUrl)
-    setQuestionPaperPreviewUrl(file.type === 'application/pdf' ? URL.createObjectURL(file) : null)
+    setQuestionPaperPreviewUrl(file.type === 'application/pdf' || file.type.startsWith('image/') ? URL.createObjectURL(file) : null)
 
     try {
       const formData = new FormData()
@@ -492,6 +498,12 @@ export default function MarkingGuides() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groups, pendingAutoGenerate])
 
+  // Any edit after a draft save means the button should offer to save again.
+  useEffect(() => {
+    const last = lastSavedRef.current
+    if (draftSaved && last && (last.title !== title || last.groups !== groups)) setDraftSaved(false)
+  }, [title, groups, draftSaved])
+
   async function handleParseMarkingGuideDoc(file) {
     if (!file) return
 
@@ -501,7 +513,7 @@ export default function MarkingGuides() {
     setGuideFile(file)
     setGuidePreviewText('')
     if (guidePreviewUrl) URL.revokeObjectURL(guidePreviewUrl)
-    setGuidePreviewUrl(file.type === 'application/pdf' ? URL.createObjectURL(file) : null)
+    setGuidePreviewUrl(file.type === 'application/pdf' || file.type.startsWith('image/') ? URL.createObjectURL(file) : null)
 
     try {
       const formData = new FormData()
@@ -685,7 +697,7 @@ export default function MarkingGuides() {
         }))
     )
 
-    setSaving(true)
+    setSaving(isDraft ? 'draft' : 'publish')
     try {
       let guide
       const payload = {
@@ -707,6 +719,8 @@ export default function MarkingGuides() {
         }
       }
       setSuccessMsg(isDraft ? 'Draft saved' : 'Marking guide saved and published.')
+      setDraftSaved(isDraft)
+      lastSavedRef.current = { title, groups }
       loadGuides()
     } catch (err) {
       setError(err.message)
@@ -853,10 +867,10 @@ export default function MarkingGuides() {
         right={
           <div className="flex items-center gap-2">
             <SecondaryButton onClick={() => handleSave(true)} disabled={saving}>
-              {saving ? 'Saving...' : 'Draft Save'}
+              {saving === 'draft' ? 'Saving...' : draftSaved ? 'Draft Saved' : 'Save Draft'}
             </SecondaryButton>
             <PrimaryButton onClick={() => handleSave(false)} disabled={saving} className="bg-brand-500 hover:bg-brand-600">
-              {saving ? 'Saving...' : 'Save & Publish'}
+              {saving === 'publish' ? 'Publishing...' : 'Save & Publish'}
             </PrimaryButton>
           </div>
         }
@@ -967,7 +981,7 @@ export default function MarkingGuides() {
                   or click to browse
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
                     onChange={handlePaperFileInputChange}
                     className="hidden"
                   />
@@ -1022,7 +1036,11 @@ export default function MarkingGuides() {
               </div>
               <div className="flex-1 overflow-auto rounded-xl bg-white">
                 {questionPaperPreviewUrl ? (
-                  <iframe src={questionPaperPreviewUrl} title="Question paper preview" className="h-full w-full" />
+                  questionPaperFile.type.startsWith('image/') ? (
+                    <img src={questionPaperPreviewUrl} alt="Question paper preview" className="mx-auto max-w-full" />
+                  ) : (
+                    <iframe src={questionPaperPreviewUrl} title="Question paper preview" className="h-full w-full" />
+                  )
                 ) : (
                   <div className="p-6">
                     <p className="mb-3 text-xs text-slate-500">
@@ -1067,7 +1085,7 @@ export default function MarkingGuides() {
                   or click to browse
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
                     onChange={handleGuideFileInputChange}
                     className="hidden"
                   />
@@ -1106,7 +1124,11 @@ export default function MarkingGuides() {
               </div>
               <div className="flex-1 overflow-auto rounded-xl bg-white">
                 {guidePreviewUrl ? (
-                  <iframe src={guidePreviewUrl} title="Marking guide preview" className="h-full w-full" />
+                  guideFile.type.startsWith('image/') ? (
+                    <img src={guidePreviewUrl} alt="Marking guide preview" className="mx-auto max-w-full" />
+                  ) : (
+                    <iframe src={guidePreviewUrl} title="Marking guide preview" className="h-full w-full" />
+                  )
                 ) : (
                   <div className="p-6">
                     <p className="mb-3 text-xs text-slate-500">
