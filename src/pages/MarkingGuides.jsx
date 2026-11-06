@@ -215,6 +215,16 @@ export default function MarkingGuides() {
     setSuccessMsg('')
   }
 
+  // A recent guide opens the session that uses it, so the lecturer lands
+  // back in that session with its guide. A guide no session uses yet opens
+  // in the current session, and saving it attaches it there.
+  async function openRecentGuide(guide) {
+    const linked = guide.sessions?.[0]
+    if (linked && linked.id !== currentSession?.id) await enterSession(linked)
+    else loadGuideForEditing(guide)
+    document.getElementById('guide-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   async function enterSession(session) {
     setLoadingSession(true)
     setError('')
@@ -758,12 +768,18 @@ export default function MarkingGuides() {
       setRemarkOffer(null)
       if (currentGuideId) {
         guide = await api.updateGuide(currentGuideId, payload, token)
+        // A guide opened from Recent Guides into a session with no guide yet.
+        if (currentSession && !currentSession.guideId) {
+          await api.updateSession(currentSession.id, { guideId: guide.id }, token)
+          setCurrentSession({ ...currentSession, guideId: guide.id })
+        }
         if (currentSession && guide.changedMarkedQuestions?.length) setRemarkOffer(guide.changedMarkedQuestions)
       } else {
         guide = await api.createGuide(payload, token)
         setCurrentGuideId(guide.id)
         if (currentSession) {
           await api.updateSession(currentSession.id, { guideId: guide.id }, token)
+          setCurrentSession({ ...currentSession, guideId: guide.id })
         }
       }
       setTotalWarnings(guide.warnings || [])
@@ -1205,6 +1221,7 @@ export default function MarkingGuides() {
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Subject / Exam Title</label>
             <input
+              id="guide-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -1514,7 +1531,7 @@ export default function MarkingGuides() {
                   return (
                     <li key={g.id}>
                       <button
-                        onClick={() => loadGuideForEditing(g)}
+                        onClick={() => openRecentGuide(g)}
                         className={`w-full text-left rounded-lg px-2 py-2 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors ${
                           currentGuideId === g.id ? 'bg-brand-50' : ''
                         }`}
