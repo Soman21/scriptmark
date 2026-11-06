@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import PointRows, { DrawingNote } from '../components/PointRows.jsx'
-import { sumMarks, warningText, startingPointScores } from '../lib/points.js'
+import { sumMarks, warningText, startingPointScores, missingAnswers } from '../lib/points.js'
 
 const answer = {
   stepBreakdown: [
@@ -32,4 +32,25 @@ test('no rows without points; drawing note marks missing labels', () => {
   expect(container.innerHTML).toBe('')
   render(<DrawingNote description="No labels. Five boxes in a row." />)
   expect(screen.getByText('No labels.')).toBeTruthy()
+})
+
+describe('missingAnswers', () => {
+  const part = (text, extra = {}) => ({ text, modelAnswer: '', steps: [], subLabel: null, ...extra })
+  const groups = [
+    { number: '1', parts: [part('Define terms', { subLabel: 'a' }), part('Components', { subLabel: 'b' }), part('Characteristics', { subLabel: 'c' })] },
+    { number: '2', parts: [part('OSI vs TCP/IP'), part('Seven layers')] },
+    { number: '3', parts: [part('Explain FDM', { modelAnswer: 'typed already' })] },
+  ]
+
+  it('names every part the guide did not answer', () => {
+    const incoming = [
+      { number: '1', subLabel: 'a', modelAnswer: 'x' },
+      { number: '1', subLabel: 'b', modelAnswer: '', steps: [{ description: 'p', marks: 1 }] },
+    ]
+    expect(missingAnswers(groups, incoming)).toEqual({ total: 6, missing: ['1c', '2a', '2b'] })
+  })
+
+  it('ignores an empty editor', () => {
+    expect(missingAnswers([{ number: '', parts: [part('')] }], [])).toEqual({ total: 0, missing: [] })
+  })
 })

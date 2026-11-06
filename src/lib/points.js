@@ -25,3 +25,26 @@ export function startingPointScores(answer) {
   const points = Array.isArray(answer?.stepBreakdown) ? answer.stepBreakdown : []
   return points.map((p) => (p.confirmed ?? p.awarded ?? 0))
 }
+
+// Parts of the guide in the editor that will still have no answer after a
+// marking guide file is merged in: groups are the editor's questions (from
+// the question paper), incoming the questions read from the guide, matched
+// the same way the merge does (question number, then position). Returns
+// { total, missing: ['2a', '3'] }.
+export function missingAnswers(groups, incoming) {
+  const byNumber = {}
+  for (const q of incoming || []) (byNumber[q.number] ||= []).push(q)
+  const missing = []
+  let total = 0
+  for (const g of groups || []) {
+    if (!g.parts.some((p) => String(p.text || '').trim())) continue
+    g.parts.forEach((p, i) => {
+      total++
+      const match = byNumber[g.number]?.[i]
+      const answered =
+        String(p.modelAnswer || '').trim() || String(match?.modelAnswer || '').trim() || p.steps?.length || match?.steps?.length
+      if (!answered) missing.push(`${g.number}${p.subLabel || match?.subLabel || (g.parts.length > 1 ? String.fromCharCode(97 + i) : '')}`)
+    })
+  }
+  return { total, missing }
+}

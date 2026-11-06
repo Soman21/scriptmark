@@ -4,7 +4,7 @@ import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
-import { sumMarks, warningText } from '../lib/points.js'
+import { sumMarks, warningText, missingAnswers } from '../lib/points.js'
 import NewSessionDialog from '../components/NewSessionDialog.jsx'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
@@ -534,7 +534,8 @@ export default function MarkingGuides() {
             : `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document.${figuresNote(data.figures)} Check everything below before saving.`
         )
       }
-      if (data.wordShapes) setError(WORD_SHAPES_MSG)
+      const problems = [data.cut && 'Only the first part of this document was read.', data.wordShapes && WORD_SHAPES_MSG].filter(Boolean)
+      if (problems.length) setError(problems.join(' '))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -587,12 +588,19 @@ export default function MarkingGuides() {
       // Marking Guide/Answers ALWAYS merges into whatever's already there,
       // never replaces, so it can never wipe out question text from the
       // Question Paper upload.
+      const gap = missingAnswers(groups, orderedQuestions)
       mergeQuestionsIntoGroups(orderedQuestions)
       setGuidePreviewText(data.previewText || '')
       setSuccessMsg(
         `Merged ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} of answers into what you already had.${figuresNote(data.figures)} Check everything below before saving.`
       )
-      if (data.wordShapes) setError(WORD_SHAPES_MSG)
+      // Say plainly when the guide did not cover every part, so a short read
+      // is never mistaken for a complete one.
+      const problems = []
+      if (gap.missing.length) problems.push(`Answers found for ${gap.total - gap.missing.length} of ${gap.total} parts. No answer for ${gap.missing.join(', ')}.`)
+      if (data.cut) problems.push('Only the first part of this document was read.')
+      if (data.wordShapes) problems.push(WORD_SHAPES_MSG)
+      if (problems.length) setError(problems.join(' '))
     } catch (err) {
       setError(err.message)
     } finally {
