@@ -107,3 +107,15 @@ test('guide totals: live checks, answer rule and what a student can score', asyn
   expect(studentMax(qs, { compulsory: ['1'], any: 1 })).toBe(37.5)
   expect(studentMax(qs, null)).toBe(52.5)
 })
+
+test('extra answers: compulsory plus the best others count', async () => {
+  const { ruleScore, countedNumbers, scoresByNumber } = await import('../lib/points.js')
+  const { resultRow } = await import('../lib/resultRows.js')
+  const answers = [{ number: '1', score: 9 }, { number: '2', score: 10 }, { number: '3', score: 3 }, { number: '4', score: 12 }, { number: '5', score: 8 }]
+  const rule = { compulsory: ['1'], any: 3 }
+  expect(ruleScore(answers, rule)).toBe(39)
+  expect([...countedNumbers(scoresByNumber(answers), rule)].sort()).toEqual(['1', '2', '4', '5'])
+  const script = { answerRule: rule, caScore: 20, answers: answers.map((a) => ({ confirmedAt: 'x', confirmedScore: a.score, question: { number: a.number } })) }
+  expect(resultRow(script, 'total').exam).toBe(39)
+  expect(resultRow({ ...script, answerRule: null }, 'total').exam).toBe(42)
+})

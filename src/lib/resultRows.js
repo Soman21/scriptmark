@@ -1,3 +1,4 @@
+import { ruleScore } from './points.js'
 // Kept in step with the backend's lib/resultRows.js, so the preview on the
 // export page matches the downloaded sheet.
 export function computeGrade(total) {
@@ -15,9 +16,13 @@ export function computeGrade(total) {
 // unchecked AI suggestion never reaches the sheet. With scores = 'total', the
 // CA is added and a grade given only when both CA and exam score exist; a
 // grade from the exam alone would be wrong for a course that has CA.
+//
+// The guide's answer rule (script.answerRule, sent by the server): when a
+// student answers more questions than allowed, only the best ones count.
 export function examScoreOf(script) {
   const answers = script.answers || []
   if (answers.length === 0 || answers.some((a) => a.confirmedAt == null)) return null
+  if (script.answerRule) return ruleScore(answers.map((a) => ({ number: a.question?.number, score: a.confirmedScore ?? 0 })), script.answerRule)
   return answers.reduce((sum, a) => sum + (a.confirmedScore ?? 0), 0)
 }
 
