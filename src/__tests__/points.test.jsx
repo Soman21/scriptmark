@@ -54,3 +54,14 @@ describe('missingAnswers', () => {
     expect(missingAnswers([{ number: '', parts: [part('')] }], [])).toEqual({ total: 0, missing: [] })
   })
 })
+
+describe('DrawingNote with a table', () => {
+  it('names what was seen', () => {
+    const { rerender } = render(<DrawingNote description={'Table written by the student (copied cell by cell):\n| | LAN |\n| Cost | Low |'} />)
+    expect(screen.getByText('Table')).toBeTruthy()
+    rerender(<DrawingNote description={'Star topology.\n\nTable written by the student (copied cell by cell):\n| a | b |'} />)
+    expect(screen.getByText('Drawing and table')).toBeTruthy()
+    rerender(<DrawingNote description="Five boxes in a row." />)
+    expect(screen.getByText('Drawing')).toBeTruthy()
+  })
+})
