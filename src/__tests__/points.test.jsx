@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import PointRows, { DrawingNote } from '../components/PointRows.jsx'
-import { sumMarks, warningText, startingPointScores, missingAnswers, allocatedText } from '../lib/points.js'
+import { sumMarks, warningText, startingPointScores, missingAnswers, totalText } from '../lib/points.js'
 
 const answer = {
   stepBreakdown: [
@@ -11,11 +11,11 @@ const answer = {
 
 test('helpers', () => {
   expect(sumMarks([{ marks: 1.25 }, { marks: '1.25' }, { marks: 0.1 }])).toBe(2.6)
-  expect(warningText({ label: 'Q3ii', kind: 'POINTS', expected: 5, actual: 1.5 })).toBe('Q3 ii: allocated 1.5 of 5 marks · 3.5 left')
-  expect(warningText({ label: 'Q4', kind: 'PARTS', expected: 20, actual: 21 })).toBe('Q4: parts allocated 21 of 20 marks · 1 over')
-  expect(allocatedText(3, 3)).toBe('3 of 3 marks')
-  expect(allocatedText(1.25 + 1.25, '2.5')).toBe('2.5 of 2.5 marks')
-  expect(warningText({ label: 'Q4', kind: 'PARTS', expected: 20, actual: 18 })).toBe('Q4: parts allocated 18 of 20 marks · 2 left')
+  expect(warningText({ label: 'Q3ii', kind: 'POINTS', expected: 5, actual: 1.5 })).toBe('Q3 ii: points total 1.5 / 5 marks')
+  expect(warningText({ label: 'Q4', kind: 'PARTS', expected: 20, actual: 21 })).toBe('Q4: parts total 21 / 20 marks')
+  expect(totalText(3, 3)).toBe('3 / 3 marks')
+  expect(totalText(1.25 + 1.25, '2.5')).toBe('2.5 / 2.5 marks')
+  expect(warningText({ label: 'Q4', kind: 'PARTS', expected: 20, actual: 18 })).toBe('Q4: parts total 18 / 20 marks')
   expect(startingPointScores(answer)).toEqual([1.25, 0.75])
 })
 
