@@ -1,7 +1,6 @@
-import { RESULT_LABEL, RESULT_STYLE, sumMarks } from '../lib/points.js'
+import { RESULT_LABEL, RESULT_STYLE, bestTotal, countedPoints } from '../lib/points.js'
 
 const NOTE_LABEL = { DIAGRAM: 'Labelled diagram', LABELS_OPTIONAL: 'Diagram' }
-const round2 = (n) => Math.round(n * 100) / 100
 
 // One row per marking point: the point, the AI's mark with Full, Partial or
 // None, and the lecturer's own mark. values holds the lecturer's marks, one
@@ -9,8 +8,12 @@ const round2 = (n) => Math.round(n * 100) / 100
 export default function PointRows({ answer, values, onChange, label }) {
   const points = Array.isArray(answer.stepBreakdown) ? answer.stepBreakdown : []
   if (!points.length) return null
-  const aiTotal = round2(points.reduce((sum, p) => sum + Number(p.awarded || 0), 0))
-  const lecturerTotal = sumMarks(values.map((v) => ({ marks: v })))
+  // "Any five" questions: only the best countBest points count; the rest
+  // are shown greyed out.
+  const countBest = answer.question?.countBest ?? null
+  const aiTotal = bestTotal(points.map((p) => p.awarded), countBest)
+  const lecturerTotal = bestTotal(values, countBest)
+  const counted = new Set(countedPoints(values, countBest))
 
   return (
     <div className="mt-3 rounded-lg border border-slate-200">
@@ -22,12 +25,14 @@ export default function PointRows({ answer, values, onChange, label }) {
       <div className="divide-y divide-slate-100">
         {points.map((p, i) => {
           const differs = Number(values[i]) !== Number(p.awarded)
+          const notCounted = !counted.has(i)
           return (
             <div
               key={i}
               className={`grid grid-cols-[1fr_auto] items-start gap-x-3 gap-y-1 px-3.5 py-2.5 text-sm sm:grid-cols-[1fr_110px_88px] ${
-                p.result && p.result !== 'full' ? 'bg-amber-50/40' : ''
+                notCounted ? 'opacity-50' : p.result && p.result !== 'full' ? 'bg-amber-50/40' : ''
               }`}
+              title={notCounted ? 'Not counted' : undefined}
             >
               <div className="col-span-2 sm:col-span-1">
                 <p className="text-slate-700">
@@ -37,6 +42,7 @@ export default function PointRows({ answer, values, onChange, label }) {
                   )}
                 </p>
                 {p.reasoning && <p className="mt-0.5 text-xs text-slate-400">{p.reasoning}</p>}
+                {notCounted && <p className="mt-0.5 text-xs text-slate-400">Not counted</p>}
               </div>
               <div className="flex items-center gap-1.5 sm:justify-end">
                 {p.result && (
@@ -63,7 +69,14 @@ export default function PointRows({ answer, values, onChange, label }) {
         })}
       </div>
       <div className="flex gap-3 border-t border-slate-200 px-3.5 py-2 text-sm font-semibold sm:grid sm:grid-cols-[1fr_110px_88px]">
-        <span className="flex-1">Total</span>
+        <span className="flex-1">
+          Total
+          {counted.size < points.length && (
+            <span className="ml-1.5 font-normal text-slate-400">
+              (best {counted.size} of {points.length})
+            </span>
+          )}
+        </span>
         <span className="text-right">
           <span className="font-normal text-slate-400 sm:hidden">AI </span>
           {aiTotal}

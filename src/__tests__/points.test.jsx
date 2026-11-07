@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import PointRows, { DrawingNote } from '../components/PointRows.jsx'
-import { sumMarks, warningText, startingPointScores, missingAnswers } from '../lib/points.js'
+import { sumMarks, warningText, startingPointScores, missingAnswers, totalText, countBestFrom, bestTotal, countedPoints, pointsTotalText } from '../lib/points.js'
 
 const answer = {
   stepBreakdown: [
@@ -11,8 +11,11 @@ const answer = {
 
 test('helpers', () => {
   expect(sumMarks([{ marks: 1.25 }, { marks: '1.25' }, { marks: 0.1 }])).toBe(2.6)
-  expect(warningText({ label: 'Q3ii', kind: 'POINTS', expected: 5, actual: 1.5 })).toBe('Q3 ii: points 1.5 of 5')
-  expect(warningText({ label: 'Q4', kind: 'PARTS', expected: 20, actual: 18 })).toBe('Q4: parts 18 of 20')
+  expect(warningText({ label: 'Q3ii', kind: 'POINTS', expected: 5, actual: 1.5 })).toBe('Q3 ii: points total 1.5 / 5 marks')
+  expect(warningText({ label: 'Q4', kind: 'PARTS', expected: 20, actual: 21 })).toBe('Q4: parts total 21 / 20 marks')
+  expect(totalText(3, 3)).toBe('3 / 3 marks')
+  expect(totalText(1.25 + 1.25, '2.5')).toBe('2.5 / 2.5 marks')
+  expect(warningText({ label: 'Q4', kind: 'PARTS', expected: 20, actual: 18 })).toBe('Q4: parts total 18 / 20 marks')
   expect(startingPointScores(answer)).toEqual([1.25, 0.75])
 })
 
@@ -64,4 +67,29 @@ describe('DrawingNote with a table', () => {
     rerender(<DrawingNote description="Five boxes in a row." />)
     expect(screen.getByText('Drawing')).toBeTruthy()
   })
+})
+
+// "State and explain any five characteristics": 7 points listed, best 5 count.
+const seven = Array.from({ length: 7 }, (_, i) => ({ description: `c${i + 1}`, marks: 1 }))
+
+test('count best helpers', () => {
+  expect(countBestFrom('State and explain any five characteristics of effective data communication.', 7)).toBe(5)
+  expect(countBestFrom('Draw any three topologies', 3)).toBe(null)
+  expect(countBestFrom('State five characteristics', 7)).toBe(null)
+  expect(bestTotal([1, 1, 0, 1, 1, 1, 1], 5)).toBe(5)
+  expect(bestTotal([1, 1, 1], '')).toBe(3)
+  expect(countedPoints([1, 1, 0, 1, 1, 1, 1], 5)).toEqual([0, 1, 3, 4, 5])
+  expect(pointsTotalText(seven, 5, 5)).toBe('5 / 5 marks (best 5 of 7)')
+  expect(pointsTotalText(seven, 5, '')).toBe('7 / 5 marks')
+})
+
+test('point rows grey out points that do not count', () => {
+  const any5 = {
+    question: { countBest: 5 },
+    stepBreakdown: [1, 1, 0, 1, 1, 1, 1].map((awarded, i) => ({ description: `c${i + 1}`, marks: 1, awarded, result: awarded ? 'full' : 'none' })),
+  }
+  render(<PointRows answer={any5} label="Q1b" values={[1, 1, 0, 1, 1, 1, 1]} onChange={() => {}} />)
+  expect(screen.getAllByText('Not counted')).toHaveLength(2)
+  expect(screen.getByText('(best 5 of 7)')).toBeTruthy()
+  expect(screen.getAllByText('5').length).toBeGreaterThanOrEqual(2)
 })

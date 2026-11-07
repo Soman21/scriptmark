@@ -7,7 +7,7 @@ import { api } from '../lib/api.js'
 import PageAssistant from '../components/PageAssistant.jsx'
 import { queueShortcuts } from '../lib/chatShortcuts.js'
 import PointRows, { DrawingNote } from '../components/PointRows.jsx'
-import { startingPointScores, sumMarks } from '../lib/points.js'
+import { startingPointScores, bestTotal } from '../lib/points.js'
 
 function confidenceTone(confidence) {
   if (confidence === 'high') return 'green'
@@ -61,7 +61,7 @@ export default function MyQueue() {
     points[index] = value
     setDrafts((prev) => ({
       ...prev,
-      [answer.id]: { ...prev[answer.id], points, score: sumMarks(points.map((v) => ({ marks: v }))) },
+      [answer.id]: { ...prev[answer.id], points, score: bestTotal(points, answer.question?.countBest) },
     }))
   }
 
