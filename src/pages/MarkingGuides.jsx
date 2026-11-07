@@ -4,7 +4,7 @@ import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
-import { sumMarks, warningText, missingAnswers, totalText } from '../lib/points.js'
+import { sumMarks, warningText, missingAnswers, bestTotal, cleanCountBest, countBestFrom, pointsTotalText } from '../lib/points.js'
 import NewSessionDialog from '../components/NewSessionDialog.jsx'
 import { SourceFileRow, SourceViewer, ReplaceDialog } from '../components/SourceFiles.jsx'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -88,6 +88,7 @@ const blankPart = () => ({
   isCalculationHeavy: false,
   subLabel: null,
   steps: [],
+  countBest: '',
 })
 
 const blankStep = () => ({ id: Date.now() + Math.random(), description: '', marks: 0, note: '', diagram: '' })
@@ -123,8 +124,17 @@ function groupsFromQuestions(questions) {
         isCalculationHeavy: q.isCalculationHeavy || false,
         subLabel: q.subLabel || null,
         steps: pointsFrom(q.steps),
+        countBest: countOf(q, q.steps),
       })),
   }))
+}
+
+// Best N of the points count ("any five" questions): the saved setting, or
+// read from the question's text when there is none (guides saved before
+// the setting existed, and guides just read from a file).
+function countOf(q, steps) {
+  const n = Array.isArray(steps) ? steps.length : 0
+  return cleanCountBest(q.countBest, n) ?? countBestFrom(q.text, n) ?? ''
 }
 
 export default function MarkingGuides() {
@@ -467,6 +477,9 @@ export default function MarkingGuides() {
             isCalculationHeavy: p.isCalculationHeavy || match.isCalculationHeavy || false,
             subLabel: p.subLabel || match.subLabel || null,
             steps: p.steps.length ? p.steps : pointsFrom(match.steps),
+            countBest: p.steps.length
+              ? p.countBest
+              : countOf({ countBest: match.countBest, text: p.text.trim() ? p.text : match.text }, match.steps),
           }
         })
         if (!g.total) g.total = incoming.find((q) => q.questionTotal)?.questionTotal ?? ''
@@ -485,6 +498,7 @@ export default function MarkingGuides() {
             isCalculationHeavy: incoming[i].isCalculationHeavy || false,
             subLabel: incoming[i].subLabel || null,
             steps: pointsFrom(incoming[i].steps),
+            countBest: countOf(incoming[i], incoming[i].steps),
           })
         }
       })
@@ -508,6 +522,7 @@ export default function MarkingGuides() {
             isCalculationHeavy: q.isCalculationHeavy || false,
             subLabel: q.subLabel || null,
             steps: pointsFrom(q.steps),
+            countBest: countOf(q, q.steps),
           })),
         }))
 
@@ -792,6 +807,7 @@ export default function MarkingGuides() {
           steps: p.steps
             .filter((s) => s.description.trim())
             .map((s) => ({ description: s.description, marks: Number(s.marks) || 0, note: s.note || null, diagram: s.diagram?.trim() || null })),
+          countBest: cleanCountBest(p.countBest, p.steps.filter((s) => s.description.trim()).length),
         }))
     )
 
@@ -1365,13 +1381,37 @@ export default function MarkingGuides() {
                       <div className="mt-4">
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium text-slate-700">Marking Points</label>
-                          <button
-                            type="button"
-                            onClick={() => addStep(group.id, part.id)}
-                            className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
-                          >
-                            <Plus size={12} /> Add point
-                          </button>
+                          <div className="flex items-center gap-4">
+                            {part.steps.length > 1 && (
+                              <label className="flex items-center gap-1.5 text-xs text-slate-500">
+                                Count
+                                <select
+                                  value={cleanCountBest(part.countBest, part.steps.length) ?? ''}
+                                  onChange={(e) => updatePart(group.id, part.id, 'countBest', e.target.value)}
+                                  aria-label="Points that count"
+                                  className={`rounded-lg border px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-400 ${
+                                    cleanCountBest(part.countBest, part.steps.length)
+                                      ? 'border-brand-200 bg-brand-50 font-medium text-brand-700'
+                                      : 'border-slate-200 bg-white text-slate-700'
+                                  }`}
+                                >
+                                  <option value="">All points</option>
+                                  {part.steps.slice(1).map((_, i) => (
+                                    <option key={i} value={i + 1}>
+                                      Best {i + 1}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => addStep(group.id, part.id)}
+                              className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
+                            >
+                              <Plus size={12} /> Add point
+                            </button>
+                          </div>
                         </div>
                         {part.steps.length === 0 ? (
                           <p className="mt-1 text-xs text-slate-400">None. Marked as a whole.</p>
@@ -1438,8 +1478,12 @@ export default function MarkingGuides() {
                                 )}
                               </div>
                             ))}
-                            <p className={`text-xs ${sumMarks(part.steps) === Number(part.marks) ? 'text-slate-400' : 'text-amber-600'}`}>
-                              Points total: {totalText(sumMarks(part.steps), part.marks)}
+                            <p
+                              className={`text-xs ${
+                                bestTotal(part.steps.map((s) => s.marks), part.countBest) === Number(part.marks) ? 'text-slate-400' : 'text-amber-600'
+                              }`}
+                            >
+                              Points total: {pointsTotalText(part.steps, part.marks, part.countBest)}
                             </p>
                           </div>
                         )}

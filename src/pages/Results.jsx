@@ -10,7 +10,7 @@ import PageAssistant from '../components/PageAssistant.jsx'
 import { resultsShortcuts } from '../lib/chatShortcuts.js'
 import ReviewAssistant from '../components/ReviewAssistant.jsx'
 import PointRows, { DrawingNote } from '../components/PointRows.jsx'
-import { startingPointScores, sumMarks } from '../lib/points.js'
+import { startingPointScores, bestTotal } from '../lib/points.js'
 
 function ImageViewerModal({ pages, startIndex, onClose, onIndexChange }) {
   useEffect(() => {
@@ -166,11 +166,11 @@ export default function Results() {
   }
 
   // A point mark changes the answer's total to the sum of its points.
-  function updatePoint(answerId, index, value) {
+  function updatePoint(answerId, index, value, countBest) {
     const values = [...(draftPoints[answerId] || [])]
     values[index] = value
     setDraftPoints((prev) => ({ ...prev, [answerId]: values }))
-    setDraftScores((prev) => ({ ...prev, [answerId]: sumMarks(values.map((v) => ({ marks: v }))) }))
+    setDraftScores((prev) => ({ ...prev, [answerId]: bestTotal(values, countBest) }))
     setTouchedPoints((prev) => ({ ...prev, [answerId]: true }))
   }
 
@@ -474,7 +474,7 @@ export default function Results() {
                         answer={answer}
                         label={label}
                         values={draftPoints[answer.id] || []}
-                        onChange={(i, v) => updatePoint(answer.id, i, v)}
+                        onChange={(i, v) => updatePoint(answer.id, i, v, answer.question?.countBest)}
                       />
 
                       <p className="mt-3 text-sm text-slate-600">
