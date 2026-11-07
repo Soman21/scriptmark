@@ -238,7 +238,7 @@ export default function MyQueue() {
                         </label>
                         <input
                           type="number"
-                          step="0.25"
+                          step="any"
                           max={question.maxMarks}
                           value={displayScore ?? ''}
                           onChange={(e) => updateDraft(a.id, 'score', e.target.value)}
