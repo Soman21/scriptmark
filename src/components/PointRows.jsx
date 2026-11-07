@@ -81,10 +81,14 @@ export default function PointRows({ answer, values, onChange, label }) {
 export function DrawingNote({ description, onViewPages }) {
   if (!description) return null
   const noLabels = description.startsWith('No labels.')
+  // The vision model also copies a table the student wrote.
+  const hasTable = description.includes('Table written by the student')
+  const hasDrawing = !description.startsWith('Table written by the student')
+  const heading = hasTable && hasDrawing ? 'Drawing and table' : hasTable ? 'Table' : 'Drawing'
   return (
     <div className="mt-3 rounded-lg border border-gold-200 bg-gold-50 p-3.5">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gold-600">Drawing</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gold-600">{heading}</p>
         {onViewPages && (
           <button onClick={onViewPages} className="text-xs font-medium text-brand-600 hover:text-brand-700">
             View pages

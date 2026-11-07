@@ -69,7 +69,12 @@ function sourceFromParse(data, file) {
 }
 
 const WORD_SHAPES_MSG = 'Diagrams drawn with Word shapes were not read. Upload the guide as PDF to include them.'
-const figuresNote = (n) => (n ? ` ${n} diagram${n !== 1 ? 's' : ''} read.` : '')
+const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`
+const figuresNote = (n, tables = 0) =>
+  [n ? ` ${plural(n, 'diagram')} read.` : '', tables ? ` ${plural(tables, 'table')} read.` : ''].join('')
+// Pages the vision model could not look at, so their tables and drawings
+// may be missing or out of order.
+const uncheckedNote = (n) => (n ? `${n === 1 ? '1 page was' : `${n} pages were`} not checked for tables and diagrams. Upload again to retry.` : '')
 
 
 const blankPart = () => ({
@@ -546,10 +551,10 @@ export default function MarkingGuides() {
         setSuccessMsg(
           blankCount > 0
             ? `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''}. ${blankCount} have no answer yet, upload a marking guide below or use Generate Answers with AI.`
-            : `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document.${figuresNote(data.figures)} Check everything below before saving.`
+            : `Parsed ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} from the document.${figuresNote(data.figures, data.tables)} Check everything below before saving.`
         )
       }
-      const problems = [data.cut && 'Only the first part of this document was read.', data.wordShapes && WORD_SHAPES_MSG].filter(Boolean)
+      const problems = [data.cut && 'Only the first part of this document was read.', uncheckedNote(data.unchecked), data.wordShapes && WORD_SHAPES_MSG].filter(Boolean)
       if (problems.length) setError(problems.join(' '))
     } catch (err) {
       setError(err.message)
@@ -603,13 +608,14 @@ export default function MarkingGuides() {
       mergeQuestionsIntoGroups(orderedQuestions)
       setSources((s) => ({ ...s, guide: sourceFromParse(data, file) }))
       setSuccessMsg(
-        `Merged ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} of answers into what you already had.${figuresNote(data.figures)} Check everything below before saving.`
+        `Merged ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} of answers into what you already had.${figuresNote(data.figures, data.tables)} Check everything below before saving.`
       )
       // Say plainly when the guide did not cover every part, so a short read
       // is never mistaken for a complete one.
       const problems = []
       if (gap.missing.length) problems.push(`Answers found for ${gap.total - gap.missing.length} of ${gap.total} parts. No answer for ${gap.missing.join(', ')}.`)
       if (data.cut) problems.push('Only the first part of this document was read.')
+      if (data.unchecked) problems.push(uncheckedNote(data.unchecked))
       if (data.wordShapes) problems.push(WORD_SHAPES_MSG)
       if (problems.length) setError(problems.join(' '))
     } catch (err) {
