@@ -18,15 +18,13 @@ npm run dev
 Get the backend running first (see the backend's README) — this app expects it at
 `http://localhost:4000` by default.
 
-## What's real vs example data
-- Auth, Marking Guides (with numbered questions and optional lettered subparts),
-  Scan Scripts (multi page uploads, live camera capture, OCR, automatic student
-  name/reg number detection), Results review/confirm, and Export (Excel + PDF
-  with CA scores and computed grades) are all fully wired to the backend.
-- The Analytics page still shows illustrative example data — wiring it to real
-  confirmed scores is the next feature to build.
-
-## Not built yet
-- OTP based two factor login
-- AI assistant chat with voice input/output
-- Role based UI restrictions (Lecturer/Reviewer/Admin)
+## What the app does
+All pages are wired to the backend; none show example data.
+- Login with an email code, password reset, lecturer profile.
+- Marking Guides: upload the guide and question paper (PDF, Word or photos), edit questions, parts and marking points. Any mark value is accepted.
+- The Marks bar at the top of a guide shows "Marks X / exam total" with the answer rule (for example Q1 + any 3), and the Check totals warnings update as you type. **Fix all** lists suggested mark changes; nothing changes until **Apply all** and **Save**.
+- Scan Scripts: multi page uploads and live camera capture, with automatic student name and reg number detection.
+- Results: review and confirm AI suggested scores point by point. Totals follow the answer rule, and questions that do not count are tagged "Not counted".
+- Courses with Tests, Assignments and the Exam, a session Overview, notifications and result sheets.
+- Export to Excel and PDF with CA scores and grades.
+- Analytics from confirmed scores, an AI assistant with voice input, and an Admin page.

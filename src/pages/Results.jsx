@@ -10,7 +10,7 @@ import PageAssistant from '../components/PageAssistant.jsx'
 import { resultsShortcuts } from '../lib/chatShortcuts.js'
 import ReviewAssistant from '../components/ReviewAssistant.jsx'
 import PointRows, { DrawingNote } from '../components/PointRows.jsx'
-import { startingPointScores, bestTotal } from '../lib/points.js'
+import { startingPointScores, bestTotal, countedNumbers, scoresByNumber, ruleScore, studentMax } from '../lib/points.js'
 
 function ImageViewerModal({ pages, startIndex, onClose, onIndexChange }) {
   useEffect(() => {
@@ -237,11 +237,15 @@ export default function Results() {
     }
   }
 
-  const confirmedTotal = currentScript
-    ? currentScript.answers.reduce((sum, a) => sum + Number(draftScores[a.id] ?? 0), 0)
-    : 0
+  // Only the questions the answer rule allows count ("Question 1 and any
+  // three others"): a student who answered extra questions keeps the best.
+  const draftAnswers = currentScript
+    ? currentScript.answers.map((a) => ({ number: a.question?.number, score: Number(draftScores[a.id] ?? 0) }))
+    : []
+  const countedSet = countedNumbers(scoresByNumber(draftAnswers), currentScript?.answerRule)
+  const confirmedTotal = currentScript ? ruleScore(draftAnswers, currentScript.answerRule) : 0
   const maxPossible = currentScript
-    ? currentScript.answers.reduce((sum, a) => sum + (a.question?.maxMarks || 0), 0)
+    ? studentMax(currentScript.answers.map((a) => a.question || {}), currentScript.answerRule)
     : 0
 
   const currentPages = currentScript?.pages?.length
@@ -419,6 +423,7 @@ export default function Results() {
                               </Badge>
                             )}
                             {answer.diagramDescription && <Badge tone="amber">Diagram</Badge>}
+                            {q && !countedSet.has(String(q.number).trim()) && <Badge tone="slate">Not counted</Badge>}
                             <button
                               onClick={() => askAbout(label)}
                               className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"

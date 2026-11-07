@@ -159,3 +159,35 @@ export function studentMax(questions, rule) {
   others.sort((a, b) => b - a)
   return round2(sum + others.slice(0, clean.any).reduce((s, t) => s + t, 0))
 }
+
+// Which questions count on one script under the answer rule (same as the
+// server's guideTotals.js). scores: Map of question number to score. The
+// compulsory questions always count; of the rest, the best `any` (ties go
+// to the lower number). No rule: every question counts.
+export function countedNumbers(scores, rule) {
+  const numbers = [...scores.keys()]
+  const clean = cleanAnswerRule(rule)
+  if (!clean) return new Set(numbers)
+  const others = numbers
+    .filter((n) => !clean.compulsory.includes(n))
+    .sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0) || a.localeCompare(b, undefined, { numeric: true }))
+    .slice(0, clean.any)
+  return new Set([...numbers.filter((n) => clean.compulsory.includes(n)), ...others])
+}
+
+// Scores per question number from [{ number, score }].
+export function scoresByNumber(answers) {
+  const scores = new Map()
+  for (const a of answers || []) {
+    const key = String(a.number ?? '').trim()
+    scores.set(key, (scores.get(key) || 0) + (Number(a.score) || 0))
+  }
+  return scores
+}
+
+// A script's score: only the questions that count.
+export function ruleScore(answers, rule) {
+  const scores = scoresByNumber(answers)
+  const counted = countedNumbers(scores, rule)
+  return round2([...counted].reduce((sum, n) => sum + scores.get(n), 0))
+}
