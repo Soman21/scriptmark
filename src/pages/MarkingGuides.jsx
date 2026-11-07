@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { Sparkles, Plus, Trash2, ArrowLeft, FileUp, Loader2, Eye, X } from 'lucide-react'
+import { Sparkles, Plus, Trash2, ArrowLeft, FileUp, Loader2 } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import { sumMarks, warningText, missingAnswers } from '../lib/points.js'
 import NewSessionDialog from '../components/NewSessionDialog.jsx'
+import { SourceFileRow, SourceViewer, ReplaceDialog } from '../components/SourceFiles.jsx'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -42,6 +43,29 @@ function pointsFrom(steps) {
   return Array.isArray(steps)
     ? steps.map((s) => ({ id: Date.now() + Math.random(), description: s.description || '', marks: s.marks || 0, note: s.note || '', diagram: s.diagram || '' }))
     : []
+}
+
+// Files kept on a saved guide. Guides saved before files were kept only
+// have the question paper's link, so that is shown on its own.
+function sourcesOf(guide) {
+  const saved = guide?.sourceFiles || {}
+  const legacyPaper = guide?.questionPaperUrl
+    ? { url: guide.questionPaperUrl, mimeType: guide.questionPaperMimeType, name: 'Question paper', text: '', uploadedAt: guide.createdAt }
+    : null
+  return { questionPaper: saved.questionPaper || legacyPaper, guide: saved.guide || null }
+}
+
+// A file as kept on the guide, from what /api/guides/parse returned.
+function sourceFromParse(data, file) {
+  if (!data.documentUrl) return null
+  return {
+    url: data.documentUrl,
+    mimeType: data.documentMimeType || file.type || null,
+    name: data.fileName || file.name,
+    text: data.text ?? data.previewText ?? '',
+    scanned: data.ocrPages > 0,
+    uploadedAt: new Date().toISOString(),
+  }
 }
 
 const WORD_SHAPES_MSG = 'Diagrams drawn with Word shapes were not read. Upload the guide as PDF to include them.'
@@ -142,18 +166,15 @@ export default function MarkingGuides() {
   const [autoGenerateOnParse, setAutoGenerateOnParse] = useState(false)
   const [generatingAnswers, setGeneratingAnswers] = useState(false)
   const [pendingAutoGenerate, setPendingAutoGenerate] = useState(false)
-  const [questionPaperFile, setQuestionPaperFile] = useState(null)
-  const [questionPaperPreviewUrl, setQuestionPaperPreviewUrl] = useState(null)
-  const [questionPaperPreviewText, setQuestionPaperPreviewText] = useState('')
-  const [questionPaperDocUrl, setQuestionPaperDocUrl] = useState(null)
-  const [questionPaperDocMimeType, setQuestionPaperDocMimeType] = useState(null)
-  const [showQuestionPaperPreview, setShowQuestionPaperPreview] = useState(false)
+  // The question paper and marking guide files, kept on the guide with the
+  // text read from each: { questionPaper, guide } (see SourceFiles.jsx).
+  const [sources, setSources] = useState({ questionPaper: null, guide: null })
+  const [viewer, setViewer] = useState(null) // { kind, mode: 'file' | 'text', text?, loading? }
+  const [replaceAsk, setReplaceAsk] = useState(null) // kind waiting for Replace to be confirmed
+  const paperInputRef = useRef(null)
+  const guideInputRef = useRef(null)
   const [dragOverPaper, setDragOverPaper] = useState(false)
   const [parsingPaper, setParsingPaper] = useState(false)
-  const [guideFile, setGuideFile] = useState(null)
-  const [guidePreviewUrl, setGuidePreviewUrl] = useState(null)
-  const [guidePreviewText, setGuidePreviewText] = useState('')
-  const [showGuidePreview, setShowGuidePreview] = useState(false)
   const [dragOverGuide, setDragOverGuide] = useState(false)
   const [parsingGuideDoc, setParsingGuideDoc] = useState(false)
 
@@ -202,14 +223,14 @@ export default function MarkingGuides() {
     setCurrentGuideId(null)
     setTitle('')
     setGroups([blankGroup(1), blankGroup(2)])
+    setSources({ questionPaper: null, guide: null })
   }
 
   function loadGuideForEditing(guide) {
     setCurrentGuideId(guide.id)
     setTitle(guide.title)
     setGroups(groupsFromQuestions(guide.questions))
-    setQuestionPaperDocUrl(guide.questionPaperUrl || null)
-    setQuestionPaperDocMimeType(guide.questionPaperMimeType || null)
+    setSources(sourcesOf(guide))
     setStage('edit')
     setError('')
     setSuccessMsg('')
@@ -495,10 +516,6 @@ export default function MarkingGuides() {
     setParsingPaper(true)
     setError('')
     setSuccessMsg('')
-    setQuestionPaperFile(file)
-    setQuestionPaperPreviewText('')
-    if (questionPaperPreviewUrl) URL.revokeObjectURL(questionPaperPreviewUrl)
-    setQuestionPaperPreviewUrl(file.type === 'application/pdf' || file.type.startsWith('image/') ? URL.createObjectURL(file) : null)
 
     try {
       const formData = new FormData()
@@ -519,9 +536,7 @@ export default function MarkingGuides() {
       // of truth for question text and marks, never merged with anything.
       setGroups(groupsFromQuestions(orderedQuestions))
       setTotalWarnings(data.warnings || [])
-      setQuestionPaperPreviewText(data.previewText || '')
-      setQuestionPaperDocUrl(data.documentUrl || null)
-      setQuestionPaperDocMimeType(data.documentMimeType || null)
+      setSources((s) => ({ ...s, questionPaper: sourceFromParse(data, file) }))
 
       const blankCount = orderedQuestions.filter((q) => !q.modelAnswer || !q.modelAnswer.trim()).length
       if (autoGenerateOnParse && blankCount > 0) {
@@ -557,8 +572,8 @@ export default function MarkingGuides() {
   // Any edit after a draft save means the button should offer to save again.
   useEffect(() => {
     const last = lastSavedRef.current
-    if (draftSaved && last && (last.title !== title || last.groups !== groups)) setDraftSaved(false)
-  }, [title, groups, draftSaved])
+    if (draftSaved && last && (last.title !== title || last.groups !== groups || last.sources !== sources)) setDraftSaved(false)
+  }, [title, groups, sources, draftSaved])
 
   async function handleParseMarkingGuideDoc(file) {
     if (!file) return
@@ -566,10 +581,6 @@ export default function MarkingGuides() {
     setParsingGuideDoc(true)
     setError('')
     setSuccessMsg('')
-    setGuideFile(file)
-    setGuidePreviewText('')
-    if (guidePreviewUrl) URL.revokeObjectURL(guidePreviewUrl)
-    setGuidePreviewUrl(file.type === 'application/pdf' || file.type.startsWith('image/') ? URL.createObjectURL(file) : null)
 
     try {
       const formData = new FormData()
@@ -590,7 +601,7 @@ export default function MarkingGuides() {
       // Question Paper upload.
       const gap = missingAnswers(groups, orderedQuestions)
       mergeQuestionsIntoGroups(orderedQuestions)
-      setGuidePreviewText(data.previewText || '')
+      setSources((s) => ({ ...s, guide: sourceFromParse(data, file) }))
       setSuccessMsg(
         `Merged ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} of answers into what you already had.${figuresNote(data.figures)} Check everything below before saving.`
       )
@@ -608,22 +619,37 @@ export default function MarkingGuides() {
     }
   }
 
-  function handleRemoveQuestionPaper() {
-    if (questionPaperPreviewUrl) URL.revokeObjectURL(questionPaperPreviewUrl)
-    setQuestionPaperFile(null)
-    setQuestionPaperPreviewUrl(null)
-    setQuestionPaperPreviewText('')
-    setQuestionPaperDocUrl(null)
-    setQuestionPaperDocMimeType(null)
-    setShowQuestionPaperPreview(false)
+  // Removing a file takes it off the guide when the guide is next saved;
+  // the questions read from it stay.
+  function removeSource(kind) {
+    setSources((s) => ({ ...s, [kind]: null }))
   }
 
-  function handleRemoveGuideDoc() {
-    if (guidePreviewUrl) URL.revokeObjectURL(guidePreviewUrl)
-    setGuideFile(null)
-    setGuidePreviewUrl(null)
-    setGuidePreviewText('')
-    setShowGuidePreview(false)
+  // Text of a file. A guide opened from Recent Guides comes without it, so
+  // it is fetched from the saved guide the first time it is asked for.
+  async function openSourceText(kind) {
+    const file = sources[kind]
+    if (typeof file.text === 'string' || !currentGuideId) {
+      setViewer({ kind, mode: 'text', text: file.text || '' })
+      return
+    }
+    setViewer({ kind, mode: 'text', loading: true })
+    try {
+      const full = await api.getGuide(currentGuideId, token)
+      const stored = sourcesOf(full)[kind]
+      const text = stored?.url === file.url ? stored.text || '' : ''
+      setSources((s) => (s[kind]?.url === file.url ? { ...s, [kind]: { ...s[kind], text } } : s))
+      setViewer({ kind, mode: 'text', text })
+    } catch (err) {
+      setViewer(null)
+      setError(err.message)
+    }
+  }
+
+  function confirmReplace() {
+    const kind = replaceAsk
+    setReplaceAsk(null)
+    ;(kind === 'questionPaper' ? paperInputRef : guideInputRef).current?.click()
   }
 
   function handlePaperFileInputChange(e) {
@@ -770,8 +796,9 @@ export default function MarkingGuides() {
         title,
         questions: flatQuestions,
         isDraft,
-        questionPaperUrl: questionPaperDocUrl,
-        questionPaperMimeType: questionPaperDocMimeType,
+        questionPaperUrl: sources.questionPaper?.url || null,
+        questionPaperMimeType: sources.questionPaper?.mimeType || null,
+        sourceFiles: sources,
       }
       setRemarkOffer(null)
       if (currentGuideId) {
@@ -793,7 +820,7 @@ export default function MarkingGuides() {
       setTotalWarnings(guide.warnings || [])
       setSuccessMsg(isDraft ? 'Draft saved' : 'Marking guide saved and published.')
       setDraftSaved(isDraft)
-      lastSavedRef.current = { title, groups }
+      lastSavedRef.current = { title, groups, sources }
       loadGuides()
     } catch (err) {
       setError(err.message)
@@ -1041,6 +1068,24 @@ export default function MarkingGuides() {
               <span>This paper has no answers. Generate them with AI automatically once it's parsed.</span>
             </label>
 
+            {/* The file input lives in the drop zone, which is hidden once a
+                file is kept, so Replace uses a second input of its own. */}
+            <input
+              ref={paperInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+              onChange={handlePaperFileInputChange}
+              className="hidden"
+            />
+            {sources.questionPaper && !parsingPaper ? (
+              <SourceFileRow
+                file={sources.questionPaper}
+                onView={() => setViewer({ kind: 'questionPaper', mode: 'file' })}
+                onText={() => openSourceText('questionPaper')}
+                onReplace={() => setReplaceAsk('questionPaper')}
+                onRemove={() => removeSource('questionPaper')}
+              />
+            ) : (
             <div
               onDragOver={(e) => {
                 e.preventDefault()
@@ -1072,25 +1117,6 @@ export default function MarkingGuides() {
                 </label>
               )}
             </div>
-
-            {questionPaperFile && !parsingPaper && (
-              <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
-                <span className="truncate text-sm text-slate-600">{questionPaperFile.name}</span>
-                <div className="flex shrink-0 items-center gap-3">
-                  <button
-                    onClick={() => setShowQuestionPaperPreview(true)}
-                    className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
-                  >
-                    <Eye size={14} /> Preview
-                  </button>
-                  <button
-                    onClick={handleRemoveQuestionPaper}
-                    className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
-                  >
-                    <Trash2 size={14} /> Remove
-                  </button>
-                </div>
-              </div>
             )}
 
             {getBlankAnswerParts().length > 0 && (
@@ -1110,34 +1136,6 @@ export default function MarkingGuides() {
             )}
           </div>
 
-          {showQuestionPaperPreview && questionPaperFile && (
-            <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/80 p-4 md:p-10">
-              <div className="flex items-center justify-between pb-3">
-                <span className="truncate text-sm font-medium text-white">{questionPaperFile.name}</span>
-                <button onClick={() => setShowQuestionPaperPreview(false)} className="rounded-full p-1.5 text-white hover:bg-white/10">
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="flex-1 overflow-auto rounded-xl bg-white">
-                {questionPaperPreviewUrl ? (
-                  questionPaperFile.type.startsWith('image/') ? (
-                    <img src={questionPaperPreviewUrl} alt="Question paper preview" className="mx-auto max-w-full" />
-                  ) : (
-                    <iframe src={questionPaperPreviewUrl} title="Question paper preview" className="h-full w-full" />
-                  )
-                ) : (
-                  <div className="p-6">
-                    <p className="mb-3 text-xs text-slate-500">
-                      Word documents cannot be rendered in the browser directly, this is the text ScriptMark actually
-                      read from it.
-                    </p>
-                    <pre className="whitespace-pre-wrap text-sm text-slate-700">{questionPaperPreviewText || 'No preview text available.'}</pre>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <p className="text-sm font-semibold text-slate-900">2. Upload Marking Guide (optional)</p>
             <p className="text-xs text-slate-500 mt-1">
@@ -1145,6 +1143,22 @@ export default function MarkingGuides() {
               already above, it never replaces the question list.
             </p>
 
+            <input
+              ref={guideInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
+              onChange={handleGuideFileInputChange}
+              className="hidden"
+            />
+            {sources.guide && !parsingGuideDoc ? (
+              <SourceFileRow
+                file={sources.guide}
+                onView={() => setViewer({ kind: 'guide', mode: 'file' })}
+                onText={() => openSourceText('guide')}
+                onReplace={() => setReplaceAsk('guide')}
+                onRemove={() => removeSource('guide')}
+              />
+            ) : (
             <div
               onDragOver={(e) => {
                 e.preventDefault()
@@ -1176,55 +1190,17 @@ export default function MarkingGuides() {
                 </label>
               )}
             </div>
-
-            {guideFile && !parsingGuideDoc && (
-              <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
-                <span className="truncate text-sm text-slate-600">{guideFile.name}</span>
-                <div className="flex shrink-0 items-center gap-3">
-                  <button
-                    onClick={() => setShowGuidePreview(true)}
-                    className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
-                  >
-                    <Eye size={14} /> Preview
-                  </button>
-                  <button
-                    onClick={handleRemoveGuideDoc}
-                    className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
-                  >
-                    <Trash2 size={14} /> Remove
-                  </button>
-                </div>
-              </div>
             )}
           </div>
 
-          {showGuidePreview && guideFile && (
-            <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/80 p-4 md:p-10">
-              <div className="flex items-center justify-between pb-3">
-                <span className="truncate text-sm font-medium text-white">{guideFile.name}</span>
-                <button onClick={() => setShowGuidePreview(false)} className="rounded-full p-1.5 text-white hover:bg-white/10">
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="flex-1 overflow-auto rounded-xl bg-white">
-                {guidePreviewUrl ? (
-                  guideFile.type.startsWith('image/') ? (
-                    <img src={guidePreviewUrl} alt="Marking guide preview" className="mx-auto max-w-full" />
-                  ) : (
-                    <iframe src={guidePreviewUrl} title="Marking guide preview" className="h-full w-full" />
-                  )
-                ) : (
-                  <div className="p-6">
-                    <p className="mb-3 text-xs text-slate-500">
-                      Word documents cannot be rendered in the browser directly, this is the text ScriptMark actually
-                      read from it.
-                    </p>
-                    <pre className="whitespace-pre-wrap text-sm text-slate-700">{guidePreviewText || 'No preview text available.'}</pre>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          <SourceViewer
+            file={viewer && sources[viewer.kind]}
+            mode={viewer?.mode}
+            text={viewer?.text}
+            loading={viewer?.loading}
+            onClose={() => setViewer(null)}
+          />
+          <ReplaceDialog kind={replaceAsk} onCancel={() => setReplaceAsk(null)} onConfirm={confirmReplace} />
 
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Subject / Exam Title</label>
