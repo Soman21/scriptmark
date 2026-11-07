@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { Sparkles, Plus, Trash2, ArrowLeft, FileUp, Loader2 } from 'lucide-react'
+import { Sparkles, Plus, Trash2, ArrowLeft, FileUp, Loader2, AlertTriangle, Check } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
-import { sumMarks, warningText, missingAnswers, bestTotal, cleanCountBest, countBestFrom, pointsTotalText } from '../lib/points.js'
+import { sumMarks, warningText, missingAnswers, bestTotal, cleanCountBest, countBestFrom, pointsTotalText, checkGuideTotals, studentMax, cleanAnswerRule } from '../lib/points.js'
+import FixTotalsDialog from '../components/FixTotalsDialog.jsx'
 import NewSessionDialog from '../components/NewSessionDialog.jsx'
 import { SourceFileRow, SourceViewer, ReplaceDialog } from '../components/SourceFiles.jsx'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -100,6 +101,56 @@ const blankGroup = (number) => ({
   parts: [blankPart()],
 })
 
+// The editor's questions as the server takes them: one entry per part.
+// Drafts keep parts with no text yet.
+function flatQuestions(groups, isDraft) {
+  return groups.flatMap((g) =>
+    g.parts
+      .map((p, i) => ({ p, label: g.parts.length > 1 ? partLabel(g, i) : null }))
+      .filter(({ p }) => isDraft || p.text.trim())
+      .map(({ p, label }) => ({
+        number: g.number,
+        subLabel: label,
+        questionTotal: g.total === '' ? null : Number(g.total) || null,
+        text: p.text,
+        modelAnswer: p.modelAnswer,
+        keywords: p.keywords,
+        maxMarks: p.marks,
+        isCalculationHeavy: p.isCalculationHeavy,
+        steps: p.steps
+          .filter((s) => s.description.trim())
+          .map((s) => ({ description: s.description, marks: Number(s.marks) || 0, note: s.note || null, diagram: s.diagram?.trim() || null })),
+        countBest: cleanCountBest(p.countBest, p.steps.filter((s) => s.description.trim()).length),
+      }))
+  )
+}
+
+// Puts Fix all's suggested marks back into the editor: part marks and the
+// marks of each written point, matched by question number and part.
+function applyFixedMarks(groups, fixed) {
+  return groups.map((g) => ({
+    ...g,
+    parts: g.parts.map((p, i) => {
+      const label = g.parts.length > 1 ? partLabel(g, i) : null
+      const q = fixed.find((x) => String(x.number) === String(g.number) && (x.subLabel || null) === label)
+      if (!q) return p
+      let k = 0
+      const steps = p.steps.map((s) => {
+        if (!s.description.trim()) return s
+        const next = q.steps?.[k++]
+        return next ? { ...s, marks: next.marks } : s
+      })
+      return { ...p, marks: q.maxMarks, steps }
+    }),
+  }))
+}
+
+// Answer rule as the editor holds it: compulsory as typed ("1" or "1, 2"),
+// any as typed.
+function ruleFromInputs(compulsory, any) {
+  return cleanAnswerRule({ compulsory, any })
+}
+
 function groupsFromQuestions(questions) {
   const byNumber = {}
   questions.forEach((q) => {
@@ -175,7 +226,13 @@ export default function MarkingGuides() {
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   // Guide arithmetic problems from the server: points vs part, parts vs total.
-  const [totalWarnings, setTotalWarnings] = useState([])
+  // Exam total and answer rule ("Q1 + any 3"), read from the paper and
+  // guide when uploaded, changeable here.
+  const [examTotal, setExamTotal] = useState('')
+  const [ruleCompulsory, setRuleCompulsory] = useState('')
+  const [ruleAny, setRuleAny] = useState('')
+  const [fixing, setFixing] = useState(false)
+  const [fixPreview, setFixPreview] = useState(null) // { questions, changes }
   const [remarkOffer, setRemarkOffer] = useState(null) // questions changed after scripts were marked
   const [remarking, setRemarking] = useState(false)
   const [autoGenerateOnParse, setAutoGenerateOnParse] = useState(false)
@@ -193,10 +250,14 @@ export default function MarkingGuides() {
   const [dragOverGuide, setDragOverGuide] = useState(false)
   const [parsingGuideDoc, setParsingGuideDoc] = useState(false)
 
-  const totalMarks = groups.reduce(
-    (sum, g) => sum + g.parts.reduce((pSum, p) => pSum + Number(p.marks || 0), 0),
-    0
-  )
+  // Checked as the lecturer types, not only after saving.
+  const liveQuestions = flatQuestions(groups, true)
+  const liveWarnings = checkGuideTotals(liveQuestions)
+  const answerRule = ruleFromInputs(ruleCompulsory, ruleAny)
+  // What one student can score under the answer rule.
+  const totalMarks = studentMax(liveQuestions, answerRule)
+  const examTotalNum = Number(examTotal) > 0 ? Number(examTotal) : null
+  const marksMatch = liveWarnings.length === 0 && (examTotalNum == null || Math.abs(totalMarks - examTotalNum) < 0.005)
   const totalQuestionCount = groups.reduce((sum, g) => sum + g.parts.length, 0)
 
   useEffect(() => {
@@ -239,6 +300,13 @@ export default function MarkingGuides() {
     setTitle('')
     setGroups([blankGroup(1), blankGroup(2)])
     setSources({ questionPaper: null, guide: null })
+    setExamRules(null, null)
+  }
+
+  function setExamRules(total, rule) {
+    setExamTotal(total ?? '')
+    setRuleCompulsory(rule ? rule.compulsory.join(', ') : '')
+    setRuleAny(rule ? String(rule.any) : '')
   }
 
   function loadGuideForEditing(guide) {
@@ -246,6 +314,7 @@ export default function MarkingGuides() {
     setTitle(guide.title)
     setGroups(groupsFromQuestions(guide.questions))
     setSources(sourcesOf(guide))
+    setExamRules(guide.examTotal, guide.answerRule)
     setStage('edit')
     setError('')
     setSuccessMsg('')
@@ -555,7 +624,11 @@ export default function MarkingGuides() {
       // Question Paper always sets the structure fresh, this is the source
       // of truth for question text and marks, never merged with anything.
       setGroups(groupsFromQuestions(orderedQuestions))
-      setTotalWarnings(data.warnings || [])
+      if (data.examTotal) setExamTotal(data.examTotal)
+      if (data.answerRule) {
+        setRuleCompulsory(data.answerRule.compulsory.join(', '))
+        setRuleAny(String(data.answerRule.any))
+      }
       setSources((s) => ({ ...s, questionPaper: sourceFromParse(data, file) }))
 
       const blankCount = orderedQuestions.filter((q) => !q.modelAnswer || !q.modelAnswer.trim()).length
@@ -622,6 +695,11 @@ export default function MarkingGuides() {
       const gap = missingAnswers(groups, orderedQuestions)
       mergeQuestionsIntoGroups(orderedQuestions)
       setSources((s) => ({ ...s, guide: sourceFromParse(data, file) }))
+      if (data.examTotal) setExamTotal(data.examTotal)
+      if (data.answerRule && !ruleAny) {
+        setRuleCompulsory(data.answerRule.compulsory.join(', '))
+        setRuleAny(String(data.answerRule.any))
+      }
       setSuccessMsg(
         `Merged ${data.questions.length} question${data.questions.length !== 1 ? 's' : ''} of answers into what you already had.${figuresNote(data.figures, data.tables)} Check everything below before saving.`
       )
@@ -772,6 +850,28 @@ export default function MarkingGuides() {
     }
   }
 
+  // Fix all: the server works out the changes (asking the AI only where a
+  // question's parts cannot be made to add up from the guide's own
+  // numbers). Nothing changes until the lecturer presses Apply all.
+  async function handleFixAll() {
+    setFixing(true)
+    setError('')
+    try {
+      const result = await api.fixGuideTotals(liveQuestions, token)
+      setFixPreview(result)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setFixing(false)
+    }
+  }
+
+  function applyFixPreview() {
+    setGroups((gs) => applyFixedMarks(gs, fixPreview.questions))
+    setFixPreview(null)
+    setSuccessMsg('Changes applied. Save to keep them.')
+  }
+
   async function handleSave(isDraft) {
     setError('')
     setSuccessMsg('')
@@ -791,33 +891,17 @@ export default function MarkingGuides() {
       }
     }
 
-    const flatQuestions = groups.flatMap((g) =>
-      g.parts
-        .map((p, i) => ({ p, label: g.parts.length > 1 ? partLabel(g, i) : null }))
-        .filter(({ p }) => isDraft || p.text.trim())
-        .map(({ p, label }) => ({
-          number: g.number,
-          subLabel: label,
-          questionTotal: g.total === '' ? null : Number(g.total) || null,
-          text: p.text,
-          modelAnswer: p.modelAnswer,
-          keywords: p.keywords,
-          maxMarks: p.marks,
-          isCalculationHeavy: p.isCalculationHeavy,
-          steps: p.steps
-            .filter((s) => s.description.trim())
-            .map((s) => ({ description: s.description, marks: Number(s.marks) || 0, note: s.note || null, diagram: s.diagram?.trim() || null })),
-          countBest: cleanCountBest(p.countBest, p.steps.filter((s) => s.description.trim()).length),
-        }))
-    )
+    const flat = flatQuestions(groups, isDraft)
 
     setSaving(isDraft ? 'draft' : 'publish')
     try {
       let guide
       const payload = {
         title,
-        questions: flatQuestions,
+        questions: flat,
         isDraft,
+        examTotal: examTotalNum,
+        answerRule,
         questionPaperUrl: sources.questionPaper?.url || null,
         questionPaperMimeType: sources.questionPaper?.mimeType || null,
         sourceFiles: sources,
@@ -839,7 +923,6 @@ export default function MarkingGuides() {
           setCurrentSession({ ...currentSession, guideId: guide.id })
         }
       }
-      setTotalWarnings(guide.warnings || [])
       setSuccessMsg(isDraft ? 'Draft saved' : 'Marking guide saved and published.')
       setDraftSaved(isDraft)
       lastSavedRef.current = { title, groups, sources }
@@ -1017,15 +1100,88 @@ export default function MarkingGuides() {
             </div>
           )}
 
-          {totalWarnings.length > 0 && (
+          <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-slate-500">Marks</p>
+                <p className={`text-2xl font-bold ${marksMatch ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {totalMarks}
+                  {examTotalNum != null && <span className="font-medium text-slate-400"> / {examTotalNum}</span>}
+                </p>
+              </div>
+              {marksMatch ? (
+                <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  <Check size={13} /> Totals match
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                  <AlertTriangle size={13} />
+                  {liveWarnings.length ? `${liveWarnings.length} issue${liveWarnings.length !== 1 ? 's' : ''}` : 'Exam total differs'}
+                </span>
+              )}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
+              <label className="flex items-center gap-1.5">
+                Exam total
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  value={examTotal}
+                  onChange={(e) => setExamTotal(e.target.value)}
+                  aria-label="Exam total"
+                  className="w-16 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-right text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-brand-400"
+                />
+              </label>
+              <span className="flex items-center gap-1.5">
+                Answer Q
+                <input
+                  value={ruleCompulsory}
+                  onChange={(e) => setRuleCompulsory(e.target.value)}
+                  placeholder="1"
+                  aria-label="Compulsory questions"
+                  className="w-14 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-center text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-brand-400"
+                />
+                + any
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={ruleAny}
+                  onChange={(e) => setRuleAny(e.target.value)}
+                  placeholder="All"
+                  aria-label="Number of other questions"
+                  className="w-14 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-center text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-brand-400"
+                />
+              </span>
+              <span>
+                Questions <span className="font-semibold text-slate-700">{groups.length}</span>
+              </span>
+            </div>
+          </div>
+
+          {liveWarnings.length > 0 && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <p className="font-semibold">Check totals</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-semibold">Check totals</p>
+                <button
+                  onClick={handleFixAll}
+                  disabled={fixing}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg bg-gold-500 px-3 py-1.5 text-xs font-semibold text-ink-950 hover:bg-gold-400 disabled:opacity-60"
+                >
+                  {fixing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Fix all
+                </button>
+              </div>
               <ul className="mt-1 space-y-0.5">
-                {totalWarnings.map((w) => (
+                {liveWarnings.map((w) => (
                   <li key={w.label + w.kind}>{warningText(w)}</li>
                 ))}
               </ul>
             </div>
+          )}
+
+          {fixPreview && (
+            <FixTotalsDialog preview={fixPreview} onCancel={() => setFixPreview(null)} onApply={applyFixPreview} />
           )}
 
           {remarkOffer && (
@@ -1561,7 +1717,7 @@ export default function MarkingGuides() {
             ) : (
               <ul className="space-y-1 max-h-96 overflow-y-auto">
                 {visibleGuides.map((g) => {
-                  const totalGuideMarks = g.questions.reduce((sum, q) => sum + q.maxMarks, 0)
+                  const totalGuideMarks = studentMax(g.questions, g.answerRule)
                   return (
                     <li key={g.id}>
                       <button

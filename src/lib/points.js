@@ -101,3 +101,61 @@ export function missingAnswers(groups, incoming) {
   }
   return { total, missing }
 }
+
+const near = (a, b) => Math.abs(a - b) < 0.005
+
+// Same checks as the server's checkGuideTotals, run as the lecturer types.
+// questions are flat guide questions ({ number, subLabel, maxMarks,
+// questionTotal, steps, countBest }).
+export function checkGuideTotals(questions) {
+  const warnings = []
+  const byNumber = new Map()
+  for (const q of questions || []) {
+    const points = Array.isArray(q.steps) ? q.steps : []
+    const max = Number(q.maxMarks) || 0
+    if (points.length) {
+      const sum = bestTotal(points.map((p) => p.marks), q.countBest)
+      if (!near(sum, max)) warnings.push({ label: `Q${q.number}${q.subLabel || ''}`, kind: 'POINTS', expected: max, actual: round2(sum) })
+    }
+    const key = String(q.number)
+    if (!byNumber.has(key)) byNumber.set(key, [])
+    byNumber.get(key).push(q)
+  }
+  for (const [number, parts] of byNumber) {
+    const total = parts.map((p) => Number(p.questionTotal)).find((t) => t > 0)
+    if (!total) continue
+    const sum = parts.reduce((s, p) => s + (Number(p.maxMarks) || 0), 0)
+    if (!near(sum, total)) warnings.push({ label: `Q${number}`, kind: 'PARTS', expected: total, actual: round2(sum) })
+  }
+  return warnings
+}
+
+// Answer rule: { compulsory: ['1'], any: 3 } is Question 1 and any three
+// others; null means every question is answered (same as the server).
+export function cleanAnswerRule(rule) {
+  if (!rule) return null
+  const any = Number(rule.any)
+  if (!Number.isInteger(any) || any < 1) return null
+  const list = Array.isArray(rule.compulsory) ? rule.compulsory : String(rule.compulsory || '').split(/[,\s]+/)
+  return { compulsory: [...new Set(list.map((n) => String(n).trim()).filter(Boolean))], any }
+}
+
+// What one student can score: the compulsory questions plus the best
+// `any` of the others, each counted by its parts' marks.
+export function studentMax(questions, rule) {
+  const totals = new Map()
+  for (const q of questions || []) {
+    const key = String(q.number ?? '').trim()
+    totals.set(key, (totals.get(key) || 0) + (Number(q.maxMarks) || 0))
+  }
+  const clean = cleanAnswerRule(rule)
+  if (!clean) return round2([...totals.values()].reduce((s, t) => s + t, 0))
+  let sum = 0
+  const others = []
+  for (const [number, total] of totals) {
+    if (clean.compulsory.includes(number)) sum += total
+    else others.push(total)
+  }
+  others.sort((a, b) => b - a)
+  return round2(sum + others.slice(0, clean.any).reduce((s, t) => s + t, 0))
+}

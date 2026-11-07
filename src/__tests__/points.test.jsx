@@ -93,3 +93,17 @@ test('point rows grey out points that do not count', () => {
   expect(screen.getByText('(best 5 of 7)')).toBeTruthy()
   expect(screen.getAllByText('5').length).toBeGreaterThanOrEqual(2)
 })
+
+test('guide totals: live checks, answer rule and what a student can score', async () => {
+  const { checkGuideTotals, studentMax, cleanAnswerRule } = await import('../lib/points.js')
+  const qs = [
+    { number: '1', subLabel: 'c', maxMarks: 4.38, questionTotal: 17.5, steps: [{ marks: 2 }, { marks: 2 }] },
+    { number: '1', subLabel: 'd', maxMarks: 13.12, questionTotal: 17.5, steps: [] },
+    { number: '2', maxMarks: 20 }, { number: '3', maxMarks: 15 },
+  ]
+  expect(checkGuideTotals(qs)).toEqual([{ label: 'Q1c', kind: 'POINTS', expected: 4.38, actual: 4 }])
+  expect(cleanAnswerRule({ compulsory: '1, 2', any: '3' })).toEqual({ compulsory: ['1', '2'], any: 3 })
+  expect(cleanAnswerRule({ compulsory: '1', any: '' })).toBe(null)
+  expect(studentMax(qs, { compulsory: ['1'], any: 1 })).toBe(37.5)
+  expect(studentMax(qs, null)).toBe(52.5)
+})
