@@ -1257,7 +1257,7 @@ export default function MarkingGuides() {
                       Parts total: <span className="font-semibold">{groupTotal}</span> /
                       <input
                         type="number"
-                        step="0.25"
+                        step="any"
                         min="0"
                         value={group.total ?? ''}
                         onChange={(e) => updateGroupTotal(group.id, e.target.value)}
@@ -1352,7 +1352,7 @@ export default function MarkingGuides() {
                           <label className="text-sm font-medium text-slate-700">Marks</label>
                           <input
                             type="number"
-                            step="0.25"
+                            step="any"
                             min="0"
                             value={part.marks}
                             onChange={(e) => updatePart(group.id, part.id, 'marks', e.target.value)}
@@ -1456,7 +1456,7 @@ export default function MarkingGuides() {
                                   </select>
                                   <input
                                     type="number"
-                                    step="0.25"
+                                    step="any"
                                     min="0"
                                     value={step.marks}
                                     onChange={(e) => updateStep(group.id, part.id, step.id, 'marks', e.target.value)}

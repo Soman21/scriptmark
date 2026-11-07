@@ -53,7 +53,7 @@ export default function PointRows({ answer, values, onChange, label }) {
               <div className="text-right">
                 <input
                   type="number"
-                  step="0.25"
+                  step="any"
                   min="0"
                   max={p.marks}
                   value={values[i] ?? ''}
