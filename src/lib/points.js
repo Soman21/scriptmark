@@ -4,11 +4,23 @@
 // Sum of marks, kept to two decimals so 1.25 + 1.25 shows as 2.5.
 export const sumMarks = (list) => Math.round((list || []).reduce((sum, x) => sum + Number(x.marks || 0), 0) * 100) / 100
 
+const round2 = (n) => Math.round(n * 100) / 100
+
+// How much of a mark its points (or a question's parts) take up, e.g.
+// "Allocated 1.5 of 5 marks · 3.5 left". Nothing is added when they match.
+export function allocatedText(allocated, of) {
+  const a = round2(Number(allocated) || 0)
+  const total = round2(Number(of) || 0)
+  const diff = round2(total - a)
+  const rest = diff > 0 ? ` · ${diff} left` : diff < 0 ? ` · ${-diff} over` : ''
+  return `${a} of ${total} marks${rest}`
+}
+
 // A guide total problem from the server, e.g. { label: 'Q3ii', kind:
-// 'POINTS', expected: 5, actual: 1.5 } -> "Q3 ii: points 1.5 of 5".
+// 'POINTS', expected: 5, actual: 1.5 } -> "Q3 ii: allocated 1.5 of 5 marks · 3.5 left".
 export function warningText(w) {
   const label = String(w.label).replace(/^(Q\d+)(\D.*)$/, '$1 $2')
-  return `${label}: ${w.kind === 'POINTS' ? 'points' : 'parts'} ${w.actual} of ${w.expected}`
+  return `${label}: ${w.kind === 'POINTS' ? 'allocated' : 'parts allocated'} ${allocatedText(w.actual, w.expected)}`
 }
 
 export const RESULT_LABEL = { full: 'Full', partial: 'Partial', attempt: 'Attempt', none: 'None' }

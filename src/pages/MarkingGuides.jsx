@@ -4,7 +4,7 @@ import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
-import { sumMarks, warningText, missingAnswers } from '../lib/points.js'
+import { sumMarks, warningText, missingAnswers, allocatedText } from '../lib/points.js'
 import NewSessionDialog from '../components/NewSessionDialog.jsx'
 import { SourceFileRow, SourceViewer, ReplaceDialog } from '../components/SourceFiles.jsx'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -1238,7 +1238,7 @@ export default function MarkingGuides() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className={`flex items-center gap-1.5 text-xs ${totalOff ? 'text-amber-600' : 'text-slate-500'}`}>
-                      Parts <span className="font-semibold">{groupTotal}</span> of
+                      Parts allocated <span className="font-semibold">{groupTotal}</span> of
                       <input
                         type="number"
                         step="0.25"
@@ -1439,7 +1439,7 @@ export default function MarkingGuides() {
                               </div>
                             ))}
                             <p className={`text-xs ${sumMarks(part.steps) === Number(part.marks) ? 'text-slate-400' : 'text-amber-600'}`}>
-                              Points {sumMarks(part.steps)} of {part.marks}
+                              Allocated {allocatedText(sumMarks(part.steps), part.marks)}
                             </p>
                           </div>
                         )}
