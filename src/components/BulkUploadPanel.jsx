@@ -19,6 +19,26 @@ export function oddGroups(groups) {
   return new Set(groups.map((g, i) => (g.pages.length >= usual * 2 || g.pages.length * 2 <= usual ? i : -1)).filter((i) => i >= 0))
 }
 
+// Answers a "Cover?" flag in one tap. A flagged page inside a script is
+// taken as a missed cover, so a new script starts there. A flagged page that
+// already starts a script is taken as a page wrongly cut off, so it joins
+// the script before it. Either way the flag is cleared.
+export function resolveCover(groups, groupIndex, pageIndex) {
+  const g = groups[groupIndex]
+  if (!g || !g.pages[pageIndex]) return groups
+  const pages = g.pages.map((p, i) => (i === pageIndex ? { ...p, unsure: false } : p))
+  const next = [...groups]
+  if (pageIndex > 0) {
+    next.splice(groupIndex, 1, { ...g, pages: pages.slice(0, pageIndex) }, { studentName: '', regNumber: '', pages: pages.slice(pageIndex) })
+  } else if (groupIndex > 0) {
+    const prev = groups[groupIndex - 1]
+    next.splice(groupIndex - 1, 2, { ...prev, pages: [...prev.pages, ...pages] })
+  } else {
+    next[groupIndex] = { ...g, pages }
+  }
+  return next
+}
+
 const MODES = [
   {
     id: 'auto',
@@ -417,9 +437,17 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
                           className={`group relative cursor-grab overflow-hidden rounded border bg-slate-50 aspect-[3/4] active:cursor-grabbing ${p.unsure ? 'border-amber-400 ring-2 ring-amber-300' : 'border-slate-200'}`}
                         >
                           {p.unsure && (
-                            <span className="absolute inset-x-1 bottom-7 z-10 rounded bg-amber-500 px-1 text-center text-[9px] font-semibold text-white">
-                              Cover?
-                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setGroups((prev) => resolveCover(prev, gi, pi))
+                              }}
+                              className="absolute inset-x-1 bottom-7 z-20 rounded bg-amber-500 px-1 py-0.5 text-center text-[9px] font-semibold text-white transition hover:bg-amber-600"
+                              title={pi > 0 ? 'Start a new script here' : 'Join to previous script'}
+                            >
+                              {pi > 0 ? 'Cover? Split' : 'Cover? Join'}
+                            </button>
                           )}
                           {pi === 0 && (
                             <span className="absolute left-1 top-1 z-10 rounded bg-emerald-600 px-1 text-[10px] font-semibold text-white">
