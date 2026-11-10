@@ -69,7 +69,9 @@ export default function MarkingProgress() {
   // Errors from Remark and Delete. Kept apart from polling errors: every
   // poll clears its own error, and used to wipe these within 3 seconds.
   const [actionError, setActionError] = useState('')
-  const [remarking, setRemarking] = useState(null) // script id
+  // Scripts being marked again, by id. Each row has its own spinner, so
+  // the other rows stay usable while one script is marked.
+  const [remarking, setRemarking] = useState(() => new Set())
   const [guideId, setGuideId] = useState(null)
   const redirectedRef = useRef(false)
   const sawUnmarkedRef = useRef(false)
@@ -131,7 +133,7 @@ export default function MarkingProgress() {
   // again from its saved text.
   async function handleRemark(s) {
     if (!guideId) return
-    setRemarking(s.id)
+    setRemarking((prev) => new Set(prev).add(s.id))
     setActionError('')
     try {
       if (!s.answerCount) await api.startMarking(sessionId, token)
@@ -143,7 +145,11 @@ export default function MarkingProgress() {
     } catch (err) {
       setActionError(err.message)
     } finally {
-      setRemarking(null)
+      setRemarking((prev) => {
+        const next = new Set(prev)
+        next.delete(s.id)
+        return next
+      })
     }
   }
 
@@ -306,11 +312,11 @@ export default function MarkingProgress() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleRemark(s)}
-                      disabled={remarking !== null}
+                      disabled={remarking.has(s.id)}
                       className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 disabled:opacity-50"
                       title="Score again"
                     >
-                      <RefreshCw size={12} className={remarking === s.id ? 'animate-spin' : ''} /> {remarking === s.id ? 'Marking...' : 'Remark'}
+                      <RefreshCw size={12} className={remarking.has(s.id) ? 'animate-spin' : ''} /> {remarking.has(s.id) ? 'Marking...' : 'Remark'}
                     </button>
                     {s.answerCount > 0 && (
                       <button
