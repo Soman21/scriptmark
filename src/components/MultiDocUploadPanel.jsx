@@ -4,6 +4,7 @@ import { Files, ChevronDown, ChevronUp, Loader2, AlertCircle, X, FileText, Image
 import { PrimaryButton } from './ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
+import { MB, BATCH_FILE_LIMIT_MB, readJson } from '../lib/upload'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -32,10 +33,13 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, embed
     const picked = Array.from(fileList || [])
     const left = picked.filter((f) => !isAccepted(f)).map((f) => f.name)
     if (left.length) setSkipped(left)
+    // The server refuses a file over the limit, so leave it out here.
+    const big = picked.filter((f) => isAccepted(f) && f.size > BATCH_FILE_LIMIT_MB * MB).map((f) => f.name)
+    setError(big.length ? `Larger than ${BATCH_FILE_LIMIT_MB} MB, skipped: ${big.join(', ')}` : '')
     setFiles((prev) => {
       // The same file picked twice would become two scripts for one student.
       const seen = new Set(prev.map((f) => `${f.name}:${f.size}`))
-      return [...prev, ...picked.filter((f) => isAccepted(f) && !seen.has(`${f.name}:${f.size}`))]
+      return [...prev, ...picked.filter((f) => isAccepted(f) && f.size <= BATCH_FILE_LIMIT_MB * MB && !seen.has(`${f.name}:${f.size}`))]
     })
   }
 
@@ -69,7 +73,7 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, embed
           headers: { Authorization: `Bearer ${token}` },
           body: formData,
         })
-        const data = await res.json()
+        const data = await readJson(res)
         if (!res.ok) throw new Error(data.error || 'Upload failed')
         created.push(...data.scripts)
       }

@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import PageViewerModal from './PageViewerModal.jsx'
 import { bakePageEdits } from '../lib/imageEdit.js'
+import { MB, SPLIT_PDF_LIMIT_MB, readJson } from '../lib/upload'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -54,6 +55,10 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
       setError('Choose a PDF file first.')
       return
     }
+    if (pdfFile.size > SPLIT_PDF_LIMIT_MB * MB) {
+      setError(`PDF is larger than ${SPLIT_PDF_LIMIT_MB} MB. Upload it in smaller parts.`)
+      return
+    }
     setSplitting(true)
     setError('')
     try {
@@ -69,7 +74,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       })
-      const data = await res.json()
+      const data = await readJson(res)
       if (!res.ok) throw new Error(data.error || 'Split failed')
 
       setGroups(
@@ -222,7 +227,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
             headers: { Authorization: `Bearer ${token}` },
             body: formData,
           })
-          const data = await res.json()
+          const data = await readJson(res)
           if (!res.ok) throw new Error(data.error || 'Could not save an edited page')
           pages.push({ imageUrl: data.imageUrl })
         }
