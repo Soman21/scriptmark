@@ -1,7 +1,7 @@
 // Upload size limits, matching the server. Checking in the browser first
 // means a lecturer is told straight away, before a long upload.
 export const MB = 1024 * 1024
-export const SPLIT_PDF_LIMIT_MB = 50
+export const SPLIT_PDF_LIMIT_MB = 60
 export const BATCH_FILE_LIMIT_MB = 25
 
 // Reads a JSON reply. When the server is down or restarting, the reply is an
