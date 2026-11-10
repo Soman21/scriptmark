@@ -66,6 +66,10 @@ export default function MarkingProgress() {
   const [markedCount, setMarkedCount] = useState(0)
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
+  // Errors from Remark and Delete. Kept apart from polling errors: every
+  // poll clears its own error, and used to wipe these within 3 seconds.
+  const [actionError, setActionError] = useState('')
+  const [remarking, setRemarking] = useState(null) // script id
   const [guideId, setGuideId] = useState(null)
   const redirectedRef = useRef(false)
   const sawUnmarkedRef = useRef(false)
@@ -122,16 +126,24 @@ export default function MarkingProgress() {
     }
   }, [sessionId, token, navigate])
 
-  async function handleRemark(scriptId) {
+  // A script that failed before any answer was saved goes back through
+  // Mark, which reads its pages again if needed. One with answers is scored
+  // again from its saved text.
+  async function handleRemark(s) {
     if (!guideId) return
+    setRemarking(s.id)
+    setActionError('')
     try {
-      await api.scoreScript(scriptId, guideId, token)
+      if (!s.answerCount) await api.startMarking(sessionId, token)
+      else await api.scoreScript(s.id, guideId, token)
       const data = await api.getMarkingStatus(sessionId, token)
       setScripts(data.scripts)
       setTotal(data.total)
       setMarkedCount(data.markedCount)
     } catch (err) {
-      setError(err.message)
+      setActionError(err.message)
+    } finally {
+      setRemarking(null)
     }
   }
 
@@ -154,7 +166,7 @@ export default function MarkingProgress() {
       setScripts((prev) => prev.filter((s) => s.id !== scriptId))
       setTotal((t) => t - 1)
     } catch (err) {
-      setError(err.message)
+      setActionError(err.message)
     }
   }
 
@@ -173,11 +185,16 @@ export default function MarkingProgress() {
     <div className="h-full overflow-y-auto p-6 space-y-6">
       <h1 className="text-xl font-semibold text-slate-900">Marking Progress</h1>
 
-      {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
-          <AlertCircle size={14} /> {error}
+      {[error, actionError].filter(Boolean).map((msg) => (
+        <div key={msg} className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">
+          <AlertCircle size={14} className="shrink-0" /> <span className="min-w-0 break-words">{msg}</span>
+          {msg === actionError && (
+            <button type="button" onClick={() => setActionError('')} className="ml-auto shrink-0 text-xs underline">
+              Dismiss
+            </button>
+          )}
         </div>
-      )}
+      ))}
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="mb-2 flex items-center justify-between text-sm font-medium text-slate-700">
@@ -276,25 +293,29 @@ export default function MarkingProgress() {
                 </td>
                 <td className="px-4 py-3">
                   <Badge tone={statusTone(s.status)}>{statusLabel(s.status)}</Badge>
+                  {s.failReason && <div className="mt-1 text-xs text-rose-500">{s.failReason}</div>}
                 </td>
                 <td className="px-4 py-3 text-slate-700">{s.totalScore != null ? s.totalScore : 'N/A'}</td>
                 <td className="px-4 py-3 text-slate-400">{timeAgo(s.updatedAt)}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => handleRemark(s.id)}
-                      className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700"
+                      onClick={() => handleRemark(s)}
+                      disabled={remarking !== null}
+                      className="flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 disabled:opacity-50"
                       title="Score again"
                     >
-                      <RefreshCw size={12} /> Remark
+                      <RefreshCw size={12} className={remarking === s.id ? 'animate-spin' : ''} /> {remarking === s.id ? 'Marking...' : 'Remark'}
                     </button>
-                    <button
-                      onClick={() => navigate(`/sessions/${sessionId}/results`)}
-                      className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
-                      title="Edit in Results"
-                    >
-                      <Pencil size={12} /> Edit
-                    </button>
+                    {s.answerCount > 0 && (
+                      <button
+                        onClick={() => navigate(`/sessions/${sessionId}/results?script=${s.id}`)}
+                        className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+                        title="Edit in Results"
+                      >
+                        <Pencil size={12} /> Edit
+                      </button>
+                    )}
                     {user?.role !== 'REVIEWER' && (
                       <button
                         onClick={() => handleDelete(s.id)}

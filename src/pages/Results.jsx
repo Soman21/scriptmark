@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download, Sparkles, MessageCircle } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, Badge } from '../components/ui.jsx'
@@ -66,6 +66,9 @@ export default function Results() {
   const { token } = useAuth()
   const { session, sessionId } = useSession()
   const navigate = useNavigate()
+  // ?script=<id>: opened from Edit on the Marking page, so start on that
+  // script instead of the first one.
+  const [searchParams] = useSearchParams()
   const [scripts, setScripts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -98,6 +101,8 @@ export default function Results() {
       // Low-confidence scripts need a closer look — put them first in the queue.
       scored.sort((a, b) => (b.hasLowConfidenceScore ? 1 : 0) - (a.hasLowConfidenceScore ? 1 : 0))
       setScripts(scored)
+      const wanted = scored.findIndex((s) => s.id === searchParams.get('script'))
+      if (wanted >= 0) setCurrentIndex(wanted)
 
       const drafts = {}
       const points = {}
