@@ -54,7 +54,7 @@ const MODES = [
   },
 ]
 
-export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded = false }) {
+export default function BulkUploadPanel({ sessionId, onScriptsCreated, onDone, embedded = false }) {
   const { token } = useAuth()
   const navigate = useNavigate()
   const [expanded, setExpanded] = useState(embedded)
@@ -260,10 +260,15 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, embedded 
       setSplitInfo(null)
       setPdfFile(null)
       setExpanded(false)
-      // Kick off background marking for the whole session, then take the
-      // lecturer straight to the live Marking page to watch progress.
-      await api.startMarking(sessionId, token).catch(() => {})
-      navigate(`/sessions/${sessionId}/marking`)
+      // Start marking for the whole session and open the Marking page. The
+      // Scan Scripts page passes onDone so every upload method can ask
+      // about adding lecturers first (see StartMarkingPrompt.jsx).
+      if (onDone) {
+        await onDone()
+      } else {
+        await api.startMarking(sessionId, token).catch(() => {})
+        navigate(`/sessions/${sessionId}/marking`)
+      }
     } catch (err) {
       setError(err.message)
     } finally {

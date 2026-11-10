@@ -116,6 +116,9 @@ export const api = {
 
   remarkQuestions: (sessionId, questionIds, token) =>
     request(`/api/sessions/${sessionId}/remark`, { method: 'POST', body: { questionIds }, token }),
+  teamCheck: (sessionId, token) => request(`/api/sessions/${sessionId}/teamCheck`, { token }),
+  assignUnclaimed: (sessionId, payload, token) =>
+    request(`/api/sessions/${sessionId}/assignUnclaimed`, { method: 'POST', body: payload || {}, token }),
   startMarking: (sessionId, token) =>
     request(`/api/sessions/${sessionId}/mark`, { method: 'POST', token }),
   getMarkingStatus: (sessionId, token) =>

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { UploadCloud, Camera, CheckCircle2, Loader2, AlertCircle, AlertTriangle, FilePlus2, UserPlus, X, Sparkles, BookOpen, FileStack, Files } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import BulkUploadPanel from '../components/BulkUploadPanel.jsx'
 import MultiDocUploadPanel from '../components/MultiDocUploadPanel.jsx'
+import { useStartMarking } from '../components/StartMarkingPrompt.jsx'
 import AttendanceUploadCard from '../components/AttendanceUploadCard.jsx'
 import { PrimaryButton, SecondaryButton } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -37,7 +37,6 @@ export const SCAN_METHODS = [
 export default function ScanScripts() {
   const { token, user } = useAuth()
   const { session, sessionId } = useSession()
-  const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
@@ -72,6 +71,7 @@ export default function ScanScripts() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [finishing, setFinishing] = useState(false)
+  const { start: startMarking, prompt: startMarkingPrompt } = useStartMarking()
 
   useEffect(() => {
     restoreProgress(sessionId)
@@ -261,10 +261,10 @@ export default function ScanScripts() {
     setFinishing(true)
     setError('')
     try {
-      await api.startMarking(sessionId, token)
-      navigate(`/sessions/${sessionId}/marking`)
+      await startMarking()
     } catch (err) {
       setError(err.message)
+    } finally {
       setFinishing(false)
     }
   }
@@ -285,6 +285,7 @@ export default function ScanScripts() {
   return (
     <div className="flex h-full flex-col">
       <Topbar title="Scan Student Scripts" />
+      {startMarkingPrompt}
 
       {error && (
         <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-600">
@@ -498,6 +499,7 @@ export default function ScanScripts() {
             <BulkUploadPanel
               embedded
               sessionId={sessionId}
+              onDone={startMarking}
               onScriptsCreated={(newScripts) => {
                 setScripts((prev) => [...newScripts, ...prev])
               }}
@@ -508,6 +510,7 @@ export default function ScanScripts() {
             <MultiDocUploadPanel
               embedded
               sessionId={sessionId}
+              onDone={startMarking}
               onScriptsCreated={(newScripts) => {
                 setScripts((prev) => [...newScripts, ...prev])
               }}
