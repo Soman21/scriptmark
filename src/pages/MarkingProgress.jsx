@@ -283,7 +283,12 @@ export default function MarkingProgress() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.map((s) => (
-              <tr key={s.id} className="hover:bg-slate-50">
+              <tr
+                key={s.id}
+                onClick={() => s.answerCount > 0 && navigate(`/sessions/${sessionId}/results?script=${s.id}`)}
+                className={`hover:bg-slate-50 ${s.answerCount > 0 ? 'cursor-pointer' : ''}`}
+                title={s.answerCount > 0 ? 'Open in Results' : undefined}
+              >
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2 font-medium text-slate-800">
                     {s.regNumber || 'Reg number pending'}
@@ -297,7 +302,7 @@ export default function MarkingProgress() {
                 </td>
                 <td className="px-4 py-3 text-slate-700">{s.totalScore != null ? s.totalScore : 'N/A'}</td>
                 <td className="px-4 py-3 text-slate-400">{timeAgo(s.updatedAt)}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleRemark(s)}
