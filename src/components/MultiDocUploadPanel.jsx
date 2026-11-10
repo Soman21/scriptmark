@@ -18,7 +18,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const CHUNK = 10
 const isAccepted = (f) => f.type === 'application/pdf' || f.type.startsWith('image/')
 
-export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, embedded = false }) {
+export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, onDone, embedded = false }) {
   const { token } = useAuth()
   const navigate = useNavigate()
   const [expanded, setExpanded] = useState(embedded)
@@ -83,8 +83,15 @@ export default function MultiDocUploadPanel({ sessionId, onScriptsCreated, embed
       setSkipped([])
       setExpanded(false)
 
-      await api.startMarking(sessionId, token).catch(() => {})
-      navigate(`/sessions/${sessionId}/marking`)
+      // Start marking for the whole session and open the Marking page. The
+      // Scan Scripts page passes onDone so every upload method can ask
+      // about adding lecturers first (see StartMarkingPrompt.jsx).
+      if (onDone) {
+        await onDone()
+      } else {
+        await api.startMarking(sessionId, token).catch(() => {})
+        navigate(`/sessions/${sessionId}/marking`)
+      }
     } catch (err) {
       // Files already sent are saved; keep only the ones still to go.
       if (created.length) {

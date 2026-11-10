@@ -13,15 +13,36 @@ export default function CoordinatorDashboard() {
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [assigning, setAssigning] = useState(false)
+  const [assignError, setAssignError] = useState('')
 
-  useEffect(() => {
-    if (!sessionId) return
-    api
+  function load() {
+    return api
       .getCoordinatorOverview(sessionId, token)
       .then(setOverview)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    if (!sessionId) return
+    load()
   }, [sessionId, token])
+
+  // Takes every question nobody has claimed. The server only fills empty
+  // ones, so a question a colleague claimed in the meantime stays theirs.
+  async function assignAllToMe() {
+    setAssigning(true)
+    setAssignError('')
+    try {
+      await api.assignUnclaimed(sessionId, {}, token)
+      await load()
+    } catch (err) {
+      setAssignError(err.message)
+    } finally {
+      setAssigning(false)
+    }
+  }
 
 
   if (loading) {
@@ -78,10 +99,25 @@ export default function CoordinatorDashboard() {
               {overview.unclaimedQuestions.join(', ')} yet, so those answers have no one to confirm them.
             </span>
           </p>
-          <Link to={`/sessions/${sessionId}/claim-questions`} className="shrink-0 font-medium underline">
-            Go to Claim Questions
-          </Link>
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={assignAllToMe}
+              disabled={assigning}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 font-medium text-white hover:bg-amber-700 disabled:opacity-60"
+            >
+              {assigning && <Loader2 size={14} className="animate-spin" />} Assign all to me
+            </button>
+            <Link to={`/sessions/${sessionId}/claim-questions`} className="font-medium underline">
+              Go to Claim Questions
+            </Link>
+          </div>
         </div>
+      )}
+      {assignError && (
+        <p className="flex items-center gap-2 text-sm text-rose-600">
+          <AlertCircle size={14} /> {assignError}
+        </p>
       )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
