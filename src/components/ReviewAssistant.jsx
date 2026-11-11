@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Sparkles, X, Send, Loader2, Check, Minus, Maximize2 } from 'lucide-react'
+import { Sparkles, X, Send, Loader2, Check, Minus } from 'lucide-react'
 import AssistantText from './AssistantText.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -28,16 +28,16 @@ const QUICK = ['Why did each question get its score?', 'Check every answer again
 // Layout: on a laptop (lg and up) the panel sits beside the page as a
 // column of its own, under the session tabs, so it pushes the page over
 // instead of covering it. Its left edge can be dragged to make it wider or
-// narrower. On a phone it is a sheet over the bottom of the screen. On both,
-// Minimise folds it down to a small bar and keeps the conversation.
-export default function ReviewAssistant({ script, open, onClose, onUseScore, ask }) {
+// narrower. On a phone it is a sheet over the bottom of the screen.
+// Minimise hides it and keeps the conversation (the icon in the Results
+// footer brings it back); Close also clears the conversation.
+export default function ReviewAssistant({ script, open, onClose, onMinimise, onUseScore, ask }) {
   const { token } = useAuth()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [used, setUsed] = useState({})
-  const [minimised, setMinimised] = useState(false)
   const [width, setWidth] = useState(savedWidth)
   const endRef = useRef(null)
 
@@ -68,11 +68,6 @@ export default function ReviewAssistant({ script, open, onClose, onUseScore, ask
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', stop)
   }
-
-  // Opening it again, or asking from an answer card, unfolds it.
-  useEffect(() => {
-    if (open) setMinimised(false)
-  }, [open, ask])
 
   useEffect(() => {
     setMessages([])
@@ -117,36 +112,6 @@ export default function ReviewAssistant({ script, open, onClose, onUseScore, ask
 
   const who = script?.studentName || script?.regNumber || 'This script'
 
-  if (minimised) {
-    return (
-      <>
-        {/* Phone: a small bar at the bottom of the screen */}
-        <button
-          onClick={() => setMinimised(false)}
-          aria-label="Open the marking assistant"
-          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg hover:bg-brand-500 lg:hidden"
-        >
-          <Sparkles size={15} /> Marking assistant
-          {sending && <Loader2 size={14} className="animate-spin" />}
-        </button>
-        {/* Laptop: a thin strip down the right side of the page */}
-        <aside aria-label="Marking assistant, minimised" className="hidden w-11 shrink-0 flex-col items-center gap-3 border-l border-slate-200 bg-white py-3 lg:flex">
-          <button onClick={() => setMinimised(false)} aria-label="Open the marking assistant" title="Open" className="rounded-lg p-1.5 text-brand-600 hover:bg-brand-50">
-            <Maximize2 size={16} />
-          </button>
-          <button onClick={() => setMinimised(false)} className="flex flex-1 flex-col items-center gap-2 text-xs font-medium text-slate-600 hover:text-brand-700">
-            <Sparkles size={15} className="text-brand-500" />
-            <span className="[writing-mode:vertical-rl]">Marking assistant</span>
-            {sending && <Loader2 size={14} className="animate-spin text-brand-500" />}
-          </button>
-          <button onClick={onClose} aria-label="Close the marking assistant" title="Close" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-            <X size={16} />
-          </button>
-        </aside>
-      </>
-    )
-  }
-
   return (
     <aside
       aria-label="Marking assistant"
@@ -171,10 +136,18 @@ export default function ReviewAssistant({ script, open, onClose, onUseScore, ask
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
-          <button onClick={() => setMinimised(true)} aria-label="Minimise the marking assistant" title="Minimise" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+          <button onClick={() => onMinimise?.(messages.length > 0)} aria-label="Minimise the marking assistant" title="Minimise" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <Minus size={18} />
           </button>
-          <button onClick={onClose} aria-label="Close the marking assistant" title="Close" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+          <button
+            onClick={() => {
+              setMessages([])
+              setUsed({})
+              setError('')
+              onClose()
+            }}
+            aria-label="Close the marking assistant"
+            title="Close" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <X size={18} />
           </button>
         </div>

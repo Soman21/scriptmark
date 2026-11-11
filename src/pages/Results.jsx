@@ -86,6 +86,7 @@ export default function Results() {
   const [pageIndex, setPageIndex] = useState(0)
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [assistantAsk, setAssistantAsk] = useState(null)
+  const [assistantMinimised, setAssistantMinimised] = useState(false) // hidden with a chat kept
   const [finderOpen, setFinderOpen] = useState(false)
   // How wide the page column is right now. It shrinks when the marking
   // assistant opens beside it, so the layout follows this width rather than
@@ -547,13 +548,16 @@ export default function Results() {
               <button
                 onClick={() => {
                   setFinderOpen(false)
-                  setAssistantOpen(true)
+                  setAssistantOpen((o) => !o)
+                  setAssistantMinimised(false)
                 }}
                 aria-label="Marking assistant"
+                aria-pressed={assistantOpen}
                 title="Marking assistant"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+                className={`relative inline-flex items-center rounded-lg border px-2.5 py-2 ${assistantOpen ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-brand-200 text-brand-700 hover:bg-brand-50'}`}
               >
-                <Sparkles size={15} /> {!compactBar && <span>Marking assistant</span>}
+                <Sparkles size={16} />
+                {assistantMinimised && !assistantOpen && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-gold-500 ring-2 ring-white" aria-hidden="true" />}
               </button>
               <PrimaryButton onClick={handleConfirmAll} disabled={confirming} className="bg-emerald-600 hover:bg-emerald-500">
                 <CheckCircle2 size={16} /> {confirming ? 'Confirming...' : 'Confirm All Scores'}
@@ -568,7 +572,14 @@ export default function Results() {
       <ReviewAssistant
         script={currentScript}
         open={assistantOpen}
-        onClose={() => setAssistantOpen(false)}
+        onClose={() => {
+          setAssistantOpen(false)
+          setAssistantMinimised(false)
+        }}
+        onMinimise={(hasChat) => {
+          setAssistantOpen(false)
+          setAssistantMinimised(hasChat)
+        }}
         onUseScore={applySuggestedScore}
         ask={assistantAsk}
       />
