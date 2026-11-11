@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download, Sparkles, MessageCircle } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
@@ -87,6 +87,21 @@ export default function Results() {
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [assistantAsk, setAssistantAsk] = useState(null)
   const [finderOpen, setFinderOpen] = useState(false)
+  // How wide the page column is right now. It shrinks when the marking
+  // assistant opens beside it, so the layout follows this width rather than
+  // the screen width.
+  const mainRef = useRef(null)
+  const [mainWidth, setMainWidth] = useState(1200)
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([entry]) => setMainWidth(entry.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const sideBySide = mainWidth >= 860 // script image beside the answers
+  const answersSideBySide = mainWidth >= 1000 // expected and student answers in two columns
+  const compactBar = mainWidth < 640 // footer buttons show icons only
 
   useEffect(() => {
     loadScripts()
@@ -260,7 +275,8 @@ export default function Results() {
     : []
 
   return (
-    <div className={`flex h-full flex-col transition-[padding] ${assistantOpen || finderOpen ? 'xl:pr-[420px]' : ''}`}>
+    <div className="flex h-full">
+    <div ref={mainRef} className={`flex min-w-0 flex-1 flex-col transition-[padding] ${finderOpen ? 'lg:pr-[400px]' : ''}`}>
       <Topbar
         title="Review Suggested Scores"
         right={
@@ -342,14 +358,14 @@ export default function Results() {
               </div>
             </div>
 
-            <div className="grid flex-1 grid-cols-1 gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+            <div className={`grid flex-1 gap-5 p-4 sm:p-6 ${sideBySide ? 'grid-cols-[minmax(220px,1fr)_minmax(0,2.2fr)]' : 'grid-cols-1'}`}>
               {/* The script itself, kept in view beside the scores while scrolling */}
-              <div className="lg:sticky lg:top-[84px] lg:self-start space-y-3">
+              <div className={`space-y-3 ${sideBySide ? 'sticky top-[84px] self-start' : ''}`}>
                 <div className="rounded-xl border border-slate-200 bg-white p-3">
                   <button
                     onClick={() => currentPages.length > 0 && setViewerIndex(pageIndex)}
                     disabled={currentPages.length === 0}
-                    className="group relative block w-full overflow-hidden rounded-lg border border-slate-100 bg-slate-50 aspect-[3/4] lg:aspect-auto lg:h-[calc(100vh-380px)] lg:min-h-[320px]"
+                    className={`group relative block w-full overflow-hidden rounded-lg border border-slate-100 bg-slate-50 ${sideBySide ? 'h-[calc(100vh-380px)] min-h-[300px]' : 'h-[30vh] min-h-[200px]'}`}
                   >
                     {currentPages[pageIndex] ? (
                       <img src={currentPages[pageIndex].imageUrl} alt={`Page ${pageIndex + 1}`} className="h-full w-full object-contain" />
@@ -455,7 +471,7 @@ export default function Results() {
                         </div>
                       </div>
 
-                      <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                      <div className={`mt-3 grid gap-3 ${answersSideBySide ? 'grid-cols-2' : 'grid-cols-1'}`}>
                         <div className="rounded-lg border border-slate-100 bg-slate-50 p-3.5">
                           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Expected Answer</p>
                           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{q?.modelAnswer}</p>
@@ -522,18 +538,22 @@ export default function Results() {
                   setAssistantOpen(false)
                   setFinderOpen(true)
                 }}
+                aria-label="Find scripts"
+                title="Find scripts"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                <MessageCircle size={15} /> <span className="hidden sm:inline">Find scripts</span>
+                <MessageCircle size={15} /> {!compactBar && <span>Find scripts</span>}
               </button>
               <button
                 onClick={() => {
                   setFinderOpen(false)
                   setAssistantOpen(true)
                 }}
+                aria-label="Marking assistant"
+                title="Marking assistant"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
               >
-                <Sparkles size={15} /> <span className="hidden sm:inline">Marking assistant</span>
+                <Sparkles size={15} /> {!compactBar && <span>Marking assistant</span>}
               </button>
               <PrimaryButton onClick={handleConfirmAll} disabled={confirming} className="bg-emerald-600 hover:bg-emerald-500">
                 <CheckCircle2 size={16} /> {confirming ? 'Confirming...' : 'Confirm All Scores'}
@@ -544,6 +564,7 @@ export default function Results() {
         )}
       </div>
 
+    </div>
       <ReviewAssistant
         script={currentScript}
         open={assistantOpen}

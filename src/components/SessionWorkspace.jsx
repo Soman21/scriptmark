@@ -153,7 +153,7 @@ export default function SessionWorkspace() {
           </nav>
         </header>
         <AddLecturersDialog session={session} open={showAdd} onClose={() => setShowAdd(false)} />
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="relative min-h-0 flex-1 overflow-hidden">
           <Outlet />
         </div>
       </div>

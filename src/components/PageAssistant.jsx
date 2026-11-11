@@ -111,7 +111,7 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
   return (
     <aside
       aria-label={title}
-      className="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-slate-200 bg-white shadow-2xl sm:w-[400px]"
+      className="fixed inset-x-0 bottom-0 z-40 flex h-[75dvh] flex-col rounded-t-2xl border-t border-slate-200 bg-white shadow-2xl lg:absolute lg:inset-y-0 lg:left-auto lg:right-0 lg:h-auto lg:w-[400px] lg:rounded-none lg:border-l lg:border-t-0"
     >
       <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <div className="min-w-0">
