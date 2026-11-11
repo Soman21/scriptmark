@@ -4,6 +4,8 @@ import AssistantText from './AssistantText.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import VoiceButton from './VoiceButton.jsx'
+import usePanelWidth, { ResizeHandle } from '../lib/usePanelWidth.jsx'
+import { useDock } from '../context/DockContext.jsx'
 
 // The chat helper on a session page. The lecturer types what they want and
 // the page carries it out with the same calls its buttons make. Claiming
@@ -23,6 +25,18 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
   const [error, setError] = useState('')
   const endRef = useRef(null)
   const inputRef = useRef(null)
+  const [heard, setHeard] = useState('') // words being heard by the mic, not yet final
+  const [width, startResize] = usePanelWidth('scriptmark.pageAssistantWidth')
+  const dock = useDock()
+
+  // On a laptop the open panel sits beside the page: the session layout
+  // makes room for it, so nothing on the page or the tabs is covered.
+  const showing = open && !hidden
+  useEffect(() => {
+    if (!dock) return
+    dock.setWidth(showing ? width : 0)
+  }, [dock, showing, width])
+  useEffect(() => () => dock?.setWidth(0), [dock])
 
   // scrollIntoView now returns a Promise in Chrome; an effect may only
   // return a clean up function, so the call is wrapped in braces.
@@ -101,9 +115,11 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
           setOpen(true)
           onOpen?.()
         }}
-        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-brand-500 px-4 py-3 text-sm font-medium text-white shadow-lg hover:bg-brand-600"
+        aria-label={title}
+        title={title}
+        className="fixed bottom-5 right-5 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-brand-500 text-white shadow-lg hover:bg-brand-600"
       >
-        <MessageCircle size={18} /> {title}
+        <MessageCircle size={20} />
       </button>
     )
   }
@@ -111,8 +127,10 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
   return (
     <aside
       aria-label={title}
-      className="fixed inset-x-0 bottom-0 z-40 flex h-[75dvh] flex-col rounded-t-2xl border-t border-slate-200 bg-white shadow-2xl lg:absolute lg:inset-y-0 lg:left-auto lg:right-0 lg:h-auto lg:w-[400px] lg:rounded-none lg:border-l lg:border-t-0"
+      style={{ '--panel-w': `${width}px` }}
+      className="fixed inset-x-0 bottom-0 z-40 flex h-[75dvh] flex-col rounded-t-2xl border-t border-slate-200 bg-white shadow-2xl lg:absolute lg:inset-y-0 lg:left-auto lg:right-0 lg:h-auto lg:w-[var(--panel-w)] lg:rounded-none lg:border-l lg:border-t-0 lg:shadow-none"
     >
+      <ResizeHandle onPointerDown={startResize} label={`Resize ${title}`} />
       <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
@@ -209,13 +227,20 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
       >
         <input
           ref={inputRef}
-          value={input}
+          value={heard ? `${input} ${heard}`.trim() : input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a request or tap the mic"
           aria-label={`Message the ${title}`}
           className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
         />
-        <VoiceButton onText={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))} disabled={sending} />
+        <VoiceButton
+          onInterim={setHeard}
+          onText={(t) => {
+            setHeard('')
+            setInput((prev) => (prev ? `${prev} ${t}` : t))
+          }}
+          disabled={sending}
+        />
         <button type="submit" disabled={sending || !input.trim()} aria-label="Send" className="rounded-lg bg-brand-500 px-3 text-white hover:bg-brand-600 disabled:opacity-50">
           <Send size={16} />
         </button>

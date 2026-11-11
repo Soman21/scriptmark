@@ -9,6 +9,7 @@ import { api } from '../lib/api.js'
 import PageAssistant from '../components/PageAssistant.jsx'
 import { resultsShortcuts } from '../lib/chatShortcuts.js'
 import ReviewAssistant from '../components/ReviewAssistant.jsx'
+import StudentInfo from '../components/StudentInfo.jsx'
 import PointRows, { DrawingNote } from '../components/PointRows.jsx'
 import { startingPointScores, bestTotal, countedNumbers, scoresByNumber, ruleScore, studentMax } from '../lib/points.js'
 
@@ -277,7 +278,7 @@ export default function Results() {
 
   return (
     <div className="flex h-full">
-    <div ref={mainRef} className={`flex min-w-0 flex-1 flex-col transition-[padding] ${finderOpen ? 'lg:pr-[400px]' : ''}`}>
+    <div ref={mainRef} className="flex min-w-0 flex-1 flex-col">
       <Topbar
         title="Review Suggested Scores"
         right={
@@ -309,10 +310,11 @@ export default function Results() {
             <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-base font-semibold text-slate-900">
-                    {currentScript.studentName || currentScript.studentIdentifier || 'Unnamed script'}
-                  </p>
-                  {currentScript.regNumber && <span className="text-sm text-slate-500">{currentScript.regNumber}</span>}
+                  <StudentInfo
+                    script={currentScript}
+                    token={token}
+                    onSaved={(info) => setScripts((prev) => prev.map((s) => (s.id === currentScript.id ? { ...s, ...info } : s)))}
+                  />
                   <Badge tone={currentScript.status === 'REVIEWED' ? 'green' : 'amber'}>
                     {currentScript.status === 'REVIEWED' ? 'Reviewed' : 'Needs review'}
                   </Badge>

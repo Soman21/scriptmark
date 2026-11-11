@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import {
   AlertCircle,
@@ -19,6 +19,7 @@ import { api } from '../lib/api.js'
 import { SessionProvider } from '../context/SessionContext.jsx'
 import { Badge } from './ui.jsx'
 import AddLecturersDialog from './AddLecturersDialog.jsx'
+import { DockContext } from '../context/DockContext.jsx'
 
 export default function SessionWorkspace() {
   const { id } = useParams()
@@ -27,6 +28,10 @@ export default function SessionWorkspace() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const navRef = useRef(null)
+  // Width of an open chat panel on the page (0 when none), so the page
+  // content makes room for it on a laptop.
+  const [dockWidth, setDockWidth] = useState(0)
+  const dock = useMemo(() => ({ setWidth: setDockWidth }), [])
   const location = useLocation()
   const [moreToRight, setMoreToRight] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
@@ -153,8 +158,10 @@ export default function SessionWorkspace() {
           </nav>
         </header>
         <AddLecturersDialog session={session} open={showAdd} onClose={() => setShowAdd(false)} />
-        <div className="relative min-h-0 flex-1 overflow-hidden">
-          <Outlet />
+        <div style={{ '--dock': `${dockWidth}px` }} className="relative min-h-0 flex-1 overflow-hidden lg:pr-[var(--dock)]">
+          <DockContext.Provider value={dock}>
+            <Outlet />
+          </DockContext.Provider>
         </div>
       </div>
     </SessionProvider>

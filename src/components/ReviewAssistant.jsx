@@ -4,20 +4,7 @@ import AssistantText from './AssistantText.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
 import VoiceButton from './VoiceButton.jsx'
-
-const MIN_WIDTH = 320
-const MAX_WIDTH = 720
-const WIDTH_KEY = 'scriptmark.reviewAssistantWidth'
-
-function savedWidth() {
-  try {
-    const w = Number(localStorage.getItem(WIDTH_KEY))
-    if (w >= MIN_WIDTH && w <= MAX_WIDTH) return w
-  } catch {
-    // Storage can be blocked (private window); the default width is fine.
-  }
-  return 380
-}
+import usePanelWidth, { ResizeHandle } from '../lib/usePanelWidth.jsx'
 
 const QUICK = ['Why did each question get its score?', 'Check every answer again against the guide.', 'What did this student miss?']
 
@@ -38,36 +25,9 @@ export default function ReviewAssistant({ script, open, onClose, onMinimise, onU
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [used, setUsed] = useState({})
-  const [width, setWidth] = useState(savedWidth)
+  const [width, startResize] = usePanelWidth('scriptmark.reviewAssistantWidth')
+  const [heard, setHeard] = useState('') // words being heard by the mic, not yet final
   const endRef = useRef(null)
-
-  // Dragging the left edge: the panel grows as the pointer moves left.
-  function startResize(e) {
-    e.preventDefault()
-    const startX = e.clientX
-    const startWidth = width
-    let latest = startWidth
-    function move(ev) {
-      const limit = Math.min(MAX_WIDTH, Math.round(window.innerWidth * 0.6))
-      latest = Math.min(Math.max(startWidth + (startX - ev.clientX), MIN_WIDTH), limit)
-      setWidth(latest)
-    }
-    function stop() {
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', stop)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-      try {
-        localStorage.setItem(WIDTH_KEY, String(latest))
-      } catch {
-        // Not saved; the width still holds for this visit.
-      }
-    }
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', stop)
-  }
 
   useEffect(() => {
     setMessages([])
@@ -118,14 +78,7 @@ export default function ReviewAssistant({ script, open, onClose, onMinimise, onU
       style={{ '--panel-w': `${width}px` }}
       className="fixed inset-x-0 bottom-0 z-40 flex h-[75dvh] flex-col rounded-t-2xl border-t border-slate-200 bg-white shadow-2xl lg:relative lg:inset-auto lg:z-auto lg:h-auto lg:w-[var(--panel-w)] lg:shrink-0 lg:rounded-none lg:border-l lg:border-t-0 lg:shadow-none"
     >
-      <div
-        onPointerDown={startResize}
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize the marking assistant"
-        title="Drag to resize"
-        className="absolute inset-y-0 -left-1 z-10 hidden w-2 cursor-col-resize hover:bg-brand-200/60 lg:block"
-      />
+      <ResizeHandle onPointerDown={startResize} label="Resize the marking assistant" />
       <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
@@ -217,13 +170,20 @@ export default function ReviewAssistant({ script, open, onClose, onMinimise, onU
         className="flex gap-2 border-t border-slate-200 p-3"
       >
         <input
-          value={input}
+          value={heard ? `${input} ${heard}`.trim() : input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about this script or tap the mic"
           aria-label="Ask the marking assistant"
           className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
         />
-        <VoiceButton onText={(t) => setInput((prev) => (prev ? `${prev} ${t}` : t))} disabled={sending} />
+        <VoiceButton
+          onInterim={setHeard}
+          onText={(t) => {
+            setHeard('')
+            setInput((prev) => (prev ? `${prev} ${t}` : t))
+          }}
+          disabled={sending}
+        />
         <button type="submit" disabled={sending || !input.trim()} aria-label="Send" className="rounded-lg bg-brand-500 px-3 text-white hover:bg-brand-600 disabled:opacity-50">
           <Send size={16} />
         </button>
