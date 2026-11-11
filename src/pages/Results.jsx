@@ -100,7 +100,7 @@ export default function Results() {
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
-  const sideBySide = mainWidth >= 860 // script image beside the answers
+  const sideBySide = mainWidth >= 680 // script image beside the answers
   const answersSideBySide = mainWidth >= 1000 // expected and student answers in two columns
   const compactBar = mainWidth < 640 // footer buttons show icons only
 
@@ -359,7 +359,7 @@ export default function Results() {
               </div>
             </div>
 
-            <div className={`grid flex-1 gap-5 p-4 sm:p-6 ${sideBySide ? 'grid-cols-[minmax(220px,1fr)_minmax(0,2.2fr)]' : 'grid-cols-1'}`}>
+            <div className={`grid flex-1 gap-5 p-4 sm:p-6 ${sideBySide ? 'grid-cols-[minmax(180px,1fr)_minmax(0,2.4fr)]' : 'grid-cols-1'}`}>
               {/* The script itself, kept in view beside the scores while scrolling */}
               <div className={`space-y-3 ${sideBySide ? 'sticky top-[84px] self-start' : ''}`}>
                 <div className="rounded-xl border border-slate-200 bg-white p-3">
