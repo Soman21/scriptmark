@@ -30,7 +30,11 @@ export default function ReviewAssistant({ script, open, onClose, onUseScore, ask
     if (open && ask?.text) send(ask.text)
   }, [ask])
 
-  useEffect(() => endRef.current?.scrollIntoView?.({ block: 'end' }), [messages, sending])
+  // scrollIntoView now returns a Promise in Chrome; an effect may only
+  // return a clean up function, so the call is wrapped in braces.
+  useEffect(() => {
+    endRef.current?.scrollIntoView?.({ block: 'end' })
+  }, [messages, sending])
 
   async function send(text) {
     const content = text.trim()

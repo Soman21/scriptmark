@@ -24,7 +24,11 @@ export default function PageAssistant({ page, sessionId, title, intro, quick = [
   const endRef = useRef(null)
   const inputRef = useRef(null)
 
-  useEffect(() => endRef.current?.scrollIntoView?.({ block: 'end' }), [messages, sending])
+  // scrollIntoView now returns a Promise in Chrome; an effect may only
+  // return a clean up function, so the call is wrapped in braces.
+  useEffect(() => {
+    endRef.current?.scrollIntoView?.({ block: 'end' })
+  }, [messages, sending])
 
   // "/" opens the chat from anywhere on the page, unless someone is typing.
   useEffect(() => {
