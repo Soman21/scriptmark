@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileUp, ChevronDown, ChevronUp, Loader2, AlertCircle, Merge, Trash2, CheckCircle2, Expand, RotateCw, Scissors, ScanSearch, Rows3 } from 'lucide-react'
+import { FileUp, ChevronDown, ChevronUp, Loader2, AlertCircle, Merge, Trash2, CheckCircle2, Expand, RotateCw, Scissors, ScanSearch, Rows3, FileText, X } from 'lucide-react'
 import { PrimaryButton, SecondaryButton } from './ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { api } from '../lib/api.js'
@@ -39,6 +39,27 @@ export function resolveCover(groups, groupIndex, pageIndex) {
   return next
 }
 
+// Adds newly picked PDFs to the ones already chosen. A second pick used to
+// replace the first; now it adds to the list. The same file picked twice is
+// kept once, since it would make every script in it twice. Files that are
+// not PDFs, or are over the split limit, are left out and named.
+export function addPdfs(prev, picked) {
+  const seen = new Set(prev.map((f) => `${f.name}:${f.size}`))
+  const added = []
+  const notPdf = []
+  const tooBig = []
+  for (const f of picked) {
+    const key = `${f.name}:${f.size}`
+    if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) notPdf.push(f.name)
+    else if (f.size > SPLIT_PDF_LIMIT_MB * MB) tooBig.push(f.name)
+    else if (!seen.has(key)) {
+      seen.add(key)
+      added.push(f)
+    }
+  }
+  return { files: [...prev, ...added], notPdf, tooBig }
+}
+
 const MODES = [
   {
     id: 'auto',
@@ -59,7 +80,8 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, onDone, e
   const navigate = useNavigate()
   const [expanded, setExpanded] = useState(embedded)
   const [dropTarget, setDropTarget] = useState(null)
-  const [pdfFile, setPdfFile] = useState(null)
+  const [pdfFiles, setPdfFiles] = useState([])
+  const [progress, setProgress] = useState(null) // { done, total } while splitting
   const [mode, setMode] = useState('auto')
   const [splitInfo, setSplitInfo] = useState(null)
   const [pagesPerSubmission, setPagesPerSubmission] = useState(1)
@@ -70,45 +92,68 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, onDone, e
   const [viewerIndex, setViewerIndex] = useState(null)
   const [dragSource, setDragSource] = useState(null) // { groupIndex, pageIndex }
 
+  function handlePdfsSelected(e) {
+    const { files, notPdf, tooBig } = addPdfs(pdfFiles, Array.from(e.target.files || []))
+    setPdfFiles(files)
+    const notes = []
+    if (notPdf.length) notes.push(`Not a PDF, skipped: ${notPdf.join(', ')}`)
+    if (tooBig.length) notes.push(`Larger than ${SPLIT_PDF_LIMIT_MB} MB, skipped: ${tooBig.join(', ')}`)
+    setError(notes.join('. '))
+    // Clears the picker so the same folder can be opened again for more.
+    e.target.value = ''
+  }
+
+  function removePdf(index) {
+    setPdfFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // Each PDF is split in its own request, one after another, so the server
+  // only ever holds one PDF at a time. The scripts from every PDF are then
+  // shown together, in the order the files were added.
   async function handleSplit() {
-    if (!pdfFile) {
+    if (pdfFiles.length === 0) {
       setError('Choose a PDF file first.')
-      return
-    }
-    if (pdfFile.size > SPLIT_PDF_LIMIT_MB * MB) {
-      setError(`PDF is larger than ${SPLIT_PDF_LIMIT_MB} MB. Upload it in smaller parts.`)
       return
     }
     setSplitting(true)
     setError('')
+    const all = []
+    let resultMode = mode
     try {
-      const formData = new FormData()
-      formData.append('pdf', pdfFile)
-      formData.append('mode', mode)
-      formData.append('pagesPerSubmission', String(Math.max(1, Math.floor(pagesPerSubmission) || 1)))
+      for (let i = 0; i < pdfFiles.length; i++) {
+        const file = pdfFiles[i]
+        setProgress({ done: i, total: pdfFiles.length })
+        const formData = new FormData()
+        formData.append('pdf', file)
+        formData.append('mode', mode)
+        formData.append('pagesPerSubmission', String(Math.max(1, Math.floor(pagesPerSubmission) || 1)))
 
-      // Splitting does zero OCR now — it's just the PDF chopped into page
-      // images and grouped, so this stays fast no matter how big the file is.
-      const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/scripts/bulkSplit`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      })
-      const data = await readJson(res)
-      if (!res.ok) throw new Error(data.error || 'Split failed')
+        // Splitting does zero OCR now — it's just the PDF chopped into page
+        // images and grouped, so this stays fast no matter how big the file is.
+        const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/scripts/bulkSplit`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        })
+        const data = await readJson(res)
+        if (!res.ok) throw new Error(`${file.name}: ${data.error || 'Split failed'}`)
+        resultMode = data.mode || mode
+        all.push(
+          ...data.groups.map((g) => ({
+            studentName: '',
+            regNumber: '',
+            pages: g.pages.map((p) => ({ ...p, rotation: 0, crop: null })),
+          }))
+        )
+      }
 
-      setGroups(
-        data.groups.map((g) => ({
-          studentName: '',
-          regNumber: '',
-          pages: g.pages.map((p) => ({ ...p, rotation: 0, crop: null })),
-        }))
-      )
-      setSplitInfo({ mode: data.mode || mode, pageCount: data.groups.reduce((n, g) => n + g.pages.length, 0) })
+      setGroups(all)
+      setSplitInfo({ mode: resultMode, pageCount: all.reduce((n, g) => n + g.pages.length, 0), fileCount: pdfFiles.length })
     } catch (err) {
       setError(err.message)
     } finally {
       setSplitting(false)
+      setProgress(null)
     }
   }
 
@@ -258,7 +303,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, onDone, e
       onScriptsCreated?.(result.scripts)
       setGroups(null)
       setSplitInfo(null)
-      setPdfFile(null)
+      setPdfFiles([])
       setExpanded(false)
       // Start marking for the whole session and open the Marking page. The
       // Scan Scripts page passes onDone so every upload method can ask
@@ -338,20 +383,58 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, onDone, e
                 </div>
               )}
 
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-slate-600"
-              />
+              <div>
+                <label className="inline-block cursor-pointer rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-100">
+                  {pdfFiles.length ? 'Add PDFs' : 'Choose PDFs'}
+                  <input
+                    type="file"
+                    multiple
+                    accept="application/pdf"
+                    onChange={handlePdfsSelected}
+                    disabled={splitting}
+                    className="hidden"
+                  />
+                </label>
+                <span className="ml-2 text-xs text-slate-400">Up to {SPLIT_PDF_LIMIT_MB} MB per file</span>
+              </div>
 
-              <PrimaryButton onClick={handleSplit} disabled={splitting || !pdfFile} className="bg-brand-500 hover:bg-brand-600">
+              {pdfFiles.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-slate-500">
+                    {pdfFiles.length} PDF{pdfFiles.length !== 1 ? 's' : ''} selected
+                  </p>
+                  <div className="max-h-64 space-y-1.5 overflow-y-auto">
+                    {pdfFiles.map((f, i) => (
+                      <div key={`${f.name}:${f.size}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <FileText size={14} className="shrink-0 text-rose-500" />
+                          <span className="truncate text-sm text-slate-700">{f.name}</span>
+                          <span className="shrink-0 text-xs text-slate-400">{(f.size / MB).toFixed(1)} MB</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removePdf(i)}
+                          disabled={splitting}
+                          className="shrink-0 text-slate-400 hover:text-rose-500 disabled:opacity-40"
+                          title="Remove"
+                          aria-label={`Remove ${f.name}`}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <PrimaryButton onClick={handleSplit} disabled={splitting || pdfFiles.length === 0} className="bg-brand-500 hover:bg-brand-600">
                 {splitting ? (
                   <>
-                    <Loader2 size={16} className="animate-spin" /> Splitting...
+                    <Loader2 size={16} className="animate-spin" />
+                    {progress && progress.total > 1 ? `Splitting ${progress.done + 1} of ${progress.total}...` : 'Splitting...'}
                   </>
                 ) : (
-                  'Split PDF'
+                  pdfFiles.length > 1 ? `Split ${pdfFiles.length} PDFs` : 'Split PDF'
                 )}
               </PrimaryButton>
             </>
@@ -362,6 +445,7 @@ export default function BulkUploadPanel({ sessionId, onScriptsCreated, onDone, e
                   {splitInfo?.mode === 'auto'
                     ? `${groups.length} script${groups.length !== 1 ? 's' : ''} detected from ${splitInfo.pageCount} pages`
                     : `${groups.length} script${groups.length !== 1 ? 's' : ''} from ${flat.length} pages`}
+                  {splitInfo?.fileCount > 1 ? ` in ${splitInfo.fileCount} PDFs` : ''}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">Drag pages to rearrange. Review before confirming.</p>
                 {splitInfo?.mode === 'auto' && groups.length === 1 && splitInfo.pageCount > 1 && (
