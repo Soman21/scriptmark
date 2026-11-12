@@ -24,7 +24,7 @@ export const SCAN_METHODS = [
     id: 'pdf',
     icon: FileStack,
     title: 'Bulk PDF Upload',
-    text: 'One PDF, many students',
+    text: 'Many students per PDF',
   },
   {
     id: 'files',
