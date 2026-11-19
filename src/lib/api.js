@@ -124,6 +124,12 @@ export const api = {
   getMarkingStatus: (sessionId, token) =>
     request(`/api/sessions/${sessionId}/markingStatus`, { token }),
 
+  getMarkedScript: (scriptId, token) => request(`/api/marked/scripts/${scriptId}`, { token }),
+  saveInk: (scriptId, pageNumber, items, token) =>
+    request(`/api/marked/scripts/${scriptId}/ink/${pageNumber}`, { method: 'PUT', body: { items }, token }),
+  readPositions: (scriptId, token) => request(`/api/marked/scripts/${scriptId}/readPositions`, { method: 'POST', token }),
+  getMarkedReady: (sessionId, token) => request(`/api/marked/sessions/${sessionId}/ready`, { token }),
+
   confirmScore: (answerId, payload, token) =>
     request(`/api/results/${answerId}/confirm`, { method: 'PUT', body: payload, token }),
   scoreScript: (scriptId, guideId, token) =>
