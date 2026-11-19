@@ -8,6 +8,7 @@ import { useSession } from '../context/SessionContext.jsx'
 import { api } from '../lib/api.js'
 import { downloadSessionExport } from '../lib/download.js'
 import { resultRow } from '../lib/resultRows.js'
+import MarkedDownloads from '../components/MarkedDownloads.jsx'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -236,6 +237,8 @@ export default function Archive() {
               </PrimaryButton>
               </div>
             </div>
+
+            <MarkedDownloads sessionId={sessionId} sessionTitle={session?.title} token={token} />
 
             <div className="rounded-xl border border-slate-200 bg-white p-5">
               <div className="flex items-center justify-between">

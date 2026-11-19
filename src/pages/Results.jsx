@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download, Sparkles, MessageCircle } from 'lucide-react'
+import { CheckCircle2, ArrowRight, ArrowLeft, AlertCircle, ImageIcon, Expand, X, ChevronLeft, ChevronRight, Download, Sparkles, MessageCircle, Printer, FileDown } from 'lucide-react'
 import Topbar from '../components/Topbar.jsx'
 import { PrimaryButton, Badge } from '../components/ui.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -11,6 +11,9 @@ import { resultsShortcuts } from '../lib/chatShortcuts.js'
 import ReviewAssistant from '../components/ReviewAssistant.jsx'
 import StudentInfo from '../components/StudentInfo.jsx'
 import PointRows, { DrawingNote } from '../components/PointRows.jsx'
+import MarkedView from '../components/MarkedView.jsx'
+import { remarkConflict } from '../lib/markInk.js'
+import { downloadMarkedScript, printMarkedScript } from '../lib/download.js'
 import { startingPointScores, bestTotal, countedNumbers, scoresByNumber, ruleScore, studentMax } from '../lib/points.js'
 
 function ImageViewerModal({ pages, startIndex, onClose, onIndexChange }) {
@@ -76,6 +79,12 @@ export default function Results() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [draftScores, setDraftScores] = useState({})
   const [draftReasons, setDraftReasons] = useState({})
+  // The short note written beside each mark on the marked script.
+  const [draftRemarks, setDraftRemarks] = useState({})
+  // Pages: the plain page images. Marked: the pages with the red ink.
+  const [viewMode, setViewMode] = useState('pages')
+  const [markedFull, setMarkedFull] = useState(false)
+  const [pdfBusy, setPdfBusy] = useState('') // 'download' | 'print'
   // Lecturer marks per marking point, by answer id. touchedPoints holds the
   // answers whose points the lecturer actually changed: only those are sent
   // point by point, so agreeing to the AI with Confirm All does not count
@@ -123,13 +132,16 @@ export default function Results() {
 
       const drafts = {}
       const points = {}
+      const remarks = {}
       scored.forEach((s) => {
         s.answers.forEach((a) => {
           drafts[a.id] = a.confirmedScore ?? a.suggestedScore ?? 0
           points[a.id] = startingPointScores(a)
+          remarks[a.id] = a.remark || ''
         })
       })
       setDraftScores(drafts)
+      setDraftRemarks(remarks)
       setDraftPoints(points)
       setTouchedPoints({})
       setDraftReasons({})
@@ -162,6 +174,13 @@ export default function Results() {
       })
       return next
     })
+    setDraftRemarks((prev) => {
+      const next = { ...prev }
+      fresh.answers.forEach((a) => {
+        next[a.id] = a.remark || ''
+      })
+      return next
+    })
     setTouchedPoints((prev) => {
       const next = { ...prev }
       ids.forEach((id) => delete next[id])
@@ -180,6 +199,13 @@ export default function Results() {
   // Each script opens on its first page.
   useEffect(() => setPageIndex(0), [currentIndex])
 
+  useEffect(() => {
+    if (!markedFull) return
+    const onKey = (e) => e.key === 'Escape' && setMarkedFull(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [markedFull])
+
   // Typing a total by hand on an answer with points stops it being sent
   // point by point, since the points no longer add up to it.
   function updateDraft(answerId, value) {
@@ -194,6 +220,10 @@ export default function Results() {
     setDraftPoints((prev) => ({ ...prev, [answerId]: values }))
     setDraftScores((prev) => ({ ...prev, [answerId]: bestTotal(values, countBest) }))
     setTouchedPoints((prev) => ({ ...prev, [answerId]: true }))
+  }
+
+  function updateRemark(answerId, value) {
+    setDraftRemarks((prev) => ({ ...prev, [answerId]: value }))
   }
 
   function updateReason(answerId, value) {
@@ -249,6 +279,7 @@ export default function Results() {
         const payload = { confirmedScore: Number(draftScores[answer.id] ?? answer.suggestedScore ?? 0) }
         if (touchedPoints[answer.id]) payload.pointScores = draftPoints[answer.id].map(Number)
         if (needsReason(answer)) payload.reason = draftReasons[answer.id].trim()
+        payload.remark = String(draftRemarks[answer.id] ?? answer.remark ?? '').trim()
         await api.confirmScore(answer.id, payload, token)
       }
       await refreshScript(currentScript.id)
@@ -270,6 +301,33 @@ export default function Results() {
     ? studentMax(currentScript.answers.map((a) => a.question || {}), currentScript.answerRule)
     : 0
 
+  // The marked script PDF is drawn from saved scores, so Download and Print
+  // wait until every answer is confirmed and nothing is left unsaved.
+  const allConfirmed = Boolean(currentScript?.answers?.length) && currentScript.answers.every((a) => a.confirmedScore != null)
+  const unsaved = Boolean(currentScript) && currentScript.answers.some(
+    (a) =>
+      a.confirmedScore == null ||
+      Number(draftScores[a.id] ?? 0) !== Number(a.confirmedScore) ||
+      String(draftRemarks[a.id] ?? '').trim() !== String(a.remark || '').trim()
+  )
+  const pdfBlocked = !allConfirmed ? 'Confirm all scores first' : unsaved ? 'Confirm changes first' : ''
+
+  async function getPdf(kind) {
+    if (!currentScript || pdfBlocked) return
+    setPdfBusy(kind)
+    setError('')
+    try {
+      if (kind === 'print') await printMarkedScript(currentScript.id, token)
+      else await downloadMarkedScript(currentScript.id, token)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setPdfBusy('')
+    }
+  }
+
+  const marked = viewMode === 'marked'
+
   const currentPages = currentScript?.pages?.length
     ? currentScript.pages
     : currentScript?.imageUrl
@@ -282,12 +340,38 @@ export default function Results() {
       <Topbar
         title="Review Suggested Scores"
         right={
-          <button
-            onClick={() => navigate(`/sessions/${sessionId}/export`)}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-3.5 py-2 transition-colors"
-          >
-            <Download size={14} /> Export Results
-          </button>
+          <div className="flex items-center gap-2">
+            {currentScript && (
+              <>
+                <span title={pdfBlocked || 'Print'}>
+                  <button
+                    onClick={() => getPdf('print')}
+                    disabled={Boolean(pdfBlocked) || Boolean(pdfBusy)}
+                    aria-label="Print"
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Printer size={14} /> {!compactBar && (pdfBusy === 'print' ? 'Preparing...' : 'Print')}
+                  </button>
+                </span>
+                <span title={pdfBlocked || 'Download Marked Script'}>
+                  <button
+                    onClick={() => getPdf('download')}
+                    disabled={Boolean(pdfBlocked) || Boolean(pdfBusy)}
+                    aria-label="Download Marked Script"
+                    className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <FileDown size={14} /> {!compactBar && (pdfBusy === 'download' ? 'Preparing...' : 'Marked Script')}
+                  </button>
+                </span>
+              </>
+            )}
+            <button
+              onClick={() => navigate(`/sessions/${sessionId}/export`)}
+              className="flex items-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-3.5 py-2 transition-colors"
+            >
+              <Download size={14} /> {!compactBar && 'Export Results'}
+            </button>
+          </div>
         }
       />
 
@@ -361,9 +445,50 @@ export default function Results() {
               </div>
             </div>
 
-            <div className={`grid flex-1 gap-5 p-4 sm:p-6 ${sideBySide ? 'grid-cols-[minmax(180px,1fr)_minmax(0,2.4fr)]' : 'grid-cols-1'}`}>
+            <div className={`grid flex-1 gap-5 p-4 sm:p-6 ${sideBySide ? (marked ? 'grid-cols-[minmax(260px,1.3fr)_minmax(0,1.7fr)]' : 'grid-cols-[minmax(180px,1fr)_minmax(0,2.4fr)]') : 'grid-cols-1'}`}>
               {/* The script itself, kept in view beside the scores while scrolling */}
-              <div className={`space-y-3 ${sideBySide ? 'sticky top-[84px] self-start' : ''}`}>
+              <div className={`space-y-3 ${sideBySide && !markedFull ? 'sticky top-[84px] self-start' : ''}`}>
+                <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm" role="tablist">
+                  {[['pages', 'Pages'], ['marked', 'Marked']].map(([id, name]) => (
+                    <button
+                      key={id}
+                      role="tab"
+                      aria-selected={viewMode === id}
+                      onClick={() => setViewMode(id)}
+                      className={`rounded-md px-3 py-1 font-medium ${viewMode === id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+                {marked ? (
+                  // One Marked view; Full size turns its wrapper into an overlay
+                  // so the ink being edited is never split between two copies.
+                  <div className={markedFull ? 'fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 p-2 sm:p-6' : ''} role={markedFull ? 'dialog' : undefined} aria-label={markedFull ? 'Marked script' : undefined}>
+                    <div className={markedFull ? 'mx-auto max-w-4xl rounded-xl bg-white p-3' : ''}>
+                      {markedFull && (
+                        <div className="flex justify-end pb-2">
+                          <button onClick={() => setMarkedFull(false)} aria-label="Close" className="rounded-lg p-2 text-slate-600 hover:bg-slate-100">
+                            <X size={18} />
+                          </button>
+                        </div>
+                      )}
+                      <MarkedView
+                        script={currentScript}
+                        token={token}
+                        draftScores={draftScores}
+                        draftRemarks={draftRemarks}
+                        countedSet={countedSet}
+                        total={confirmedTotal}
+                        totalMax={maxPossible}
+                        pageIndex={pageIndex}
+                        onPageChange={setPageIndex}
+                        onExpand={markedFull ? null : () => setMarkedFull(true)}
+                        tall={markedFull}
+                      />
+                    </div>
+                  </div>
+                ) : (
                 <div className="rounded-xl border border-slate-200 bg-white p-3">
                   <button
                     onClick={() => currentPages.length > 0 && setViewerIndex(pageIndex)}
@@ -417,6 +542,7 @@ export default function Results() {
                     </div>
                   )}
                 </div>
+                )}
                 <details className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
                   <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-slate-400">
                     Full extracted text
@@ -510,6 +636,27 @@ export default function Results() {
                         <span className="text-slate-400">AI reasoning: </span>
                         {answer.reasoning}
                       </p>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <label htmlFor={`remark-${answer.id}`} className="text-xs font-medium text-slate-500">
+                          Remark
+                        </label>
+                        <input
+                          id={`remark-${answer.id}`}
+                          value={draftRemarks[answer.id] ?? ''}
+                          onChange={(e) => updateRemark(answer.id, e.target.value)}
+                          maxLength={120}
+                          placeholder="Note on the script"
+                          className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-400"
+                        />
+                        {remarkConflict(draftScores[answer.id], q?.maxMarks, draftRemarks[answer.id]) && (
+                          <span title="Remark and score disagree">
+                            <Badge tone="amber">
+                              <AlertCircle size={12} /> Check remark
+                            </Badge>
+                          </span>
+                        )}
+                      </div>
 
                       {showReasonBox && (
                         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
