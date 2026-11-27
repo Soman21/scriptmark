@@ -222,6 +222,8 @@ export default function MarkingGuides() {
   // True right after a draft save; cleared by the next edit so the button
   // goes back to Save Draft once there is something new to save.
   const [draftSaved, setDraftSaved] = useState(false)
+  // True right after a publish; cleared by the next edit.
+  const [published, setPublished] = useState(false)
   const lastSavedRef = useRef(null)
   const [error, setError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
@@ -665,8 +667,11 @@ export default function MarkingGuides() {
   // Any edit after a draft save means the button should offer to save again.
   useEffect(() => {
     const last = lastSavedRef.current
-    if (draftSaved && last && (last.title !== title || last.groups !== groups || last.sources !== sources)) setDraftSaved(false)
-  }, [title, groups, sources, draftSaved])
+    if ((draftSaved || published) && last && (last.title !== title || last.groups !== groups || last.sources !== sources)) {
+      setDraftSaved(false)
+      setPublished(false)
+    }
+  }, [title, groups, sources, draftSaved, published])
 
   async function handleParseMarkingGuideDoc(file) {
     if (!file) return
@@ -925,6 +930,7 @@ export default function MarkingGuides() {
       }
       setSuccessMsg(isDraft ? 'Draft saved' : 'Marking guide saved and published.')
       setDraftSaved(isDraft)
+      setPublished(!isDraft)
       lastSavedRef.current = { title, groups, sources }
       loadGuides()
     } catch (err) {
@@ -1075,7 +1081,7 @@ export default function MarkingGuides() {
               {saving === 'draft' ? 'Saving...' : draftSaved ? 'Draft Saved' : 'Save Draft'}
             </SecondaryButton>
             <PrimaryButton onClick={() => handleSave(false)} disabled={saving} className="bg-brand-500 hover:bg-brand-600">
-              {saving === 'publish' ? 'Publishing...' : 'Save & Publish'}
+              {saving === 'publish' ? 'Publishing...' : published ? 'Published' : 'Save & Publish'}
             </PrimaryButton>
           </div>
         }
@@ -1096,7 +1102,17 @@ export default function MarkingGuides() {
                 error ? 'border-rose-200 bg-rose-50 text-rose-600' : 'border-emerald-200 bg-emerald-50 text-emerald-600'
               }`}
             >
-              {error || successMsg}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>{error || successMsg}</span>
+                {!error && published && currentSession && (
+                  <button
+                    onClick={() => navigate(`/sessions/${currentSession.id}/scan`)}
+                    className="font-medium underline hover:no-underline"
+                  >
+                    Continue to scripts
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
